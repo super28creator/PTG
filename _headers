@@ -2,5 +2,3 @@
   Content-Security-Policy: frame-ancestors *;
   Access-Control-Allow-Origin: *
   X-Frame-Options: ALLOWALL
-  
-  sralczi
