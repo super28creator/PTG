@@ -231,7 +231,7 @@
                  <button id="leaderboardBtn" class="ghost" style="padding: 6px; border-radius: 8px; font-size: 16px; border-color:rgba(255,255,255,0.1);">🏆</button>
                  <div class="small" id="scoreDisplay" style="background:rgba(245, 158, 11, 0.1); color:#fbbf24; padding:6px 10px; border-radius:8px; font-weight:700; font-size: 12px;">...</div>
                  <div class="small" title="Streak" style="background:rgba(249, 115, 22, 0.1); color:#f97316; padding:6px 10px; border-radius:8px; font-weight:700; font-size: 12px; display:flex; align-items:center; gap:4px;">
-                    🔥 <span id="streakDisplay">0</span>
+                   🔥 <span id="streakDisplay">0</span>
                  </div>
              </div>
 
@@ -352,6 +352,11 @@
 </div>
 
 <script type="module">
+  // --- VERCEL ANALYTICS INJECTION ---
+  import { inject } from 'https://esm.sh/@vercel/analytics';
+  inject();
+  // ----------------------------------
+
   import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
   import { getDatabase, ref, get, set, update, runTransaction, onValue } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js';
