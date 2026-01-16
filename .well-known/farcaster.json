@@ -1,0 +1,17 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEwNzYyNjQsInR5cGUiOiJhdXRoIiwia2V5IjoiMHhmYWM3NjkzOUMzMWU2Y0I4MEUwNGM0NkFFNWY4MTMyRWE1MzRDODU1In0",
+    "payload": "eyJkb21haW4iOiJwdGctb25lLnZlcmNlbC5hcHAifQ",
+    "signature": "7w6ejGQ6T7xuLcWPk0sSD/FbD/bziEAxPCwyBuzcQWUQFlMPEcv2HubXWfGQvTFRtsMuerEtvkfUGIgd3AuHyBs="
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Phrase To Guess",
+    "homeUrl": "https://ptg-one.vercel.app",
+    "iconUrl": "https://ptg-one.vercel.app/icon-512.png",
+    "splashImageUrl": "https://ptg-one.vercel.app/icon-512.png",
+    "splashBackgroundColor": "#071028",
+    "description": "Daily Web3 word-guessing game.",
+    "tags": ["game", "daily", "web3", "puzzle", "base"]
+  }
+}
