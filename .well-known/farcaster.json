@@ -7,11 +7,14 @@
   "miniapp": {
     "version": "1",
     "name": "Phrase To Guess",
-    "homeUrl": "https://ptg-one.vercel.app",
-    "iconUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "splashImageUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "splashBackgroundColor": "#071028",
+    "homeUrl": "https://ptg-git-main-super-team1.vercel.app",
+    "iconUrl": "https://ptg-git-main-super-team1.vercel.app/icon-512.png",
+    "splashImageUrl": "https://ptg-git-main-super-team1.vercel.app/icon-512.png",
+    "splashBackgroundColor": "#0a0e1a",
     "description": "Daily Web3 word-guessing game.",
-    "tags": ["game", "daily", "web3", "puzzle", "base"]
+    "tags": ["game", "daily", "web3", "puzzle", "base"],
+    "ogTitle": "Phrase To Guess",
+    "ogDescription": "Daily Web3 word-guessing game on Base.",
+    "ogImageUrl": "https://ptg-git-main-super-team1.vercel.app/icon-512.png"
   }
 }
