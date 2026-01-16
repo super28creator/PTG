@@ -6,10 +6,17 @@
   <title>Phrase To Guess</title>
   
   <meta name="base:app_id" content="6963e5868a6eeb04b568def8" />
+  
   <meta property="og:title" content="Phrase To Guess" />
   <meta property="og:description" content="Daily Web3 word-guessing game on Base." />
-  
   <meta property="og:image" content="https://ptg-one.vercel.app/icon-512.png" />
+  <meta property="og:url" content="https://ptg-one.vercel.app/" />
+  <meta property="og:type" content="website" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Phrase To Guess" />
+  <meta name="twitter:description" content="Daily Web3 word-guessing game on Base." />
+  <meta name="twitter:image" content="https://ptg-one.vercel.app/icon-512.png" />
   
   <meta property="fc:frame" content="vNext" />
   <meta property="fc:frame:image" content="https://ptg-one.vercel.app/icon-512.png" />
@@ -19,6 +26,7 @@
   <meta property="fc:frame:button:1" content="Play Phrase To Guess" />
   <meta property="fc:frame:button:1:action" content="link" />
   <meta property="fc:frame:button:1:target" content="https://ptg-one.vercel.app/" />
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
@@ -478,7 +486,7 @@
   // --- GAME LOGIC ---
   function initGame(newCat = true) {
     if(hasPlayedToday) return blockGame();
-    if(newCat || !currentCategory) currentCategory = Object.keys(CATEGORIES)[Math.floor(Math.random()*5)];
+    if(newCat || !currentCategory) currentCategory = Object.keys(CATEGORIES)[Math.floor(Math.random()*Object.keys(CATEGORIES).length)];
     
     const catArray = CATEGORIES[currentCategory];
     if (!catArray || catArray.length === 0) { console.error("Category empty!"); return; }
