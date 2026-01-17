@@ -124,7 +124,7 @@
         color: var(--text-bright); text-shadow: 0 0 10px var(--accent-secondary); 
     }
 
-    /* --- KEYBOARD (RESTORED STYLE) --- */
+    /* --- KEYBOARD --- */
     .keyboard { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; margin-top: 20px; }
     @media (max-width: 360px) {
         .keyboard { grid-template-columns: repeat(7, 1fr); }
@@ -144,7 +144,7 @@
     .key.hit { background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary)); color: #fff; border: none; box-shadow: 0 0 10px rgba(6, 182, 212, 0.4); opacity: 1;}
     .key.miss { background: rgba(239, 68, 68, 0.2); color: var(--danger); border-color: var(--danger); opacity: 0.7;}
 
-    /* --- CHART (RESTORED STYLE) --- */
+    /* --- CHART --- */
     canvas { 
         width: 100%; height: 200px; border-radius: 16px; 
         background: linear-gradient(180deg, rgba(20, 25, 40, 0.8) 0%, rgba(10, 14, 26, 0.9) 100%); 
@@ -194,9 +194,10 @@
     }
     .social-icon { width: 16px; height: 16px; fill: currentColor; }
 
-    /* --- MODALS --- */
+    /* --- MODALS & VICTORY SCREEN --- */
     .modal-overlay { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 999; padding: 20px; }
     .modal-overlay.show { display: flex; animation: fadeIn 0.3s ease; }
+    
     .mint-card { 
         background: rgba(26, 31, 53, 0.98);
         border: 1px solid rgba(139, 92, 246, 0.4);
@@ -204,7 +205,45 @@
         box-shadow: 0 20px 50px rgba(0,0,0,0.7);
         text-align: center;
     }
+
+    /* --- STYLIZACJA OKNA ZWYCIĘSTWA (NEW) --- */
+    .victory-modal-content {
+        text-align: center;
+        width: 100%;
+        border: 2px solid #4ade80;
+        box-shadow: 0 0 40px rgba(74, 222, 128, 0.2);
+    }
+    .victory-icon {
+        font-size: 64px; margin-bottom: 16px;
+        animation: bounce 1s infinite;
+    }
+    .victory-title {
+        font-size: 36px; font-weight: 900; 
+        background: linear-gradient(to right, #4ade80, #22d3ee); 
+        -webkit-background-clip: text; background-clip: text; 
+        -webkit-text-fill-color: transparent; 
+        margin-bottom: 8px;
+        letter-spacing: -1px;
+    }
+    .victory-subtitle {
+        color: #94a3b8; font-size: 16px; margin-bottom: 24px;
+    }
     
+    /* WIELKI PRZYCISK MINT */
+    .big-mint-btn {
+        background: linear-gradient(90deg, #7c3aed, #db2777);
+        color: white; font-size: 20px; font-weight: 800;
+        padding: 18px 24px; border-radius: 16px; border: none;
+        width: 100%; cursor: pointer;
+        box-shadow: 0 10px 30px rgba(219, 39, 119, 0.4);
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        text-transform: uppercase; letter-spacing: 1px;
+    }
+    .big-mint-btn:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(219, 39, 119, 0.6); }
+    .big-mint-btn:active { transform: scale(0.98); }
+    .big-mint-btn:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(1); }
+
     .txlink a { color: var(--accent-secondary); text-decoration: none; border-bottom: 1px dotted var(--accent-secondary); transition: 0.2s;}
     .txlink a:hover { color: var(--text-bright); border-bottom-style: solid;}
 
@@ -228,6 +267,7 @@
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   </style>
 </head>
 <body>
@@ -236,6 +276,36 @@
     <div style="text-align:center;">
         <div class="loader"></div>
         <div style="margin-top:10px; font-size:12px; color:#94a3b8;">Loading Profile...</div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="victoryModal">
+    <div class="mint-card victory-modal-content">
+        <div class="victory-icon">🏆</div>
+        <div class="victory-title">VICTORY!</div>
+        <div class="victory-subtitle">You solved the phrase!</div>
+        
+        <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: left;">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                <span style="color:#94a3b8;">Reward:</span>
+                <span style="color:#4ade80; font-weight:700;">+1 Point</span>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+                <span style="color:#94a3b8;">Bonus:</span>
+                <span style="color:#a78bfa; font-weight:700;">+2 Points (Mint)</span>
+            </div>
+        </div>
+
+        <button id="victoryMintBtn" class="big-mint-btn" onclick="mintNFT()">
+            <span>✨ MINT TROPHY</span>
+        </button>
+        
+        <div id="victoryStatus" style="margin-top:15px; font-weight:600; font-size:14px; min-height:20px; color:#94a3b8;"></div>
+        <div id="victoryTxLink" class="small txlink" style="margin-top:5px;"></div>
+
+        <div style="margin-top:20px;">
+            <button class="ghost" onclick="closeVictoryModal()" style="width:100%; font-size:13px; padding: 10px;">Close & View Stats</button>
+        </div>
     </div>
 </div>
 
@@ -285,34 +355,20 @@
       <button class="ghost" id="newCategoryBtn" style="width: 100%">New Category</button>
     </div>
     
-    <div id="nextGameTimer" style="display:none; text-align:center; margin-top:20px; font-size:13px; color:#94a3b8; font-style:italic;">
-        Daily limit reached. Next game in: <span id="countdown" style="color:var(--accent-secondary); font-weight:700; font-family:'Roboto Mono', monospace;">--:--:--</span>
+    <div id="nextGameTimer" style="display:none; text-align:center; margin-top:20px;">
+        <div style="font-size:13px; color:#94a3b8; font-style:italic; margin-bottom:10px;">
+            Daily limit reached. Next game in: <span id="countdown" style="color:var(--accent-secondary); font-weight:700; font-family:'Roboto Mono', monospace;">--:--:--</span>
+        </div>
+        <button id="recoverMintBtn" class="btn" style="display:none; background: linear-gradient(90deg, #7c3aed, #db2777);" onclick="document.getElementById('victoryModal').classList.add('show')">
+            ✨ Claim Your Pending Trophy
+        </button>
     </div>
     
     <div id="keyboard" class="keyboard"></div>
   </div>
 
   <div class="card">
-    <h1>Mint Victory</h1>
-    <p class="lead">Solve the phrase to unlock the minting capability.$PTG is coming.</p>
-    
-    <div class="mint-panel" id="mintPanel">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="font-weight:700; font-size: 16px; color: var(--accent-primary);">Victory Trophy</div>
-          <div class="small" id="priceInfo" style="margin-top:4px; font-size:12px; color:var(--text-muted);">Price: 0.0001 ETH</div>
-        </div>
-        <button class="btn" id="mintBtn" onclick="mintNFT()" style="padding: 8px 16px; font-size:14px; width: auto;">MINT NFT</button>
-      </div>
-      <div id="mintStatusSmall" style="color: var(--success); margin-top:8px; font-size:13px; font-weight:600;"></div>
-      <div id="txLink" class="small txlink" style="margin-top:12px;"></div>
-      
-      <div style="margin-top:15px; font-size:10px; color:#6b7280; font-style:italic; text-align:center;">
-        $PTG is coming
-      </div>
-    </div>
-
-    <h3 style="margin-top:24px; font-size: 16px; color: var(--accent-secondary);">Categories</h3>
+    <h3 style="margin-top:0; font-size: 16px; color: var(--accent-secondary);">Categories</h3>
     <ul class="available-cats" style="padding-left:18px; line-height:1.6;">
       <li>Animals & Nature</li>
       <li>Crypto & Web3</li>
@@ -426,7 +482,6 @@
 
   // --- INIT APP ---
   async function startApp() {
-      // ✅ FIX: Wyślij gotowość natychmiast, aby Base nie blokował ekranu
       if (sdk && sdk.actions) {
           try {
               sdk.actions.ready();
@@ -434,7 +489,6 @@
           } catch (err) { console.warn(err); }
       }
 
-      // ✅ FIX: Zawsze usuwaj ekran ładowania po 2s
       const safeLoad = setTimeout(() => {
           document.getElementById('loadingScreen').style.display = 'none';
           if(hasPlayedToday) blockGame(); else initGame();
@@ -487,7 +541,6 @@
               const data = snapshot.val();
               currentScore = data.score || 0;
               
-              // LOGIKA STREAKA (UI FIX)
               const today = new Date().toISOString().split('T')[0];
               const yesterdayDate = new Date();
               yesterdayDate.setDate(yesterdayDate.getDate() - 1);
@@ -526,15 +579,19 @@
     
     document.getElementById('categoryDisplay').textContent = "Category: " + currentCategory;
     document.getElementById('status').innerHTML = "";
-    document.getElementById('mintPanel').classList.remove('show');
+    document.getElementById('victoryModal').classList.remove('show'); // Hide modal
     document.getElementById('tries').textContent = "0";
     document.getElementById('keyboard').style.pointerEvents = 'auto';
     document.getElementById('keyboard').style.opacity = '1';
+    document.getElementById('recoverMintBtn').style.display = 'none'; // Hide recover btn
     
-    const btns = [document.getElementById('mintBtn')];
-    btns.forEach(b => { b.textContent = "MINT NFT"; b.disabled = false; b.classList.remove('ghost'); b.classList.add('btn'); });
-    document.getElementById('mintStatusSmall').textContent = "";
-    document.getElementById('txLink').innerHTML = "";
+    // Reset Mint Button in Modal
+    const vBtn = document.getElementById('victoryMintBtn');
+    vBtn.innerHTML = "<span>✨ MINT TROPHY</span>";
+    vBtn.disabled = false;
+    
+    document.getElementById('victoryStatus').textContent = "";
+    document.getElementById('victoryTxLink').innerHTML = "";
     
     renderWord(); renderKeyboard(); drawCandleChart(); updateDailyUI();
   }
@@ -546,12 +603,24 @@
         document.getElementById('keyboard').style.opacity = '0.3';
         document.getElementById('newCategoryBtn').style.display = 'none';
         document.getElementById('nextGameTimer').style.display = 'block';
+        
+        // LOGIKA PERSYSTENCJI (Jeśli grałeś dziś, wygrałeś, ale nie mintowałeś)
+        if(hasPlayedToday && !hasMintedThisSession && db) {
+             const userRef = ref(db, 'players/' + myUserId);
+             get(userRef).then(snapshot => {
+                 const data = snapshot.val();
+                 // Sprawdzamy czy streak jest > 0 co sugeruje wygraną (uproszczone, ale skuteczne)
+                 if(data && data.streak > 0 && (!data.mintCount || data.mintCount < 2)) { 
+                     document.getElementById('recoverMintBtn').style.display = 'block';
+                 }
+             });
+        }
+
         updateDailyUI();
-        startCountdown(); // ✅ URUCHAMIAMY LICZNIK
+        startCountdown(); 
         setTimeout(showLeaderboard, 500);
   }
   
-  // ✅ FUNKCJA ODLICZAJĄCA DO PÓŁNOCY UTC
   function startCountdown() {
       const timerElem = document.getElementById('countdown');
       if (!timerElem) return;
@@ -559,12 +628,12 @@
       function update() {
           const now = new Date();
           const tomorrow = new Date(now);
-          tomorrow.setUTCHours(24, 0, 0, 0); // Następna północ UTC
+          tomorrow.setUTCHours(24, 0, 0, 0); 
 
           const diff = tomorrow - now;
 
           if (diff <= 0) {
-              timerElem.textContent = "00:00:00"; // Reset
+              timerElem.textContent = "00:00:00"; 
               return;
           }
 
@@ -608,7 +677,6 @@
     });
   }
 
-  // PHYSICAL KEYBOARD SUPPORT
   document.addEventListener('keydown', (e) => {
       if(gameOver || hasPlayedToday) return;
       const key = e.key.toUpperCase();
@@ -656,7 +724,6 @@
               if (userData) {
                   userData.score = (userData.score || 0) + 1;
                   
-                  // LOGIKA STREAKA (DB FIX)
                   if (userData.lastPlayed === yesterday) {
                       userData.streak = (userData.streak || 0) + 1;
                   } else {
@@ -671,7 +738,6 @@
               return userData;
           }).then(() => {
               currentScore++; 
-              // Wizualny update lokalny
               const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
               const yesterday = yesterdayDate.toISOString().split('T')[0];
               currentStreak++; 
@@ -680,7 +746,10 @@
           });
       }
 
-      document.getElementById('mintPanel').classList.add('show'); 
+      // ✅ ZMIANA: Pokaż duże okno zwycięstwa
+      setTimeout(() => {
+          document.getElementById('victoryModal').classList.add('show');
+      }, 1000); 
       incrementGamesPlayed();
 
     } else if (mistakes >= MAX_MISTAKES) {
@@ -732,14 +801,21 @@
     });
   }
 
-  // ✅ UPDATED SPONSORED MINT (First 2 Free)
+  // ✅ UPDATED SPONSORED MINT (Connected to Modal)
   async function mintNFT() {
     const PAYMASTER_URL = "https://api.developer.coinbase.com/rpc/v1/base/3M1L5nFOcWdbHk0VCWxqcvlRKPI8Qd4p"; 
-    const btns = [document.getElementById('mintBtn')];
-    btns.forEach(b => { b.textContent = "Processing...", b.disabled = true; });
+    
+    // Używamy przycisku w modalu
+    const btn = document.getElementById('victoryMintBtn');
+    const statusDiv = document.getElementById('victoryStatus');
+    const txDiv = document.getElementById('victoryTxLink');
+    
+    btn.innerHTML = "Processing...";
+    btn.disabled = true;
+    statusDiv.textContent = "Waiting for wallet...";
+    statusDiv.style.color = "#94a3b8";
 
     try {
-      // 1. Check User Mint Count in Firebase
       let mintCount = 0;
       if (db) {
         const userRef = ref(db, 'players/' + myUserId);
@@ -753,7 +829,7 @@
       let txHash;
       let sponsored = false;
 
-      // 2. Decide: Sponsored (<2) or Paid (>=2)
+      // Logic: Sponsored (<2) or Paid (>=2)
       if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
           const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
           
@@ -764,16 +840,14 @@
               calls: [{ to: CONTRACT_ADDRESS, data: dataHex, value: "0x5af3107a4000" }]
           };
 
-          // Only add paymaster capabilities if mintCount < 2
           if (mintCount < 2) {
               callsParams.capabilities = { paymasterService: { url: PAYMASTER_URL } };
               sponsored = true;
-              console.log("Attempting Sponsored Mint (Count: " + mintCount + ")");
-          } else {
-              console.log("Attempting Paid Mint (Count: " + mintCount + ")");
+              console.log("Attempting Sponsored Mint");
           }
 
           try {
+             statusDiv.textContent = "Confirm in Wallet...";
              const result = await sdk.wallet.ethProvider.request({
                 method: 'wallet_sendCalls',
                 params: [callsParams]
@@ -781,12 +855,12 @@
              txHash = result;
           } catch (paymasterError) { 
               console.warn("Wallet call failed", paymasterError); 
-              sponsored = false; // Reset if failed
+              sponsored = false; 
               throw paymasterError;
           }
       }
 
-      // Fallback for non-SDK browsers (Standard Paid Mint)
+      // Fallback
       if (!txHash && window.ethereum) {
           const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
           try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); } catch(e){}
@@ -796,27 +870,39 @@
           });
       } else if (!txHash) { throw new Error("No wallet found"); }
 
-      // 3. Success! Update Firebase (Score +2 AND MintCount +1)
-      if(db && !hasMintedThisSession) {
+      // Success Logic
+      if(db) {
           hasMintedThisSession = true;
           const userRef = ref(db, 'players/' + myUserId);
           runTransaction(userRef, (userData) => {
               if (userData) { 
+                  // Add score ONLY if not added for this mint yet (simple check)
+                  // Better: rely on mintCount increment
                   userData.score = (userData.score || 0) + 2; 
-                  userData.mintCount = (userData.mintCount || 0) + 1; // Increment mint count
+                  userData.mintCount = (userData.mintCount || 0) + 1; 
               }
               return userData;
-          }).then(() => { currentScore += 2; updateScoreUI(); });
+          }).then(() => { 
+              currentScore += 2; 
+              updateScoreUI();
+              // Ukryj przycisk odzyskiwania jeśli był widoczny
+              document.getElementById('recoverMintBtn').style.display = 'none';
+          });
       }
 
-      document.getElementById('mintStatusSmall').textContent = sponsored ? "Success! Free Mint! 🏆" : "Success! Trophy Minted. 🏆";
-      btns.forEach(b => { b.textContent = "Minted! 🏆", b.classList.remove('btn'), b.classList.add('ghost'); });
+      statusDiv.textContent = sponsored ? "Success! Free Mint! 🏆" : "Success! Trophy Minted. 🏆";
+      statusDiv.style.color = "#4ade80";
+      btn.innerHTML = "MINTED! 🏆";
+      
       const actualHash = (typeof txHash === 'string') ? txHash : (txHash?.[0] || "tx_sent");
-      document.getElementById('txLink').innerHTML = `<a href="https://basescan.org/tx/${actualHash}" target="_blank">View on BaseScan</a>`;
+      txDiv.innerHTML = `<a href="https://basescan.org/tx/${actualHash}" target="_blank">View on BaseScan</a>`;
+      
     } catch(e) { 
         console.error(e);
-        alert("Status: " + (e.message || "Unknown error"));
-        btns.forEach(b => { b.textContent = "Try Again", b.disabled = false; });
+        statusDiv.textContent = "Error: " + (e.message || "Cancelled");
+        statusDiv.style.color = "#ef4444";
+        btn.innerHTML = "Try Again";
+        btn.disabled = false;
     }
   }
 
@@ -825,7 +911,6 @@
       document.getElementById('streakDisplay').textContent = currentStreak; 
   }
 
-  // ✅ PRZYWRÓCONY STREAK DO TABELI
   function showLeaderboard() {
       const tbody = document.getElementById('leaderboardBody');
       tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">Loading scores...</td></tr>';
@@ -857,6 +942,10 @@
       });
   }
 
+  window.closeVictoryModal = function() {
+      document.getElementById('victoryModal').classList.remove('show');
+  }
+
   function todayKey() { return new Date().toISOString().split('T')[0]; }
   function gamesPlayedToday() { if (hasPlayedToday) return 1; return parseInt(localStorage.getItem('played_' + todayKey()) || "0"); }
   function incrementGamesPlayed() { localStorage.setItem('played_' + todayKey(), 1); updateDailyUI(); }
@@ -866,9 +955,12 @@
   }
 
   document.getElementById('newCategoryBtn').onclick = () => initGame(true);
-  document.getElementById('mintBtn').onclick = mintNFT;
   document.getElementById('leaderboardBtn').onclick = showLeaderboard;
   document.getElementById('closeLeaderboard').onclick = () => document.getElementById('leaderboardOverlay').classList.remove('show');
+
+  // Funkcje do globalnego scope (dla buttonów onlick)
+  window.mintNFT = mintNFT;
+  window.initGame = initGame;
 
   window.onload = startApp;
 </script>
