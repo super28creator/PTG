@@ -18,7 +18,7 @@
     "subtitle": "Guess the phrase, watch the market.",
     "tagline": "Guess. Win. Mint.",
     "primaryCategory": "social",
-    "tags": ["game", "wordle", "crypto", "base"],
+    "tags": ["game", "daily", "web3", "puzzle", "base"],
     "screenshotUrls": ["https://ptg-one.vercel.app/icon-512.png"],
     "ogTitle": "Phrase To Guess",
     "ogDescription": "Daily Web3 word-guessing game.",
