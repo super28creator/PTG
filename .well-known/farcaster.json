@@ -1,8 +1,8 @@
 {
   "accountAssociation": {
-    "header": "eyJmaWQiOjEwNzYyNjQsInR5cGUiOiJhdXRoIiwia2V5IjoiMHhmYWM3NjkzOUMzMWU2Y0I4MEUwNGM0NkFFNWY4MTMyRWE1MzRDODU1In0",
+    "header": "eyJmaWQiOjEwNzYyNjQsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg0NUE2MDU2YzlBMUI4ZTlhQjJlQzhlNjVCMDg3Njc2YTIxZGI3NkY2In0",
     "payload": "eyJkb21haW4iOiJwdGctb25lLnZlcmNlbC5hcHAifQ",
-    "signature": "7w6ejGQ6T7xuLcWPk0sSD/FbD/bziEAxPCwyBuzcQWUQFlMPEcv2HubXWfGQvTFRtsMuerEtvkfUGIgd3AuHyBs="
+    "signature": "mzkxZYJznS+WffXu29XrsNMcHKRlyvQRWDPvXI2uxJsYS9mbio9DMYc4jZSCx0UkuPBNwZ9FsWvmz0OQlf7b9xs="
   },
   "miniapp": {
     "version": "1",
@@ -10,8 +10,10 @@
     "homeUrl": "https://ptg-one.vercel.app",
     "iconUrl": "https://ptg-one.vercel.app/icon-512.png",
     "imageUrl": "https://ptg-one.vercel.app/icon-512.png",
+    "heroImageUrl": "https://ptg-one.vercel.app/icon-512.png",
     "splashImageUrl": "https://ptg-one.vercel.app/icon-512.png",
     "splashBackgroundColor": "#0a0e1a",
+    "webhookUrl": "https://ptg-one.vercel.app/api/webhook",
     "description": "Daily Web3 word-guessing game on Base.",
     "subtitle": "Guess the phrase, watch the market.",
     "tagline": "Guess. Win. Mint.",
@@ -22,7 +24,6 @@
       "crypto",
       "base"
     ],
-    "heroImageUrl": "https://ptg-one.vercel.app/icon-512.png",
     "screenshotUrls": [
       "https://ptg-one.vercel.app/icon-512.png"
     ],
