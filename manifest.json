@@ -1,7 +1,7 @@
 {
   "name": "Phrase To Guess",
   "short_name": "PhraseGuess",
-  "description": "Daily Web3 word-guessing game on Base.",
+  "description": "Daily Web3 word-guessing game.",
   "version": "1.0.0",
   "icons": [
     {
@@ -33,7 +33,7 @@
     "iconUrl": "https://ptg-one.vercel.app/icon-512.png",
     "splashImageUrl": "https://ptg-one.vercel.app/icon-512.png",
     "splashBackgroundColor": "#071028",
-    "description": "Daily Web3 word-guessing game on Base.",
+    "description": "Daily Web3 word-guessing game.",
     "tags": ["game", "daily", "web3", "puzzle", "base"],
     "accountAssociation": {
       "header": "eyJmaWQiOjEwNzYyNjQsInR5cGUiOiJhdXRoIiwia2V5IjoiMHhmYWM3NjkzOUMzMWU2Y0I4MEUwNGM0NkFFNWY4MTMyRWE1MzRDODU1In0",

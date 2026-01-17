@@ -4,32 +4,15 @@
     "payload": "eyJkb21haW4iOiJodHRwczovL3B0Zy1vbmUudmVyY2VsLmFwcCJ9",
     "signature": "l/uvItk+nIYY9HvAaKkV4qCGIroU0i5UtS/8U7QtryE1KsBSOzBmh3Rcdnur4geLDqvOAPaXfAI4/79mQaPawRw="
   },
-  "miniapp": {
+  "frame": {
     "version": "1",
     "name": "Phrase To Guess",
-    "homeUrl": "https://ptg-one.vercel.app",
     "iconUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "imageUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "heroImageUrl": "https://ptg-one.vercel.app/icon-512.png",
+    "homeUrl": "https://ptg-one.vercel.app",
     "splashImageUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "splashBackgroundColor": "#0a0e1a",
-    "webhookUrl": "https://ptg-one.vercel.app/api/webhook",
-    "description": "Daily Web3 word-guessing game on Base.",
-    "subtitle": "Guess the phrase, watch the market.",
-    "tagline": "Guess. Win. Mint.",
-    "primaryCategory": "social",
-    "tags": [
-      "game",
-      "wordle",
-      "crypto",
-      "base"
-    ],
-    "screenshotUrls": [
-      "https://ptg-one.vercel.app/icon-512.png"
-    ],
-    "ogTitle": "Phrase To Guess",
-    "ogDescription": "Daily Web3 word-guessing game on Base.",
-    "ogImageUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "noindex": false
+    "splashBackgroundColor": "#071028",
+    "description": "Daily Web3 word-guessing game.",
+    "primaryCategory": "games",
+    "subtitle": "Daily Web3 word-guessing game on Base."
   }
 }
