@@ -44,6 +44,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
   <style>
     /* --- CONFIG --- */
@@ -177,10 +178,6 @@
     .chip { padding: 6px 12px; background: rgba(255,255,255,0.05); border-radius: 999px; font-weight: 600; border: var(--glass-border); }
     .user-chip { border-color: var(--accent-primary); background: rgba(139, 92, 246, 0.1); color: var(--accent-primary); }
 
-    .mint-panel { display: none; margin-top: 20px; padding: 20px; background: rgba(124,58,237,0.1); border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.3); }
-    .mint-panel.show { display: block; animation: fadeIn 0.5s ease; }
-    .available-cats li { margin-bottom: 6px; color: var(--text-muted); font-size: 13px; }
-
     .social-section { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
     .social-btn {
         flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -211,38 +208,50 @@
         text-align: center;
         width: 100%;
         border: 2px solid #4ade80;
-        box-shadow: 0 0 40px rgba(74, 222, 128, 0.2);
+        box-shadow: 0 0 60px rgba(74, 222, 128, 0.15);
+        background: radial-gradient(circle at center, #1a2035 0%, #0f121d 100%);
     }
     .victory-icon {
-        font-size: 64px; margin-bottom: 16px;
+        font-size: 72px; margin-bottom: 16px;
         animation: bounce 1s infinite;
+        text-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
     }
     .victory-title {
-        font-size: 36px; font-weight: 900; 
-        background: linear-gradient(to right, #4ade80, #22d3ee); 
+        font-size: 42px; font-weight: 900; 
+        background: linear-gradient(to bottom, #ffffff, #a5b4fc); 
         -webkit-background-clip: text; background-clip: text; 
         -webkit-text-fill-color: transparent; 
         margin-bottom: 8px;
         letter-spacing: -1px;
+        text-transform: uppercase;
     }
     .victory-subtitle {
-        color: #94a3b8; font-size: 16px; margin-bottom: 24px;
+        color: #4ade80; font-size: 18px; margin-bottom: 30px; font-weight: 600;
+        text-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
     }
     
     /* WIELKI PRZYCISK MINT */
     .big-mint-btn {
-        background: linear-gradient(90deg, #7c3aed, #db2777);
-        color: white; font-size: 20px; font-weight: 800;
-        padding: 18px 24px; border-radius: 16px; border: none;
+        background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+        color: white; font-size: 22px; font-weight: 800;
+        padding: 20px 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);
         width: 100%; cursor: pointer;
-        box-shadow: 0 10px 30px rgba(219, 39, 119, 0.4);
-        transition: transform 0.2s, box-shadow 0.2s;
-        display: flex; align-items: center; justify-content: center; gap: 10px;
+        box-shadow: 0 10px 40px rgba(124, 58, 237, 0.4);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-transform: uppercase; letter-spacing: 1px;
+        position: relative; overflow: hidden;
     }
-    .big-mint-btn:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(219, 39, 119, 0.6); }
-    .big-mint-btn:active { transform: scale(0.98); }
-    .big-mint-btn:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(1); }
+    .big-mint-btn:before {
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
+    }
+    .big-mint-btn:hover:not(:disabled) { transform: translateY(-4px) scale(1.02); box-shadow: 0 20px 50px rgba(124, 58, 237, 0.6); }
+    .big-mint-btn:active:not(:disabled) { transform: scale(0.98); }
+    .big-mint-btn:disabled { 
+        background: #334155; color: #94a3b8; 
+        cursor: not-allowed; box-shadow: none; border-color: transparent;
+    }
 
     .txlink a { color: var(--accent-secondary); text-decoration: none; border-bottom: 1px dotted var(--accent-secondary); transition: 0.2s;}
     .txlink a:hover { color: var(--text-bright); border-bottom-style: solid;}
@@ -267,7 +276,7 @@
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
   </style>
 </head>
 <body>
@@ -283,28 +292,22 @@
     <div class="mint-card victory-modal-content">
         <div class="victory-icon">🏆</div>
         <div class="victory-title">VICTORY!</div>
-        <div class="victory-subtitle">You solved the phrase!</div>
+        <div class="victory-subtitle">Phrase Solved!</div>
         
-        <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: left;">
-            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
-                <span style="color:#94a3b8;">Reward:</span>
-                <span style="color:#4ade80; font-weight:700;">+1 Point</span>
-            </div>
-            <div style="display:flex; justify-content:space-between;">
-                <span style="color:#94a3b8;">Bonus:</span>
-                <span style="color:#a78bfa; font-weight:700;">+2 Points (Mint)</span>
-            </div>
+        <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
+            <div style="color:#94a3b8; font-size: 14px; margin-bottom: 5px;">Your Reward:</div>
+            <div style="color:#a78bfa; font-weight:700; font-size: 18px;">Victory Trophy NFT</div>
         </div>
 
         <button id="victoryMintBtn" class="big-mint-btn" onclick="mintNFT()">
             <span>✨ MINT TROPHY</span>
         </button>
         
-        <div id="victoryStatus" style="margin-top:15px; font-weight:600; font-size:14px; min-height:20px; color:#94a3b8;"></div>
+        <div id="victoryStatus" style="margin-top:20px; font-weight:600; font-size:14px; min-height:20px; color:#94a3b8;"></div>
         <div id="victoryTxLink" class="small txlink" style="margin-top:5px;"></div>
 
-        <div style="margin-top:20px;">
-            <button class="ghost" onclick="closeVictoryModal()" style="width:100%; font-size:13px; padding: 10px;">Close & View Stats</button>
+        <div style="margin-top:25px;">
+            <button class="ghost" onclick="closeVictoryModal()" style="width:100%; font-size:13px; padding: 12px; opacity:0.7;">Close & View Stats</button>
         </div>
     </div>
 </div>
@@ -381,6 +384,10 @@
         <div style="display: flex; gap: 10px;">
             <a href="https://x.com/Super_Apps_" target="_blank" class="social-btn">
                 <svg class="social-icon" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                Twitter
+            </a>
+            <a href="https://discord.gg/m99P3DXr5t" target="_blank" class="social-btn">
+                <svg class="social-icon" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z"/></svg>
                 Twitter
             </a>
             <a href="https://discord.gg/m99P3DXr5t" target="_blank" class="social-btn">
@@ -711,6 +718,9 @@
       gameOver = true; document.getElementById('status').innerHTML = "<span class='won'>VICTORY!</span>";
       generateHugeCandle('up'); drawCandleChart();
       
+      // URUCHOM KONFETTI 
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+
       if(db && !hasPlayedToday) {
           hasPlayedToday = true;
           const userRef = ref(db, 'players/' + myUserId);
@@ -746,7 +756,7 @@
           });
       }
 
-      // ✅ ZMIANA: Pokaż duże okno zwycięstwa
+      // Pokaż duże okno zwycięstwa
       setTimeout(() => {
           document.getElementById('victoryModal').classList.add('show');
       }, 1000); 
@@ -801,11 +811,10 @@
     });
   }
 
-  // ✅ UPDATED SPONSORED MINT (Connected to Modal)
+  // ✅ UPDATED SPONSORED MINT (Connected to Modal + Atomic Fix)
   async function mintNFT() {
     const PAYMASTER_URL = "https://api.developer.coinbase.com/rpc/v1/base/3M1L5nFOcWdbHk0VCWxqcvlRKPI8Qd4p"; 
     
-    // Używamy przycisku w modalu
     const btn = document.getElementById('victoryMintBtn');
     const statusDiv = document.getElementById('victoryStatus');
     const txDiv = document.getElementById('victoryTxLink');
@@ -824,12 +833,19 @@
         mintCount = userData.mintCount || 0;
       }
 
+      // 🔴 BLOKADA PODWÓJNEGO MINTA
+      if (mintCount >= 1) {
+          statusDiv.textContent = "You already own this NFT!";
+          statusDiv.style.color = "#f59e0b";
+          btn.innerHTML = "ALREADY OWNED";
+          return;
+      }
+
       const iface = new ethers.utils.Interface(CONTRACT_ABI);
       const dataHex = iface.encodeFunctionData("publicMint", [METADATA_URL]);
       let txHash;
       let sponsored = false;
 
-      // Logic: Sponsored (<2) or Paid (>=2)
       if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
           const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
           
@@ -840,8 +856,15 @@
               calls: [{ to: CONTRACT_ADDRESS, data: dataHex, value: "0x5af3107a4000" }]
           };
 
-          if (mintCount < 2) {
-              callsParams.capabilities = { paymasterService: { url: PAYMASTER_URL } };
+          // DARMOWY MINT TYLKO JESLI MINTCOUNT < 1
+          if (mintCount < 1) {
+              callsParams.capabilities = { 
+                  paymasterService: { url: PAYMASTER_URL },
+                  atomic: true // ✅ FIX: Atomic flag for Smart Wallet
+              };
+              // Alternatywna flaga dla nowszych/innych wersji
+              callsParams.atomicRequired = true; 
+              
               sponsored = true;
               console.log("Attempting Sponsored Mint");
           }
@@ -876,8 +899,6 @@
           const userRef = ref(db, 'players/' + myUserId);
           runTransaction(userRef, (userData) => {
               if (userData) { 
-                  // Add score ONLY if not added for this mint yet (simple check)
-                  // Better: rely on mintCount increment
                   userData.score = (userData.score || 0) + 2; 
                   userData.mintCount = (userData.mintCount || 0) + 1; 
               }
@@ -885,7 +906,6 @@
           }).then(() => { 
               currentScore += 2; 
               updateScoreUI();
-              // Ukryj przycisk odzyskiwania jeśli był widoczny
               document.getElementById('recoverMintBtn').style.display = 'none';
           });
       }
@@ -896,6 +916,9 @@
       
       const actualHash = (typeof txHash === 'string') ? txHash : (txHash?.[0] || "tx_sent");
       txDiv.innerHTML = `<a href="https://basescan.org/tx/${actualHash}" target="_blank">View on BaseScan</a>`;
+      
+      // Konfetti jeszcze raz na sukces
+      confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
       
     } catch(e) { 
         console.error(e);
