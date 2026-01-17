@@ -416,56 +416,49 @@
 
   // --- INIT APP ---
   async function startApp() {
-      // ✅ PRIORYTET: Wyślij sygnał do Base OD RAZU!
+      // ✅ FIX: Wyślij gotowość natychmiast, aby Base nie blokował ekranu
       if (sdk && sdk.actions) {
           try {
               sdk.actions.ready();
-              console.log("Called sdk.actions.ready()");
-          } catch (err) {
-              console.error("SDK Ready Error:", err);
-          }
+          } catch (err) { console.warn(err); }
       }
 
       try {
           const app = initializeApp(firebaseConfig);
           db = getDatabase(app);
           console.log("Firebase OK");
-      } catch(e) { console.error("Firebase Error", e); }
 
-      // Identify User
-      if (sdk && sdk.context) {
-          try {
-              const ctx = await sdk.context;
-              if(ctx?.user?.username) {
-                  myUsername = "@" + ctx.user.username;
-                  myUserId = myUsername.replace(/[^a-zA-Z0-9]/g, ""); 
-                  document.getElementById('playerDisplay').textContent = myUsername;
-                  document.getElementById('playerDisplay').style.display = 'inline-flex';
-              }
-          } catch(e) {}
-      } else if (window.ethereum) {
-          try {
-              const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-              if(accounts.length > 0) {
-                  myUsername = accounts[0].substring(0,6) + "..." + accounts[0].substring(38);
-                  myUserId = accounts[0].toLowerCase();
-                  document.getElementById('playerDisplay').textContent = myUsername;
-                  document.getElementById('playerDisplay').style.display = 'inline-flex';
-              }
-          } catch(e) {}
-      }
+          if (sdk && sdk.context) {
+              try {
+                  const ctx = await sdk.context;
+                  if(ctx?.user?.username) {
+                      myUsername = "@" + ctx.user.username;
+                      myUserId = myUsername.replace(/[^a-zA-Z0-9]/g, ""); 
+                      document.getElementById('playerDisplay').textContent = myUsername;
+                      document.getElementById('playerDisplay').style.display = 'inline-flex';
+                  }
+              } catch(e) {}
+          } else if (window.ethereum) {
+              try {
+                  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                  if(accounts.length > 0) {
+                      myUsername = accounts[0].substring(0,6) + "..." + accounts[0].substring(38);
+                      myUserId = accounts[0].toLowerCase();
+                      document.getElementById('playerDisplay').textContent = myUsername;
+                      document.getElementById('playerDisplay').style.display = 'inline-flex';
+                  }
+              } catch(e) {}
+          }
 
-      // Safe Load Logic: Timeout safety net
-      const safeLoad = setTimeout(() => {
+          // ✅ Próba synchronizacji profilu (jeśli nie wyjdzie, idziemy dalej)
+          await syncUserProfile();
+      } catch(e) {
+          console.error("Critical error during startApp", e);
+      } finally {
+          // ✅ FIX: Zawsze usuwaj ekran ładowania, niezależnie od błędów w async
           document.getElementById('loadingScreen').style.display = 'none';
-          if(!hasPlayedToday) initGame(); else blockGame();
-      }, 2000);
-
-      await syncUserProfile();
-      clearTimeout(safeLoad);
-      document.getElementById('loadingScreen').style.display = 'none';
-      
-      if(hasPlayedToday) blockGame(); else initGame();
+          if(hasPlayedToday) blockGame(); else initGame();
+      }
   }
 
   async function syncUserProfile() {
@@ -485,7 +478,7 @@
       } catch(e) { console.error("Sync Error", e); }
       document.getElementById('scoreDisplay').innerText = currentScore;
       document.getElementById('streakDisplay').innerText = currentStreak;
-      updateDailyUI(); // Force update based on Firebase state
+      updateDailyUI();
   }
 
   // --- GAME LOGIC ---
@@ -506,16 +499,14 @@
     document.getElementById('categoryDisplay').textContent = "Category: " + currentCategory;
     document.getElementById('status').innerHTML = "";
     document.getElementById('mintPanel').classList.remove('show');
-    document.getElementById('modalOverlay').classList.remove('show');
     document.getElementById('tries').textContent = "0";
     document.getElementById('keyboard').style.pointerEvents = 'auto';
     document.getElementById('keyboard').style.opacity = '1';
     
-    const btns = [document.getElementById('mintBtn'), document.getElementById('modalMintBtn')];
+    const btns = [document.getElementById('mintBtn')];
     btns.forEach(b => { b.textContent = "MINT NFT"; b.disabled = false; b.classList.remove('ghost'); b.classList.add('btn'); });
     document.getElementById('mintStatusSmall').textContent = "";
     document.getElementById('txLink').innerHTML = "";
-    document.getElementById('modalTxLink').innerHTML = "";
     
     renderWord(); renderKeyboard(); drawCandleChart(); updateDailyUI();
   }
@@ -527,7 +518,7 @@
         document.getElementById('keyboard').style.opacity = '0.3';
         document.getElementById('newCategoryBtn').style.display = 'none';
         document.getElementById('nextGameTimer').style.display = 'block';
-        updateDailyUI(); // Ensure UI shows 1/1 when blocked
+        updateDailyUI();
         setTimeout(showLeaderboard, 500);
   }
 
@@ -556,7 +547,7 @@
     });
   }
 
-  // ✅ PHYSICAL KEYBOARD SUPPORT
+  // PHYSICAL KEYBOARD SUPPORT
   document.addEventListener('keydown', (e) => {
       if(gameOver || hasPlayedToday) return;
       const key = e.key.toUpperCase();
@@ -591,7 +582,6 @@
       gameOver = true; document.getElementById('status').innerHTML = "<span class='won'>VICTORY!</span>";
       generateHugeCandle('up'); drawCandleChart();
       
-      // WIN (+1 Score, +1 Streak)
       if(db && !hasPlayedToday) {
           hasPlayedToday = true;
           const userRef = ref(db, 'players/' + myUserId);
@@ -615,14 +605,12 @@
       }
 
       document.getElementById('mintPanel').classList.add('show'); 
-      document.getElementById('modalOverlay').classList.add('show');
       incrementGamesPlayed();
 
     } else if (mistakes >= MAX_MISTAKES) {
       gameOver = true; document.getElementById('status').innerHTML = "<span class='dead'>LIQUIDATED!</span>";
       generateHugeCandle('down'); drawCandleChart(); incrementGamesPlayed();
       
-      // LOSE (Reset Streak)
       if(db && !hasPlayedToday) {
           hasPlayedToday = true;
           const today = new Date().toISOString().split('T')[0];
@@ -668,12 +656,10 @@
     });
   }
 
-  // ✅ INTELIGENTNY MINT: 2 razy za darmo, potem płatne
+  // ✅ SPONSOROWANY MINT NFT (PAYMASTER LINK)
   async function mintNFT() {
-    // 👇👇👇 PAYMASTER URL 👇👇👇
     const PAYMASTER_URL = "https://api.developer.coinbase.com/rpc/v1/base/3M1L5nFOcWdbHk0VCWxqcvlRKPI8Qd4p"; 
-
-    const btns = [document.getElementById('mintBtn'), document.getElementById('modalMintBtn')];
+    const btns = [document.getElementById('mintBtn')];
     btns.forEach(b => { b.textContent = "Processing...", b.disabled = true; });
 
     try {
@@ -682,82 +668,46 @@
       let txHash;
       let sponsored = false;
 
-      // KROK 1: Próba darmowego minta (Sponsorowanego przez Coinbase Paymaster)
       if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
           const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
-          
           try {
-             console.log("Próba darmowej transakcji...");
              const result = await sdk.wallet.ethProvider.request({
                 method: 'wallet_sendCalls',
                 params: [{
-                    version: '1.0',
-                    chainId: '0x2105', // Base Mainnet
-                    from: accounts[0],
-                    calls: [{
-                        to: CONTRACT_ADDRESS,
-                        data: dataHex,
-                        value: "0x5af3107a4000" // 0.0001 ETH (Cena NFT)
-                    }],
-                    capabilities: {
-                        paymasterService: {
-                            url: PAYMASTER_URL
-                        }
-                    }
+                    version: '1.0', chainId: '0x2105', from: accounts[0],
+                    calls: [{ to: CONTRACT_ADDRESS, data: dataHex, value: "0x5af3107a4000" }],
+                    capabilities: { paymasterService: { url: PAYMASTER_URL } }
                 }]
              });
-             txHash = result; 
-             sponsored = true;
-             console.log("Sponsorowany mint udany! Hash:", txHash);
-          } catch (paymasterError) {
-             console.warn("Limit darmowych mintów wyczerpany lub błąd paymastera. Przełączam na płatny.", paymasterError);
-          }
+             txHash = result; sponsored = true;
+          } catch (paymasterError) { console.warn("Paymaster fail, falling back", paymasterError); }
       }
 
-      // KROK 2: Jeśli darmowy się nie udał (bo limit wykorzystany lub błąd), płaci użytkownik
-      if (!sponsored) {
-          if (window.ethereum) {
-              const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-              // Upewnij się, że jesteśmy na Base
-              try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); } catch(e){}
-              
-              txHash = await window.ethereum.request({
-                  method: 'eth_sendTransaction',
-                  params: [{ from: accounts[0], to: CONTRACT_ADDRESS, value: "0x5af3107a4000", data: dataHex }]
-              });
-          } else if (!txHash) {
-              throw new Error("No wallet found");
-          }
-      }
+      if (!sponsored && window.ethereum) {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); } catch(e){}
+          txHash = await window.ethereum.request({
+              method: 'eth_sendTransaction',
+              params: [{ from: accounts[0], to: CONTRACT_ADDRESS, value: "0x5af3107a4000", data: dataHex }]
+          });
+      } else if (!txHash) { throw new Error("No wallet found"); }
 
-      // SUKCES - Aktualizacja Bazy Danych i UI
       if(db && !hasMintedThisSession) {
           hasMintedThisSession = true;
           const userRef = ref(db, 'players/' + myUserId);
           runTransaction(userRef, (userData) => {
               if (userData) { userData.score = (userData.score || 0) + 2; }
               return userData;
-          }).then(() => {
-              currentScore += 2;
-              updateScoreUI();
-          });
+          }).then(() => { currentScore += 2; updateScoreUI(); });
       }
 
-      document.getElementById('mintStatusSmall').textContent = sponsored ? "Success! Minted for FREE! 🏆" : "Success! Trophy Minted. 🏆";
+      document.getElementById('mintStatusSmall').textContent = sponsored ? "Success! Free Mint! 🏆" : "Success! Trophy Minted. 🏆";
       btns.forEach(b => { b.textContent = "Minted! 🏆", b.classList.remove('btn'), b.classList.add('ghost'); });
-      
       const actualHash = (typeof txHash === 'string') ? txHash : (txHash?.[0] || "tx_sent");
-      const link = `https://basescan.org/tx/${actualHash}`;
-      
-      document.getElementById('txLink').innerHTML = `<a href="${link}" target="_blank">View on BaseScan</a>`;
-      document.getElementById('modalTxLink').innerHTML = `<a href="${link}" target="_blank">View on BaseScan -></a>`;
-      setTimeout(() => document.getElementById('modalOverlay').classList.remove('show'), 2000);
-
+      document.getElementById('txLink').innerHTML = `<a href="https://basescan.org/tx/${actualHash}" target="_blank">View on BaseScan</a>`;
     } catch(e) { 
         console.error(e);
-        let msg = e.message || "Unknown error";
-        if (msg.includes("user rejected")) msg = "Transaction cancelled";
-        alert("Status: " + msg);
+        alert("Status: " + (e.message || "Unknown error"));
         btns.forEach(b => { b.textContent = "Try Again", b.disabled = false; });
     }
   }
@@ -771,41 +721,25 @@
       const tbody = document.getElementById('leaderboardBody');
       tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">Loading scores...</td></tr>';
       document.getElementById('leaderboardOverlay').classList.add('show');
-
-      if (!db) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">DB Error</td></tr>'; return; }
-
+      if (!db) return;
       const playersRef = ref(db, 'players');
       onValue(playersRef, (snapshot) => {
           const data = snapshot.val();
-          if (!data) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No scores yet!</td></tr>'; return; }
-
+          if (!data) return;
           const sortedPlayers = Object.values(data).sort((a, b) => (b.score||0) - (a.score||0)).slice(0, 50);
-
           tbody.innerHTML = sortedPlayers.map((p, i) => { 
               const rank = i + 1;
               let rankClass = "rank-badge rank-other";
               if(rank===1) rankClass = "rank-badge rank-1";
               else if(rank===2) rankClass = "rank-badge rank-2";
               else if(rank===3) rankClass = "rank-badge rank-3";
-              
-              const isMe = p.name === myUsername;
-              const nameStyle = isMe ? 'color: #8b5cf6; font-weight: 700;' : 'color: #fff;';
-              return `
-                <tr>
-                    <td><div class="${rankClass}">${rank}</div></td>
-                    <td style="${nameStyle}">${p.name} <span style="font-size:10px; color:#94a3b8; margin-left:4px;">(🔥${p.streak||0})</span></td>
-                    <td style="text-align:right; font-weight:700;">${p.score||0}</td>
-                </tr>
-              `;
+              return `<tr><td><div class="${rankClass}">${rank}</div></td><td>${p.name}</td><td style="text-align:right;">${p.score||0}</td></tr>`;
           }).join('');
       });
   }
 
   function todayKey() { return new Date().toISOString().split('T')[0]; }
-  function gamesPlayedToday() { 
-      if (hasPlayedToday) return 1;
-      return parseInt(localStorage.getItem('played_' + todayKey()) || "0"); 
-  }
+  function gamesPlayedToday() { if (hasPlayedToday) return 1; return parseInt(localStorage.getItem('played_' + todayKey()) || "0"); }
   function incrementGamesPlayed() { localStorage.setItem('played_' + todayKey(), 1); updateDailyUI(); }
   function updateDailyUI() { 
       const count = (hasPlayedToday || gamesPlayedToday() >= 1) ? 1 : 0;
@@ -814,8 +748,6 @@
 
   document.getElementById('newCategoryBtn').onclick = () => initGame(true);
   document.getElementById('mintBtn').onclick = mintNFT;
-  document.getElementById('modalMintBtn').onclick = mintNFT;
-  document.getElementById('modalCloseBtn').onclick = () => document.getElementById('modalOverlay').classList.remove('show');
   document.getElementById('leaderboardBtn').onclick = showLeaderboard;
   document.getElementById('closeLeaderboard').onclick = () => document.getElementById('leaderboardOverlay').classList.remove('show');
 
