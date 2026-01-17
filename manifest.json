@@ -37,8 +37,8 @@
     "tags": ["game", "daily", "web3", "puzzle", "base"],
     "accountAssociation": {
       "header": "eyJmaWQiOjEwNzYyNjQsInR5cGUiOiJhdXRoIiwia2V5IjoiMHhmYWM3NjkzOUMzMWU2Y0I4MEUwNGM0NkFFNWY4MTMyRWE1MzRDODU1In0",
-      "payload": "eyJkb21haW4iOiJodHRwczovL3B0Zy1vbmUudmVyY2VsLmFwcCJ9",
-      "signature": "l/uvItk+nIYY9HvAaKkV4qCGIroU0i5UtS/8U7QtryE1KsBSOzBmh3Rcdnur4geLDqvOAPaXfAI4/79mQaPawRw="
+      "payload": "eyJkb21haW4iOiJwdGctb25lLnZlcmNlbC5hcHAifQ",
+      "signature": "OcvxnLJLLNIZa8/5LhBeOtl07lTJOtMZLreGg4mzBMA8AgysJxN6rGsGdixgPaFBVvzb2CLwrtJ7YAECQbebRRs="
     }
   }
 }
