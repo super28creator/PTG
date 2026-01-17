@@ -659,8 +659,11 @@
     });
   }
 
-  // ✅ HYBRID MINT (DYNAMIC ENCODING + RAW SEND)
+  // ✅ INTELIGENTNY MINT: Sponsoring przez Coinbase Paymaster
   async function mintNFT() {
+    // 👇 LINK Z TWOJEGO PANELU
+    const PAYMASTER_URL = "https://api.developer.coinbase.com/rpc/v1/base/3M1L5nFOcWdbHk0VCWxqcvlRKPI8Qd4p";
+
     const btns = [document.getElementById('mintBtn'), document.getElementById('modalMintBtn')];
     btns.forEach(b => { b.textContent = "Processing...", b.disabled = true; });
 
@@ -668,23 +671,55 @@
       const iface = new ethers.utils.Interface(CONTRACT_ABI);
       const dataHex = iface.encodeFunctionData("publicMint", [METADATA_URL]);
       let txHash;
+      let sponsored = false;
 
+      // KROK 1: Próba darmowego minta (Sponsorowanego)
       if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
           const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
-          txHash = await sdk.wallet.ethProvider.request({
-              method: 'eth_sendTransaction',
-              params: [{ from: accounts[0], to: CONTRACT_ADDRESS, value: "0x5af3107a4000", data: dataHex }]
-          });
-      } else if (window.ethereum) {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); } catch(e){}
-          txHash = await window.ethereum.request({
-              method: 'eth_sendTransaction',
-              params: [{ from: accounts[0], to: CONTRACT_ADDRESS, value: "0x5af3107a4000", data: dataHex }]
-          });
-      } else throw new Error("No wallet");
+          
+          try {
+             console.log("Próba darmowej transakcji (Paymaster)...");
+             const result = await sdk.wallet.ethProvider.request({
+                method: 'wallet_sendCalls',
+                params: [{
+                    version: '1.0',
+                    chainId: '0x2105', // Base Mainnet
+                    from: accounts[0],
+                    calls: [{
+                        to: CONTRACT_ADDRESS,
+                        data: dataHex,
+                        value: "0x5af3107a4000" // 0.0001 ETH
+                    }],
+                    capabilities: {
+                        paymasterService: {
+                            url: PAYMASTER_URL
+                        }
+                    }
+                }]
+             });
+             txHash = result; 
+             sponsored = true;
+             console.log("Sponsorowany mint udany! Hash:", txHash);
+          } catch (paymasterError) {
+             console.warn("Błąd Paymastera lub wyczerpany limit. Przełączam na płatny.", paymasterError);
+          }
+      }
 
-      // +2 Points on Mint
+      // KROK 2: Fallback do płatnego minta
+      if (!sponsored) {
+          if (window.ethereum) {
+              const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+              try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); } catch(e){}
+              txHash = await window.ethereum.request({
+                  method: 'eth_sendTransaction',
+                  params: [{ from: accounts[0], to: CONTRACT_ADDRESS, value: "0x5af3107a4000", data: dataHex }]
+              });
+          } else if (!txHash) {
+              throw new Error("No wallet found");
+          }
+      }
+
+      // SUKCES - Aktualizacja Bazy Danych i UI
       if(db && !hasMintedThisSession) {
           hasMintedThisSession = true;
           const userRef = ref(db, 'players/' + myUserId);
@@ -697,9 +732,12 @@
           });
       }
 
-      document.getElementById('mintStatusSmall').textContent = "Success! Trophy Minted.";
+      document.getElementById('mintStatusSmall').textContent = sponsored ? "Success! Minted for FREE! 🏆" : "Success! Trophy Minted. 🏆";
       btns.forEach(b => { b.textContent = "Minted! 🏆", b.classList.remove('btn'), b.classList.add('ghost'); });
-      const link = `https://basescan.org/tx/${txHash}`;
+      
+      const actualHash = (typeof txHash === 'string') ? txHash : (txHash?.[0] || "tx_sent");
+      const link = `https://basescan.org/tx/${actualHash}`;
+      
       document.getElementById('txLink').innerHTML = `<a href="${link}" target="_blank">View on BaseScan</a>`;
       document.getElementById('modalTxLink').innerHTML = `<a href="${link}" target="_blank">View on BaseScan -></a>`;
       setTimeout(() => document.getElementById('modalOverlay').classList.remove('show'), 2000);
