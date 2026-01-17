@@ -7,24 +7,24 @@
   "miniapp": {
     "version": "1",
     "name": "Phrase To Guess",
-    "homeUrl": "https://ptg-git-main-super-team1.vercel.app",
-    "iconUrl": "https://ptg-git-main-super-team1.vercel.app/icon-512.png",
-    "splashImageUrl": "https://ptg-git-main-super-team1.vercel.app/icon-512.png",
+    "homeUrl": "https://ptg-one.vercel.app",
+    "iconUrl": "https://ptg-one.vercel.app/icon-512.png",
+    "splashImageUrl": "https://ptg-one.vercel.app/icon-512.png",
     "splashBackgroundColor": "#0a0e1a",
-    "webhookUrl": "https://ptg-git-main-super-team1.vercel.app",
+    "webhookUrl": "https://ptg-one.vercel.app/api/webhook",
     "subtitle": "Daily Web3 word game",
     "description": "Daily Web3 word-guessing game on Base. Solve the phrase, watch the market.",
     "screenshotUrls": [
-      "https://ptg-git-main-super-team1.vercel.app/icon-512.png"
+      "https://ptg-one.vercel.app/icon-512.png"
     ],
     "primaryCategory": "social",
     "tags": ["game", "wordle", "crypto", "base"],
-    "heroImageUrl": "https://ptg-git-main-super-team1.vercel.app/icon-512.png",
-    "imageUrl": "https://ptg-git-main-super-team1.vercel.app/icon-512.png",
+    "heroImageUrl": "https://ptg-one.vercel.app/icon-512.png",
+    "imageUrl": "https://ptg-one.vercel.app/icon-512.png",
     "tagline": "Guess. Win. Mint.",
     "ogTitle": "Phrase To Guess",
     "ogDescription": "Daily Web3 word-guessing game on Base.",
-    "ogImageUrl": "https://ptg-git-main-super-team1.vercel.app/icon-512.png",
+    "ogImageUrl": "https://ptg-one.vercel.app/icon-512.png",
     "noindex": false
   }
 }
