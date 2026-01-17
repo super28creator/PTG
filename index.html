@@ -245,8 +245,16 @@
         <div>
             <h1>Phrase To Guess</h1>
             <p class="lead">Guess the phrase. Watch the market.</p>
-            <p class="lead">🏆Win: +1 pt</p>
-            <p class="lead">✨Mint: +2 pt</p>
+            <div style="margin: 10px 0; font-size: 14px; font-weight: 500; color: #94a3b8;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span>🏆 Win:</span> 
+                <span style="color: #4ade80; font-weight: bold;">+1 pt</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span>✨ Mint:</span> 
+                <span style="color: #a78bfa; font-weight: bold;">+2 pts</span>
+              </div>
+            </div>
         </div>
         <div style="text-align:right;">
              <div class="small" id="dailyInfo" style="background:rgba(255,255,255,0.05); padding:6px 10px; border-radius:8px; font-size: 12px; margin-bottom: 6px;">Games: 0/1</div>
@@ -278,7 +286,7 @@
     </div>
     
     <div id="nextGameTimer" style="display:none; text-align:center; margin-top:20px; font-size:13px; color:#94a3b8; font-style:italic;">
-        Daily limit reached. Come back tomorrow.
+        Daily limit reached. Next game in: <span id="countdown" style="color:var(--accent-secondary); font-weight:700; font-family:'Roboto Mono', monospace;">--:--:--</span>
     </div>
     
     <div id="keyboard" class="keyboard"></div>
@@ -478,8 +486,19 @@
           if(snapshot.exists()) {
               const data = snapshot.val();
               currentScore = data.score || 0;
-              currentStreak = data.streak || 0;
+              
+              // LOGIKA STREAKA (UI FIX)
               const today = new Date().toISOString().split('T')[0];
+              const yesterdayDate = new Date();
+              yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+              const yesterday = yesterdayDate.toISOString().split('T')[0];
+
+              if (data.lastPlayed === today || data.lastPlayed === yesterday) {
+                  currentStreak = data.streak || 0;
+              } else {
+                  currentStreak = 0;
+              }
+              
               if(data.lastPlayed === today) {
                   hasPlayedToday = true;
               }
@@ -528,7 +547,40 @@
         document.getElementById('newCategoryBtn').style.display = 'none';
         document.getElementById('nextGameTimer').style.display = 'block';
         updateDailyUI();
+        startCountdown(); // ✅ URUCHAMIAMY LICZNIK
         setTimeout(showLeaderboard, 500);
+  }
+  
+  // ✅ FUNKCJA ODLICZAJĄCA DO PÓŁNOCY UTC
+  function startCountdown() {
+      const timerElem = document.getElementById('countdown');
+      if (!timerElem) return;
+
+      function update() {
+          const now = new Date();
+          const tomorrow = new Date(now);
+          tomorrow.setUTCHours(24, 0, 0, 0); // Następna północ UTC
+
+          const diff = tomorrow - now;
+
+          if (diff <= 0) {
+              timerElem.textContent = "00:00:00"; // Reset
+              return;
+          }
+
+          const h = Math.floor(diff / (1000 * 60 * 60));
+          const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+          const hStr = h < 10 ? "0" + h : h;
+          const mStr = m < 10 ? "0" + m : m;
+          const sStr = s < 10 ? "0" + s : s;
+
+          timerElem.textContent = `${hStr}:${mStr}:${sStr}`;
+      }
+
+      update();
+      setInterval(update, 1000);
   }
 
   function preloadChartHistory() { for(let i=0; i<80; i++) { generateCandle((Math.random() - 0.5) * 1.5, 2.5); } }
@@ -597,9 +649,20 @@
           const today = new Date().toISOString().split('T')[0];
 
           runTransaction(userRef, (userData) => {
+              const yesterdayDate = new Date();
+              yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+              const yesterday = yesterdayDate.toISOString().split('T')[0];
+
               if (userData) {
                   userData.score = (userData.score || 0) + 1;
-                  userData.streak = (userData.streak || 0) + 1;
+                  
+                  // LOGIKA STREAKA (DB FIX)
+                  if (userData.lastPlayed === yesterday) {
+                      userData.streak = (userData.streak || 0) + 1;
+                  } else {
+                      userData.streak = 1;
+                  }
+
                   userData.lastPlayed = today;
                   userData.name = myUsername;
               } else {
@@ -607,7 +670,11 @@
               }
               return userData;
           }).then(() => {
-              currentScore++; currentStreak++;
+              currentScore++; 
+              // Wizualny update lokalny
+              const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+              const yesterday = yesterdayDate.toISOString().split('T')[0];
+              currentStreak++; 
               updateScoreUI();
               updateDailyUI();
           });
@@ -625,7 +692,7 @@
           const today = new Date().toISOString().split('T')[0];
           update(ref(db, 'players/' + myUserId), {
               name: myUsername,
-              streak: 0,
+              streak: 0, 
               lastPlayed: today
           }).then(() => {
               currentStreak = 0;
@@ -665,34 +732,62 @@
     });
   }
 
-  // ✅ SPONSOROWANY MINT NFT (PAYMASTER LINK)
+  // ✅ UPDATED SPONSORED MINT (First 2 Free)
   async function mintNFT() {
     const PAYMASTER_URL = "https://api.developer.coinbase.com/rpc/v1/base/3M1L5nFOcWdbHk0VCWxqcvlRKPI8Qd4p"; 
     const btns = [document.getElementById('mintBtn')];
     btns.forEach(b => { b.textContent = "Processing...", b.disabled = true; });
 
     try {
+      // 1. Check User Mint Count in Firebase
+      let mintCount = 0;
+      if (db) {
+        const userRef = ref(db, 'players/' + myUserId);
+        const snapshot = await get(userRef);
+        const userData = snapshot.val() || {};
+        mintCount = userData.mintCount || 0;
+      }
+
       const iface = new ethers.utils.Interface(CONTRACT_ABI);
       const dataHex = iface.encodeFunctionData("publicMint", [METADATA_URL]);
       let txHash;
       let sponsored = false;
 
+      // 2. Decide: Sponsored (<2) or Paid (>=2)
       if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
           const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
+          
+          let callsParams = {
+              version: '1.0', 
+              chainId: '0x2105', 
+              from: accounts[0],
+              calls: [{ to: CONTRACT_ADDRESS, data: dataHex, value: "0x5af3107a4000" }]
+          };
+
+          // Only add paymaster capabilities if mintCount < 2
+          if (mintCount < 2) {
+              callsParams.capabilities = { paymasterService: { url: PAYMASTER_URL } };
+              sponsored = true;
+              console.log("Attempting Sponsored Mint (Count: " + mintCount + ")");
+          } else {
+              console.log("Attempting Paid Mint (Count: " + mintCount + ")");
+          }
+
           try {
              const result = await sdk.wallet.ethProvider.request({
                 method: 'wallet_sendCalls',
-                params: [{
-                    version: '1.0', chainId: '0x2105', from: accounts[0],
-                    calls: [{ to: CONTRACT_ADDRESS, data: dataHex, value: "0x5af3107a4000" }],
-                    capabilities: { paymasterService: { url: PAYMASTER_URL } }
-                }]
+                params: [callsParams]
              });
-             txHash = result; sponsored = true;
-          } catch (paymasterError) { console.warn("Paymaster fail, falling back", paymasterError); }
+             txHash = result;
+          } catch (paymasterError) { 
+              console.warn("Wallet call failed", paymasterError); 
+              sponsored = false; // Reset if failed
+              throw paymasterError;
+          }
       }
 
-      if (!sponsored && window.ethereum) {
+      // Fallback for non-SDK browsers (Standard Paid Mint)
+      if (!txHash && window.ethereum) {
           const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
           try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); } catch(e){}
           txHash = await window.ethereum.request({
@@ -701,11 +796,15 @@
           });
       } else if (!txHash) { throw new Error("No wallet found"); }
 
+      // 3. Success! Update Firebase (Score +2 AND MintCount +1)
       if(db && !hasMintedThisSession) {
           hasMintedThisSession = true;
           const userRef = ref(db, 'players/' + myUserId);
           runTransaction(userRef, (userData) => {
-              if (userData) { userData.score = (userData.score || 0) + 2; }
+              if (userData) { 
+                  userData.score = (userData.score || 0) + 2; 
+                  userData.mintCount = (userData.mintCount || 0) + 1; // Increment mint count
+              }
               return userData;
           }).then(() => { currentScore += 2; updateScoreUI(); });
       }
