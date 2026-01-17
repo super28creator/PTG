@@ -659,10 +659,10 @@
     });
   }
 
-  // ✅ INTELIGENTNY MINT: Sponsoring przez Coinbase Paymaster
+  // ✅ INTELIGENTNY MINT: 2 razy za darmo, potem płatne
   async function mintNFT() {
-    // 👇 LINK Z TWOJEGO PANELU
-    const PAYMASTER_URL = "https://api.developer.coinbase.com/rpc/v1/base/3M1L5nFOcWdbHk0VCWxqcvlRKPI8Qd4p";
+    // 👇👇👇 PAYMASTER URL 👇👇👇
+    const PAYMASTER_URL = "https://api.developer.coinbase.com/rpc/v1/base/3M1L5nFOcWdbHk0VCWxqcvlRKPI8Qd4p"; 
 
     const btns = [document.getElementById('mintBtn'), document.getElementById('modalMintBtn')];
     btns.forEach(b => { b.textContent = "Processing...", b.disabled = true; });
@@ -673,12 +673,12 @@
       let txHash;
       let sponsored = false;
 
-      // KROK 1: Próba darmowego minta (Sponsorowanego)
+      // KROK 1: Próba darmowego minta (Sponsorowanego przez Coinbase Paymaster)
       if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
           const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
           
           try {
-             console.log("Próba darmowej transakcji (Paymaster)...");
+             console.log("Próba darmowej transakcji...");
              const result = await sdk.wallet.ethProvider.request({
                 method: 'wallet_sendCalls',
                 params: [{
@@ -688,7 +688,7 @@
                     calls: [{
                         to: CONTRACT_ADDRESS,
                         data: dataHex,
-                        value: "0x5af3107a4000" // 0.0001 ETH
+                        value: "0x5af3107a4000" // 0.0001 ETH (Cena NFT)
                     }],
                     capabilities: {
                         paymasterService: {
@@ -701,15 +701,17 @@
              sponsored = true;
              console.log("Sponsorowany mint udany! Hash:", txHash);
           } catch (paymasterError) {
-             console.warn("Błąd Paymastera lub wyczerpany limit. Przełączam na płatny.", paymasterError);
+             console.warn("Limit darmowych mintów wyczerpany lub błąd paymastera. Przełączam na płatny.", paymasterError);
           }
       }
 
-      // KROK 2: Fallback do płatnego minta
+      // KROK 2: Jeśli darmowy się nie udał (bo limit wykorzystany lub błąd), płaci użytkownik
       if (!sponsored) {
           if (window.ethereum) {
               const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+              // Upewnij się, że jesteśmy na Base
               try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); } catch(e){}
+              
               txHash = await window.ethereum.request({
                   method: 'eth_sendTransaction',
                   params: [{ from: accounts[0], to: CONTRACT_ADDRESS, value: "0x5af3107a4000", data: dataHex }]
