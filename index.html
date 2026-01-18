@@ -208,7 +208,7 @@
         text-align: center;
     }
 
-    /* --- STYLIZACJA OKNA ZWYCIĘSTWA (NEW) --- */
+    /* --- STYLIZACJA OKNA ZWYCIĘSTWA --- */
     .victory-modal-content {
         text-align: center;
         width: 100%;
@@ -327,6 +327,7 @@
         <div>
             <h1>Phrase To Guess</h1>
             <p class="lead">Guess the phrase. Watch the market.</p>
+            
             <div style="margin: 10px 0; font-size: 14px; font-weight: 500; color: #94a3b8;">
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                 <span>🏆 Win:</span> 
@@ -339,7 +340,7 @@
             </div>
         </div>
         <div style="text-align:right;">
-             <div class="small" id="dailyInfo" style="background:rgba(255,255,255,0.05); padding:6px 10px; border-radius:8px; font-size: 12px; margin-bottom: 6px;">Games: 0/1</div>
+             <div class="small" id="dailyInfo" style="background: rgba(139, 92, 246, 0.1); color: #a78bfa; font-weight: 700; border: 1px solid rgba(139, 92, 246, 0.2); padding:6px 10px; border-radius:8px; font-size: 12px; margin-bottom: 6px;">Games: 0/1</div>
              
              <div style="display:flex; gap:8px; justify-content: flex-end; align-items:center;">
                  <button id="leaderboardBtn" class="ghost" style="padding: 6px; border-radius: 8px; font-size: 16px; border-color:rgba(255,255,255,0.1);">🏆</button>
@@ -548,6 +549,7 @@
       }
   }
 
+  // ✅ POPRAWIONA LOGIKA STREAKA - Aktywny reset w DB
   async function syncUserProfile() {
       if(!db) return;
       const userRef = ref(db, 'players/' + myUserId);
@@ -562,14 +564,19 @@
               yesterdayDate.setDate(yesterdayDate.getDate() - 1);
               const yesterday = yesterdayDate.toISOString().split('T')[0];
 
-              if (data.lastPlayed === today || data.lastPlayed === yesterday) {
-                  currentStreak = data.streak || 0;
-              } else {
-                  currentStreak = 0;
-              }
-              
               if(data.lastPlayed === today) {
                   hasPlayedToday = true;
+                  currentStreak = data.streak || 0;
+              }
+              else if (data.lastPlayed === yesterday) {
+                  currentStreak = data.streak || 0;
+              }
+              else {
+                  // Jeśli ostatnia gra nie była dzisiaj ani wczoraj -> reset streaka w DB
+                  currentStreak = 0;
+                  if (data.streak > 0) {
+                       update(userRef, { streak: 0 });
+                  }
               }
           }
       } catch(e) { console.error("Sync Error", e); }
