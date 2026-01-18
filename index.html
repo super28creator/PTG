@@ -328,6 +328,10 @@
             <h1>Phrase To Guess</h1>
             <p class="lead">Guess the phrase. Watch the market.</p>
             
+            <div style="margin: 6px 0; font-size: 11px; color:#6b7280; font-style:italic;">
+                $PTG is coming.
+            </div>
+            
             <div style="margin: 10px 0; font-size: 14px; font-weight: 500; color: #94a3b8;">
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                 <span>🏆 Win:</span> 
@@ -619,14 +623,14 @@
     renderWord(); renderKeyboard(); drawCandleChart(); updateDailyUI();
   }
 
-  // FIX: ZABLOKUJ "NEW CATEGORY" PO PORAŻCE I POKAŻ TIMER
+  // ✅ FIX: ZABLOKUJ "NEW CATEGORY" PO PORAŻCE/ZWYCIĘSTWIE I POKAŻ TIMER
   function blockGame() {
         document.getElementById('wordDisplay').innerHTML = ''; 
         document.getElementById('status').innerText = "";
         document.getElementById('keyboard').style.pointerEvents = 'none';
         document.getElementById('keyboard').style.opacity = '0.3';
-        document.getElementById('newCategoryBtn').style.display = 'none'; // UKRYWAMY PRZYCISK
-        document.getElementById('nextGameTimer').style.display = 'block'; // POKAZUJEMY TIMER
+        document.getElementById('newCategoryBtn').style.display = 'none'; // ✅ UKRYWAMY PRZYCISK
+        document.getElementById('nextGameTimer').style.display = 'block'; // ✅ POKAZUJEMY TIMER
         
         if(hasPlayedToday && !hasMintedThisSession && db) {
              const userRef = ref(db, 'players/' + myUserId);
@@ -735,6 +739,11 @@
       
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
 
+      // ✅ FIX: NATYCHMIASTOWA BLOKADA PO ZWYCIĘSTWIE
+      document.getElementById('newCategoryBtn').style.display = 'none';
+      document.getElementById('nextGameTimer').style.display = 'block';
+      startCountdown();
+
       if(db && !hasPlayedToday) {
           hasPlayedToday = true;
           const userRef = ref(db, 'players/' + myUserId);
@@ -779,7 +788,7 @@
       gameOver = true; document.getElementById('status').innerHTML = "<span class='dead'>LIQUIDATED!</span>";
       generateHugeCandle('down'); drawCandleChart(); incrementGamesPlayed();
       
-      // FIX: NATYCHMIASTOWA BLOKADA "NEW CATEGORY" PO PORAŻCE
+      // ✅ FIX: NATYCHMIASTOWA BLOKADA PO PORAŻCE
       document.getElementById('newCategoryBtn').style.display = 'none';
       document.getElementById('nextGameTimer').style.display = 'block';
       startCountdown();
@@ -829,7 +838,7 @@
     });
   }
 
-  // UPDATED MINT (Gas Sponsored ONLY, User pays value)
+  // ✅ UPDATED MINT (FIXED CAPABILITIES for Base/Farcaster)
   async function mintNFT() {
     const PAYMASTER_URL = "https://api.developer.coinbase.com/rpc/v1/base/3M1L5nFOcWdbHk0VCWxqcvlRKPI8Qd4p"; 
     
@@ -878,13 +887,12 @@
               }]
           };
 
-          // SPONSORUJEMY TYLKO GAZ (FEE), ALE NIE VALUE
+          // ✅ FIX: Poprawiona struktura capabilities dla Paymastera + atomic
           if (mintCount < 1) {
               callsParams.capabilities = { 
                   paymasterService: { url: PAYMASTER_URL },
                   atomic: true 
               };
-              callsParams.atomicRequired = true; 
               sponsored = true;
               console.log("Attempting Gas-Sponsored Mint (Value paid by user)");
           }
