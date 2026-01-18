@@ -636,10 +636,15 @@
              const userRef = ref(db, 'players/' + myUserId);
              get(userRef).then(snapshot => {
                  const data = snapshot.val();
-                 if(data && data.streak > 0 && (!data.mintCount || data.mintCount < 2)) { 
+                 // ✅ FIX: Zmiana warunku na < 1 (bo mintCount >= 1 już blokuje w mintNFT i oznacza sukces)
+                 if(data && data.streak > 0 && (!data.mintCount || data.mintCount < 1)) { 
                      document.getElementById('recoverMintBtn').style.display = 'block';
+                 } else {
+                     document.getElementById('recoverMintBtn').style.display = 'none';
                  }
              });
+        } else {
+             document.getElementById('recoverMintBtn').style.display = 'none';
         }
 
         updateDailyUI();
@@ -872,16 +877,13 @@
       const dataHex = iface.encodeFunctionData("publicMint", [METADATA_URL]);
       let txHash;
 
-      // ✅ UŻYWAMY eth_sendTransaction ABY WYMUSIĆ STANDARDOWĄ TRANSAKCJĘ BEZ PAYMASTERA
-      // To naprawi błąd 'invalid_type' z 'capabilities'
-      
+      // ✅ UŻYWAMY eth_sendTransaction ABY WYMUSIĆ STANDARDOWĄ TRANSAKCJĘ BEZ PAYMASTERA BEZ ATOMIC
       if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
           const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
           
           try {
              statusDiv.textContent = "Confirm transaction (Pay 0.00001 ETH)...";
              
-             // Używamy prostego eth_sendTransaction zamiast wallet_sendCalls, żeby uniknąć błędów capabilities
              const result = await sdk.wallet.ethProvider.request({
                 method: 'eth_sendTransaction',
                 params: [{ 
@@ -921,6 +923,7 @@
           }).then(() => { 
               currentScore += 2; 
               updateScoreUI();
+              // ✅ FIX: UKRYJ PRZYCISK OD RAZU PO SUKCESIE
               document.getElementById('recoverMintBtn').style.display = 'none';
           });
       }
