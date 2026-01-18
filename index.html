@@ -846,7 +846,7 @@
   // ✅ UPDATED MINT (0.00001 ETH - STANDARD TRANSACTION)
   async function mintNFT() {
     // 0.00001 ETH in Hex
-    const MINT_PRICE = "0x9184e72a000"; // ✅ POPRAWNA WARTOŚĆ HEX dla 10000000000000 wei
+    const MINT_PRICE = "0x9184e72a000"; // 10000000000000 wei
 
     const btn = document.getElementById('victoryMintBtn');
     const statusDiv = document.getElementById('victoryStatus');
@@ -877,13 +877,14 @@
       const dataHex = iface.encodeFunctionData("publicMint", [METADATA_URL]);
       let txHash;
 
-      // ✅ UŻYWAMY eth_sendTransaction ABY WYMUSIĆ STANDARDOWĄ TRANSAKCJĘ BEZ PAYMASTERA BEZ ATOMIC
+      // ✅ UŻYWAMY eth_sendTransaction (STANDARD TX)
       if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
           const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
           
           try {
              statusDiv.textContent = "Confirm transaction (Pay 0.00001 ETH)...";
              
+             // Standardowe wywołanie transakcji
              const result = await sdk.wallet.ethProvider.request({
                 method: 'eth_sendTransaction',
                 params: [{ 
