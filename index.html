@@ -301,7 +301,7 @@
         
         <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
             <div style="color:#94a3b8; font-size: 14px; margin-bottom: 5px;">Your Reward:</div>
-            <div style="color:#a78bfa; font-weight:700; font-size: 18px;">Victory Trophy NFT</div>
+            <div style="color:#a78bfa; font-weight:700; font-size: 18px;"> PhraseToGuess for OG</div>
             
             <div style="margin-top:12px; font-size:11px; color:#6b7280; font-style:italic;">
                 $PTG is coming.
@@ -739,7 +739,7 @@
       
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
 
-      // ✅ FIX: NATYCHMIASTOWA BLOKADA PO ZWYCIĘSTWIE
+      // ✅ FIX: NATYCHMIASTOWA BLOKADA PO ZWYCIĘSTWIE (NEW CATEGORY ZNIKA)
       document.getElementById('newCategoryBtn').style.display = 'none';
       document.getElementById('nextGameTimer').style.display = 'block';
       startCountdown();
@@ -788,7 +788,7 @@
       gameOver = true; document.getElementById('status').innerHTML = "<span class='dead'>LIQUIDATED!</span>";
       generateHugeCandle('down'); drawCandleChart(); incrementGamesPlayed();
       
-      // ✅ FIX: NATYCHMIASTOWA BLOKADA PO PORAŻCE
+      // ✅ FIX: NATYCHMIASTOWA BLOKADA PO PORAŻCE (NEW CATEGORY ZNIKA)
       document.getElementById('newCategoryBtn').style.display = 'none';
       document.getElementById('nextGameTimer').style.display = 'block';
       startCountdown();
@@ -838,10 +838,10 @@
     });
   }
 
-  // ✅ UPDATED MINT (MINT: 0.00001 ETH - STANDARD TX)
+  // ✅ UPDATED MINT (0.00001 ETH - STANDARD TRANSACTION)
   async function mintNFT() {
     // 0.00001 ETH in Hex
-    const MINT_PRICE = "0x2386F26FC10000"; 
+    const MINT_PRICE = "0x9184e72a000"; // ✅ POPRAWNA WARTOŚĆ HEX dla 10000000000000 wei
 
     const btn = document.getElementById('victoryMintBtn');
     const statusDiv = document.getElementById('victoryStatus');
@@ -861,7 +861,6 @@
         mintCount = userData.mintCount || 0;
       }
 
-      // BLOKADA PODWÓJNEGO MINTA
       if (mintCount >= 1) {
           statusDiv.textContent = "You already own this NFT!";
           statusDiv.style.color = "#f59e0b";
@@ -873,30 +872,24 @@
       const dataHex = iface.encodeFunctionData("publicMint", [METADATA_URL]);
       let txHash;
 
+      // ✅ UŻYWAMY eth_sendTransaction ABY WYMUSIĆ STANDARDOWĄ TRANSAKCJĘ BEZ PAYMASTERA
+      // To naprawi błąd 'invalid_type' z 'capabilities'
+      
       if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
           const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
           
-          let callsParams = {
-              version: '1.0', 
-              chainId: '0x2105', 
-              from: accounts[0],
-              calls: [{ 
-                  to: CONTRACT_ADDRESS, 
-                  data: dataHex, 
-                  value: MINT_PRICE
-              }]
-          };
-
-          // ✅ FIX: DODAŁEM `atomic: true` (nawet bez paymastera, dla Smart Walletów to ważne)
-          callsParams.capabilities = {
-              atomic: true
-          };
-
           try {
              statusDiv.textContent = "Confirm transaction (Pay 0.00001 ETH)...";
+             
+             // Używamy prostego eth_sendTransaction zamiast wallet_sendCalls, żeby uniknąć błędów capabilities
              const result = await sdk.wallet.ethProvider.request({
-                method: 'wallet_sendCalls',
-                params: [callsParams]
+                method: 'eth_sendTransaction',
+                params: [{ 
+                  from: accounts[0], 
+                  to: CONTRACT_ADDRESS, 
+                  data: dataHex, 
+                  value: MINT_PRICE 
+                }]
              });
              txHash = result;
           } catch (err) { 
