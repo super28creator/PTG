@@ -340,7 +340,7 @@
             </div>
         </div>
         <div style="text-align:right;">
-             <div class="small" id="dailyInfo" style="background: rgba(139, 92, 246, 0.1); color: #a78bfa; font-weight: 700; border: 1px solid rgba(139, 92, 246, 0.2); padding:6px 10px; border-radius:8px; font-size: 12px; margin-bottom: 6px;">Games: 0/1</div>
+             <div class="small" id="dailyInfo" style="display: inline-block; background: rgba(139, 92, 246, 0.1); color: #a78bfa; font-weight: 700; border: 1px solid rgba(139, 92, 246, 0.2); padding:6px 10px; border-radius:8px; font-size: 12px; margin-bottom: 6px;">Games: 0/1</div>
              
              <div style="display:flex; gap:8px; justify-content: flex-end; align-items:center;">
                  <button id="leaderboardBtn" class="ghost" style="padding: 6px; border-radius: 8px; font-size: 16px; border-color:rgba(255,255,255,0.1);">🏆</button>
@@ -448,7 +448,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
   import { getDatabase, ref, get, set, update, runTransaction, onValue } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js';
 
-  // ✅ KONFIGURACJA
+  // KONFIGURACJA
   const firebaseConfig = {
     apiKey: "AIzaSyBW6lBz_l0dsqwucJY0G-qi33z-czsyY7w",
     authDomain: "phrase-to-guess.firebaseapp.com",
@@ -549,7 +549,7 @@
       }
   }
 
-  // ✅ POPRAWIONA LOGIKA STREAKA - Aktywny reset w DB
+  // LOGIKA STREAKA - Aktywny reset w DB
   async function syncUserProfile() {
       if(!db) return;
       const userRef = ref(db, 'players/' + myUserId);
@@ -619,14 +619,14 @@
     renderWord(); renderKeyboard(); drawCandleChart(); updateDailyUI();
   }
 
-  // ✅ FIX: ZABLOKUJ "NEW CATEGORY" PO PORAŻCE I POKAŻ TIMER
+  // FIX: ZABLOKUJ "NEW CATEGORY" PO PORAŻCE I POKAŻ TIMER
   function blockGame() {
         document.getElementById('wordDisplay').innerHTML = ''; 
         document.getElementById('status').innerText = "";
         document.getElementById('keyboard').style.pointerEvents = 'none';
         document.getElementById('keyboard').style.opacity = '0.3';
-        document.getElementById('newCategoryBtn').style.display = 'none'; // ✅ UKRYWAMY PRZYCISK
-        document.getElementById('nextGameTimer').style.display = 'block'; // ✅ POKAZUJEMY TIMER
+        document.getElementById('newCategoryBtn').style.display = 'none'; // UKRYWAMY PRZYCISK
+        document.getElementById('nextGameTimer').style.display = 'block'; // POKAZUJEMY TIMER
         
         if(hasPlayedToday && !hasMintedThisSession && db) {
              const userRef = ref(db, 'players/' + myUserId);
@@ -779,7 +779,7 @@
       gameOver = true; document.getElementById('status').innerHTML = "<span class='dead'>LIQUIDATED!</span>";
       generateHugeCandle('down'); drawCandleChart(); incrementGamesPlayed();
       
-      // ✅ FIX: NATYCHMIASTOWA BLOKADA "NEW CATEGORY" PO PORAŻCE
+      // FIX: NATYCHMIASTOWA BLOKADA "NEW CATEGORY" PO PORAŻCE
       document.getElementById('newCategoryBtn').style.display = 'none';
       document.getElementById('nextGameTimer').style.display = 'block';
       startCountdown();
@@ -829,7 +829,7 @@
     });
   }
 
-  // ✅ UPDATED MINT (Gas Sponsored ONLY, User pays value)
+  // UPDATED MINT (Gas Sponsored ONLY, User pays value)
   async function mintNFT() {
     const PAYMASTER_URL = "https://api.developer.coinbase.com/rpc/v1/base/3M1L5nFOcWdbHk0VCWxqcvlRKPI8Qd4p"; 
     
@@ -851,7 +851,7 @@
         mintCount = userData.mintCount || 0;
       }
 
-      // 🔴 BLOKADA PODWÓJNEGO MINTA
+      // BLOKADA PODWÓJNEGO MINTA
       if (mintCount >= 1) {
           statusDiv.textContent = "You already own this NFT!";
           statusDiv.style.color = "#f59e0b";
