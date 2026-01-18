@@ -62,9 +62,15 @@
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-    html, body { 
-        height: 100%; margin: 0; padding: 0;
+    html {
+        height: 100%;
+        background: #0a0e1a;
+    }
+
+    body { 
+        min-height: 100%; margin: 0; padding: 0;
         background: radial-gradient(circle at top right, #1e1335 0%, var(--bg-main) 60%);
+        background-attachment: fixed;
         font-family: 'Inter', system-ui, sans-serif; 
         color: var(--text-bright); 
         overflow-x: hidden; 
@@ -78,7 +84,6 @@
         display: flex;
         flex-direction: column;
         gap: 20px;
-        min-height: 100vh;
     }
 
     .card { 
@@ -297,6 +302,10 @@
         <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
             <div style="color:#94a3b8; font-size: 14px; margin-bottom: 5px;">Your Reward:</div>
             <div style="color:#a78bfa; font-weight:700; font-size: 18px;">Victory Trophy NFT</div>
+            
+            <div style="margin-top:12px; font-size:11px; color:#6b7280; font-style:italic;">
+                $PTG is coming.
+            </div>
         </div>
 
         <button id="victoryMintBtn" class="big-mint-btn" onclick="mintNFT()">
@@ -359,6 +368,10 @@
     </div>
     
     <div id="nextGameTimer" style="display:none; text-align:center; margin-top:20px;">
+        <div style="margin-bottom: 15px; font-size: 14px; color:#a78bfa; font-weight: 600; font-style:italic;">
+            $PTG is coming.
+        </div>
+
         <div style="font-size:13px; color:#94a3b8; font-style:italic; margin-bottom:10px;">
             Daily limit reached. Next game in: <span id="countdown" style="color:var(--accent-secondary); font-weight:700; font-family:'Roboto Mono', monospace;">--:--:--</span>
         </div>
@@ -582,13 +595,13 @@
     
     document.getElementById('categoryDisplay').textContent = "Category: " + currentCategory;
     document.getElementById('status').innerHTML = "";
-    document.getElementById('victoryModal').classList.remove('show'); // Hide modal
+    document.getElementById('victoryModal').classList.remove('show'); 
     document.getElementById('tries').textContent = "0";
     document.getElementById('keyboard').style.pointerEvents = 'auto';
     document.getElementById('keyboard').style.opacity = '1';
-    document.getElementById('recoverMintBtn').style.display = 'none'; // Hide recover btn
+    document.getElementById('newCategoryBtn').style.display = 'block'; // Reset btn
+    document.getElementById('recoverMintBtn').style.display = 'none'; 
     
-    // Reset Mint Button in Modal
     const vBtn = document.getElementById('victoryMintBtn');
     vBtn.innerHTML = "<span>✨ MINT TROPHY</span>";
     vBtn.disabled = false;
@@ -599,20 +612,19 @@
     renderWord(); renderKeyboard(); drawCandleChart(); updateDailyUI();
   }
 
+  // ✅ FIX: ZABLOKUJ "NEW CATEGORY" PO PORAŻCE I POKAŻ TIMER
   function blockGame() {
         document.getElementById('wordDisplay').innerHTML = ''; 
         document.getElementById('status').innerText = "";
         document.getElementById('keyboard').style.pointerEvents = 'none';
         document.getElementById('keyboard').style.opacity = '0.3';
-        document.getElementById('newCategoryBtn').style.display = 'none';
-        document.getElementById('nextGameTimer').style.display = 'block';
+        document.getElementById('newCategoryBtn').style.display = 'none'; // ✅ UKRYWAMY PRZYCISK
+        document.getElementById('nextGameTimer').style.display = 'block'; // ✅ POKAZUJEMY TIMER
         
-        // LOGIKA PERSYSTENCJI (Jeśli grałeś dziś, wygrałeś, ale nie mintowałeś)
         if(hasPlayedToday && !hasMintedThisSession && db) {
              const userRef = ref(db, 'players/' + myUserId);
              get(userRef).then(snapshot => {
                  const data = snapshot.val();
-                 // Sprawdzamy czy streak jest > 0 co sugeruje wygraną (uproszczone, ale skuteczne)
                  if(data && data.streak > 0 && (!data.mintCount || data.mintCount < 2)) { 
                      document.getElementById('recoverMintBtn').style.display = 'block';
                  }
@@ -714,7 +726,6 @@
       gameOver = true; document.getElementById('status').innerHTML = "<span class='won'>VICTORY!</span>";
       generateHugeCandle('up'); drawCandleChart();
       
-      // URUCHOM KONFETTI 
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
 
       if(db && !hasPlayedToday) {
@@ -752,7 +763,6 @@
           });
       }
 
-      // Pokaż duże okno zwycięstwa
       setTimeout(() => {
           document.getElementById('victoryModal').classList.add('show');
       }, 1000); 
@@ -762,6 +772,11 @@
       gameOver = true; document.getElementById('status').innerHTML = "<span class='dead'>LIQUIDATED!</span>";
       generateHugeCandle('down'); drawCandleChart(); incrementGamesPlayed();
       
+      // ✅ FIX: NATYCHMIASTOWA BLOKADA "NEW CATEGORY" PO PORAŻCE
+      document.getElementById('newCategoryBtn').style.display = 'none';
+      document.getElementById('nextGameTimer').style.display = 'block';
+      startCountdown();
+
       if(db && !hasPlayedToday) {
           hasPlayedToday = true;
           const today = new Date().toISOString().split('T')[0];
@@ -807,7 +822,7 @@
     });
   }
 
-  // ✅ UPDATED SPONSORED MINT (Connected to Modal + Atomic Fix)
+  // ✅ UPDATED MINT (Gas Sponsored ONLY, User pays value)
   async function mintNFT() {
     const PAYMASTER_URL = "https://api.developer.coinbase.com/rpc/v1/base/3M1L5nFOcWdbHk0VCWxqcvlRKPI8Qd4p"; 
     
@@ -849,24 +864,26 @@
               version: '1.0', 
               chainId: '0x2105', 
               from: accounts[0],
-              calls: [{ to: CONTRACT_ADDRESS, data: dataHex, value: "0x5af3107a4000" }]
+              calls: [{ 
+                  to: CONTRACT_ADDRESS, 
+                  data: dataHex, 
+                  value: "0x5af3107a4000" // 0.0001 ETH (PŁACI USER)
+              }]
           };
 
-          // DARMOWY MINT TYLKO JESLI MINTCOUNT < 1
+          // SPONSORUJEMY TYLKO GAZ (FEE), ALE NIE VALUE
           if (mintCount < 1) {
               callsParams.capabilities = { 
                   paymasterService: { url: PAYMASTER_URL },
-                  atomic: true // ✅ FIX: Atomic flag for Smart Wallet
+                  atomic: true 
               };
-              // Alternatywna flaga dla nowszych/innych wersji
               callsParams.atomicRequired = true; 
-              
               sponsored = true;
-              console.log("Attempting Sponsored Mint");
+              console.log("Attempting Gas-Sponsored Mint (Value paid by user)");
           }
 
           try {
-             statusDiv.textContent = "Confirm in Wallet...";
+             statusDiv.textContent = "Confirm transaction (Pay 0.0001 ETH)...";
              const result = await sdk.wallet.ethProvider.request({
                 method: 'wallet_sendCalls',
                 params: [callsParams]
@@ -906,14 +923,13 @@
           });
       }
 
-      statusDiv.textContent = sponsored ? "Success! Free Mint! 🏆" : "Success! Trophy Minted. 🏆";
+      statusDiv.textContent = sponsored ? "Success! Gas Sponsored! 🏆" : "Success! Trophy Minted. 🏆";
       statusDiv.style.color = "#4ade80";
       btn.innerHTML = "MINTED! 🏆";
       
       const actualHash = (typeof txHash === 'string') ? txHash : (txHash?.[0] || "tx_sent");
       txDiv.innerHTML = `<a href="https://basescan.org/tx/${actualHash}" target="_blank">View on BaseScan</a>`;
       
-      // Konfetti jeszcze raz na sukces
       confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
       
     } catch(e) { 
