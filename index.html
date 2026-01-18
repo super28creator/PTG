@@ -843,10 +843,10 @@
     });
   }
 
-  // ✅ UPDATED MINT (0.00001 ETH - STANDARD TRANSACTION)
+  // ✅ UPDATED MINT (FIX DLA PC/METAMASK + MOBILE + UI)
   async function mintNFT() {
     // 0.00001 ETH in Hex
-    const MINT_PRICE = "0x9184e72a000"; // 10000000000000 wei
+    const MINT_PRICE = "0x9184e72a000"; 
 
     const btn = document.getElementById('victoryMintBtn');
     const statusDiv = document.getElementById('victoryStatus');
@@ -877,14 +877,11 @@
       const dataHex = iface.encodeFunctionData("publicMint", [METADATA_URL]);
       let txHash;
 
-      // ✅ UŻYWAMY eth_sendTransaction (STANDARD TX)
+      // 1. PRÓBA PRZEZ FARCASTER SDK (MOBILE)
       if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
           const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
-          
           try {
              statusDiv.textContent = "Confirm transaction (Pay 0.00001 ETH)...";
-             
-             // Standardowe wywołanie transakcji
              const result = await sdk.wallet.ethProvider.request({
                 method: 'eth_sendTransaction',
                 params: [{ 
@@ -896,22 +893,54 @@
              });
              txHash = result;
           } catch (err) { 
-              console.warn("Wallet call failed", err); 
-              throw err;
+              console.warn("SDK wallet failed, trying fallback...", err);
           }
       }
 
-      // Fallback
+      // 2. FALLBACK DLA PC (METAMASK / RABBY) - FIX RPC ERROR
       if (!txHash && window.ethereum) {
           const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); } catch(e){}
+          
+          // ✅ FIX: WYMUSZENIE SIECI BASE (CHAIN ID 8453 = 0x2105)
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0x2105' }],
+            });
+          } catch (switchError) {
+            // Jeśli nie ma sieci Base, dodajemy ją
+            if (switchError.code === 4902) {
+               try {
+                 await window.ethereum.request({
+                   method: 'wallet_addEthereumChain',
+                   params: [{
+                     chainId: '0x2105',
+                     chainName: 'Base',
+                     rpcUrls: ['https://mainnet.base.org'],
+                   }],
+                 });
+               } catch (addError) {}
+            }
+          }
+
+          statusDiv.textContent = "Confirm in MetaMask...";
+          
+          // ✅ FIX: DODANIE LIMITU GAZU (NAPRAWIA BŁĄD RPC NA KOMPIE)
           txHash = await window.ethereum.request({
               method: 'eth_sendTransaction',
-              params: [{ from: accounts[0], to: CONTRACT_ADDRESS, value: MINT_PRICE, data: dataHex }]
+              params: [{ 
+                  from: accounts[0], 
+                  to: CONTRACT_ADDRESS, 
+                  value: MINT_PRICE, 
+                  data: dataHex,
+                  gas: '0x493E0' // ~300,000 Gas Limit (Bezpieczny zapas dla PC)
+              }]
           });
-      } else if (!txHash) { throw new Error("No wallet found"); }
+      } else if (!txHash && !sdk?.wallet?.ethProvider) { 
+          throw new Error("No wallet found"); 
+      }
 
-      // Success Logic
+      // SUKCES
       if(db) {
           hasMintedThisSession = true;
           const userRef = ref(db, 'players/' + myUserId);
@@ -924,8 +953,9 @@
           }).then(() => { 
               currentScore += 2; 
               updateScoreUI();
-              // ✅ FIX: UKRYJ PRZYCISK OD RAZU PO SUKCESIE
-              document.getElementById('recoverMintBtn').style.display = 'none';
+              // ✅ UKRYWAMY PRZYCISK CLAIM
+              const btnRecover = document.getElementById('recoverMintBtn');
+              if(btnRecover) btnRecover.style.display = 'none';
           });
       }
 
@@ -946,7 +976,6 @@
         btn.disabled = false;
     }
   }
-
   function updateScoreUI() { 
       document.getElementById('scoreDisplay').textContent = currentScore; 
       document.getElementById('streakDisplay').textContent = currentStreak; 
