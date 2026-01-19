@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Phrase To Guess</title>
+  
+  <meta name="base:app_id" content="6963e5868a6eeb04b568def8" />
+  
+  <meta property="og:title" content="Phrase To Guess" />
+  <meta property="og:description" content="Daily Web3 word-guessing game on Base." />
+  <meta property="og:image" content="https://ptg-one.vercel.app/icon-512.png" />
+  <meta property="og:url" content="https://ptg-one.vercel.app" />
+  <meta property="og:type" content="website" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Phrase To Guess" />
+  <meta name="twitter:description" content="Daily Web3 word-guessing game on Base." />
+  <meta name="twitter:image" content="https://ptg-one.vercel.app/icon-512.png" />
+  
+  <meta name="fc:miniapp" content='{
+    "version": "next",
+    "imageUrl": "https://ptg-one.vercel.app/icon-512.png",
+    "button": {
+      "title": "Play Phrase To Guess",
+      "action": {
+        "type": "launch_frame",
+        "name": "Phrase To Guess",
+        "url": "https://ptg-one.vercel.app",
+        "splashImageUrl": "https://ptg-one.vercel.app/icon-512.png",
+        "splashBackgroundColor": "#0a0e1a"
+      }
+    }
+  }' />
+
+  <meta property="fc:frame" content="vNext" />
+  <meta property="fc:frame:image" content="https://ptg-one.vercel.app/icon-512.png" />
+  <meta property="fc:frame:image:aspect_ratio" content="1:1" />
+  <meta property="fc:frame:post_url" content="https://ptg-one.vercel.app" />
+  <meta property="fc:frame:button:1" content="Play Phrase To Guess" />
+  <meta property="fc:frame:button:1:action" content="link" />
+  <meta property="fc:frame:button:1:target" content="https://ptg-one.vercel.app" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    /* --- CONFIG --- */
+    :root {
+      --bg-main: #0a0e1a;
+      --accent-primary: #8b5cf6;
+      --accent-secondary: #06b6d4;
+      --text-bright: #ffffff;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+      --card-glow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html {
+        height: 100%;
+        background: #0a0e1a;
+    }
+
+    body { 
+        min-height: 100vh; margin: 0; padding: 0;
+        background: radial-gradient(circle at top right, #1e1335 0%, var(--bg-main) 60%);
+        background-attachment: fixed;
+        font-family: 'Inter', system-ui, sans-serif; 
+        color: var(--text-bright); 
+        overflow-x: hidden; 
+    }
+
+    .wrap { 
+        width: 100%;
+        max-width: 600px; 
+        margin: 0 auto; 
+        padding: 20px; 
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .card { 
+        background: rgba(19, 26, 45, 0.7); 
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border-radius: 24px; padding: 24px; 
+        box-shadow: var(--card-glow); border: var(--glass-border);
+        width: 100%;
+    }
+
+    h1 { 
+        margin: 0 0 8px 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; 
+        background: linear-gradient(to right, #fff, #a5b4fc); 
+        -webkit-background-clip: text; background-clip: text; 
+        -webkit-text-fill-color: transparent; 
+    } 
+    
+    p.lead { margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.4; }
+    
+    /* --- WORD DISPLAY --- */
+    .word-container {
+        display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; 
+        margin-top: 20px; margin-bottom: 20px;
+        min-height: 60px;
+        padding: 15px;
+        background: rgba(0,0,0,0.2); 
+        border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.2);
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+    }
+
+    .word-group { display: flex; gap: 4px; }
+
+    .letter-box { 
+        font-family: 'Roboto Mono', monospace;
+        font-size: 24px; 
+        width: 28px; height: 40px;
+        display: flex; align-items: center; justify-content: center;
+        border-bottom: 2px solid #334155;
+        color: transparent; transition: all 0.2s; font-weight: 700;
+    }
+
+    .letter-box.revealed { 
+        border-bottom-color: var(--accent-secondary); 
+        color: var(--text-bright); text-shadow: 0 0 10px var(--accent-secondary); 
+    }
+
+    /* --- KEYBOARD --- */
+    .keyboard { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; margin-top: 20px; }
+    @media (max-width: 360px) {
+        .keyboard { grid-template-columns: repeat(7, 1fr); }
+    }
+
+    .key { 
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
+        padding: 10px 0; border-radius: 8px; cursor: pointer; 
+        text-align: center; user-select: none; transition: all 0.1s ease; 
+        font-weight: 600; color: #e2e8f0; font-size: 14px;
+        min-height: 40px;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .key:hover:not(:disabled) { background: rgba(255,255,255,0.15); transform: translateY(-2px); }
+    .key:active { transform: scale(0.95); }
+    .key:disabled { opacity: 0.5; cursor: default; transform: none; }
+    .key.hit { background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary)); color: #fff; border: none; box-shadow: 0 0 10px rgba(6, 182, 212, 0.4); opacity: 1;}
+    .key.miss { background: rgba(239, 68, 68, 0.2); color: var(--danger); border-color: var(--danger); opacity: 0.7;}
+
+    /* --- CHART --- */
+    canvas { 
+        width: 100%; height: 200px; border-radius: 16px; 
+        background: linear-gradient(180deg, rgba(20, 25, 40, 0.8) 0%, rgba(10, 14, 26, 0.9) 100%); 
+        display: block; margin-top: 20px; border: var(--glass-border);
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    /* --- CONTROLS --- */
+    .controls { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+    
+    button.btn { 
+        background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); 
+        border: none; color: white; padding: 12px 20px; border-radius: 12px; cursor: pointer; font-weight: 700; 
+        transition: 0.2s; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); width: 100%;
+    }
+    button.btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    button.ghost { 
+        background: transparent; border: 1px solid rgba(255,255,255,0.2); 
+        color: var(--text-muted); cursor: pointer; padding: 12px 20px; 
+        border-radius: 12px; font-weight: 600; transition: 0.2s;
+    }
+    button.ghost:hover { border-color: var(--text-bright); color: var(--text-bright); background: rgba(255,255,255,0.05);}
+
+    .status { font-weight: 700; font-size: 18px; margin-top: 15px; text-align: center; letter-spacing: 1px; min-height: 27px; }
+    .dead { color: var(--danger); text-shadow: 0 0 10px rgba(239, 68, 68, 0.5); } 
+    .won { color: var(--success); text-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+
+    .meta { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 15px; font-size: 13px;}
+    .chip { padding: 6px 12px; background: rgba(255,255,255,0.05); border-radius: 999px; font-weight: 600; border: var(--glass-border); }
+    .user-chip { border-color: var(--accent-primary); background: rgba(139, 92, 246, 0.1); color: var(--accent-primary); }
+
+    .social-section { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+    .social-btn {
+        flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+        padding: 10px; border-radius: 12px; color: var(--text-muted);
+        text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s ease;
+    }
+    .social-btn:hover {
+        background: rgba(255,255,255,0.1); color: var(--text-bright);
+        border-color: var(--accent-primary); transform: translateY(-2px);
+    }
+    .social-icon { width: 16px; height: 16px; fill: currentColor; }
+
+    /* --- MODALS & VICTORY SCREEN --- */
+    .modal-overlay { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 999; padding: 20px; }
+    .modal-overlay.show { display: flex; animation: fadeIn 0.3s ease; }
+    
+    .mint-card { 
+        background: rgba(26, 31, 53, 0.98);
+        border: 1px solid rgba(139, 92, 246, 0.4);
+        padding: 24px; border-radius: 24px; max-width: 450px; width: 100%; 
+        box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+        text-align: center;
+    }
+
+    /* --- STYLIZACJA OKNA ZWYCIĘSTWA --- */
+    .victory-modal-content {
+        text-align: center;
+        width: 100%;
+        border: 2px solid #4ade80;
+        box-shadow: 0 0 60px rgba(74, 222, 128, 0.15);
+        background: radial-gradient(circle at center, #1a2035 0%, #0f121d 100%);
+    }
+    .victory-icon {
+        font-size: 72px; margin-bottom: 16px;
+        animation: bounce 1s infinite;
+        text-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
+    }
+    .victory-title {
+        font-size: 42px; font-weight: 900; 
+        background: linear-gradient(to bottom, #ffffff, #a5b4fc); 
+        -webkit-background-clip: text; background-clip: text; 
+        -webkit-text-fill-color: transparent; 
+        margin-bottom: 8px;
+        letter-spacing: -1px;
+        text-transform: uppercase;
+    }
+    .victory-subtitle {
+        color: #4ade80; font-size: 18px; margin-bottom: 30px; font-weight: 600;
+        text-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
+    }
+    
+    /* WIELKI PRZYCISK MINT */
+    .big-mint-btn {
+        background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+        color: white; font-size: 22px; font-weight: 800;
+        padding: 20px 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);
+        width: 100%; cursor: pointer;
+        box-shadow: 0 10px 40px rgba(124, 58, 237, 0.4);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-transform: uppercase; letter-spacing: 1px;
+        position: relative; overflow: hidden;
+    }
+    .big-mint-btn:before {
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
+    }
+    .big-mint-btn:hover:not(:disabled) { transform: translateY(-4px) scale(1.02); box-shadow: 0 20px 50px rgba(124, 58, 237, 0.6); }
+    .big-mint-btn:active:not(:disabled) { transform: scale(0.98); }
+    .big-mint-btn:disabled { 
+        background: #334155; color: #94a3b8; 
+        cursor: not-allowed; box-shadow: none; border-color: transparent;
+    }
+
+    .txlink a { color: var(--accent-secondary); text-decoration: none; border-bottom: 1px dotted var(--accent-secondary); transition: 0.2s;}
+    .txlink a:hover { color: var(--text-bright); border-bottom-style: solid;}
+
+    .leaderboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;}
+    .leaderboard-table { width: 100%; border-collapse: collapse; color: #fff; }
+    .leaderboard-table th { text-align: left; color: var(--text-muted); font-size: 12px; padding-bottom: 10px; font-weight: 600; }
+    .leaderboard-table td { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+    .rank-badge { 
+        width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; 
+        border-radius: 4px; font-weight: 700; font-size: 11px; 
+    }
+    .rank-1 { background: #fbbf24; color: #000; }
+    .rank-2 { background: #94a3b8; color: #000; }
+    .rank-3 { background: #b45309; color: #fff; }
+    .rank-other { color: var(--text-muted); }
+    
+    /* LOADER */
+    .loader {
+        border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid var(--accent-primary);
+        border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 20px auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+  </style>
+</head>
+<body>
+
+<div class="modal-overlay show" id="loadingScreen">
+    <div style="text-align:center;">
+        <div class="loader"></div>
+        <div style="margin-top:10px; font-size:12px; color:#94a3b8;">Loading Profile...</div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="victoryModal">
+    <div class="mint-card victory-modal-content">
+        <div class="victory-icon">🏆</div>
+        <div class="victory-title">VICTORY!</div>
+        <div class="victory-subtitle">Phrase Solved!</div>
+        
+        <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
+            <div style="color:#94a3b8; font-size: 14px; margin-bottom: 5px;">Your Reward:</div>
+            <div style="color:#a78bfa; font-weight:700; font-size: 18px;"> PhraseToGuess for OG</div>
+            
+            <div style="margin-top:12px; font-size:11px; color:#6b7280; font-style:italic;">
+                $PTG is coming.
+            </div>
+        </div>
+
+        <button id="victoryMintBtn" class="big-mint-btn" onclick="mintNFT()">
+            <span>✨ MINT TROPHY</span>
+        </button>
+        
+        <div id="victoryStatus" style="margin-top:20px; font-weight:600; font-size:14px; min-height:20px; color:#94a3b8;"></div>
+        <div id="victoryTxLink" class="small txlink" style="margin-top:5px;"></div>
+
+        <div style="margin-top:25px;">
+            <button class="ghost" onclick="closeVictoryModal()" style="width:100%; font-size:13px; padding: 12px; opacity:0.7;">Close & View Stats</button>
+        </div>
+    </div>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom: 10px;">
+        <div>
+            <h1>Phrase To Guess</h1>
+            <p class="lead">Guess the phrase. Watch the market.</p>
+            
+            <div style="margin: 6px 0; font-size: 11px; color:#6b7280; font-style:italic;">
+                
+            </div>
+            
+            <div style="margin: 10px 0; font-size: 14px; font-weight: 500; color: #94a3b8;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span>🏆 Win:</span> 
+                <span style="color: #4ade80; font-weight: bold;">+1 pt</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span>✨ Mint:</span> 
+                <span style="color: #a78bfa; font-weight: bold;">+2 pts</span>
+              </div>
+            </div>
+        </div>
+        <div style="text-align:right;">
+             <div class="small" id="dailyInfo" style="display: inline-block; background: rgba(139, 92, 246, 0.1); color: #a78bfa; font-weight: 700; border: 1px solid rgba(139, 92, 246, 0.2); padding:6px 10px; border-radius:8px; font-size: 12px; margin-bottom: 6px;">Games: 0/3</div>
+             
+             <div style="display:flex; gap:8px; justify-content: flex-end; align-items:center;">
+                 <button id="leaderboardBtn" class="ghost" style="padding: 6px; border-radius: 8px; font-size: 16px; border-color:rgba(255,255,255,0.1);">🏆</button>
+                 <div class="small" id="scoreDisplay" style="background:rgba(245, 158, 11, 0.1); color:#fbbf24; padding:6px 10px; border-radius:8px; font-weight:700; font-size: 12px;">...</div>
+                 <div class="small" title="Streak" style="background:rgba(249, 115, 22, 0.1); color:#f97316; padding:6px 10px; border-radius:8px; font-weight:700; font-size: 12px; display:flex; align-items:center; gap:4px;">
+                   🔥 <span id="streakDisplay">0</span>
+                 </div>
+             </div>
+
+             <div id="playerDisplay" class="chip user-chip" style="display:none; margin-top:6px; float:right; font-size: 11px;"></div>
+        </div>
+    </div>
+    
+    <div class="meta">
+        <div class="chip" id="categoryDisplay" style="color: var(--accent-secondary);">Category: —</div>
+        <div class="chip">Mistakes: <span id="tries" style="color:var(--danger); margin-left:4px;">0</span>/5</div>
+    </div>
+
+    <div class="word-container" id="wordDisplay"></div>
+    
+    <canvas id="chart" width="800" height="250"></canvas>
+    <div class="status" id="status"></div>
+    
+    <div class="controls">
+      <button class="ghost" id="newCategoryBtn" style="width: 100%">New Category</button>
+    </div>
+    
+    <div id="nextGameTimer" style="display:none; text-align:center; margin-top:20px;">
+        <div style="margin-bottom: 15px; font-size: 14px; color:#a78bfa; font-weight: 600; font-style:italic;">
+            $PTG is coming.
+        </div>
+
+        <div style="font-size:13px; color:#94a3b8; font-style:italic; margin-bottom:10px;">
+            Daily limit reached. Next game in: <span id="countdown" style="color:var(--accent-secondary); font-weight:700; font-family:'Roboto Mono', monospace;">--:--:--</span>
+        </div>
+        <button id="recoverMintBtn" class="btn" style="display:none; background: linear-gradient(90deg, #7c3aed, #db2777);" onclick="document.getElementById('victoryModal').classList.add('show')">
+            ✨ Claim Your Pending Trophy
+        </button>
+    </div>
+    
+    <div id="keyboard" class="keyboard"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0; font-size: 16px; color: var(--accent-secondary);">Categories</h3>
+    <ul class="available-cats" style="padding-left:18px; line-height:1.6;">
+      <li>Animals & Nature</li>
+      <li>Crypto & Web3</li>
+      <li>Economics & Finance</li>
+      <li>DeFi Protocols</li>
+    </ul>
+
+    <div class="social-section">
+        <p class="small" style="margin-bottom: 12px; font-weight: 600; font-size: 12px; color: var(--text-muted);">JOIN COMMUNITY</p>
+        <div style="display: flex; gap: 10px;">
+            <a href="https://x.com/Super_Apps_" target="_blank" class="social-btn">
+                <svg class="social-icon" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                Twitter
+            </a>
+            <a href="https://discord.gg/m99P3DXr5t" target="_blank" class="social-btn">
+                <svg class="social-icon" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z"/></svg>
+                Discord
+            </a>
+        </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay" id="leaderboardOverlay">
+  <div class="mint-card" style="max-height: 80vh; display: flex; flex-direction: column;">
+    <div class="leaderboard-header">
+        <h2 style="margin:0; font-size:20px; color: #fff;">🏆 Global Leaderboard</h2>
+        <div style="font-size: 12px; color: var(--text-muted);">Season 1</div>
+    </div>
+    
+    <div style="overflow-y: auto; flex: 1;">
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th width="15%">#</th>
+                    <th width="60%">PLAYER</th>
+                    <th width="25%" style="text-align:right;">SCORE</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+                <tr><td colspan="3" style="text-align:center; padding:20px;">Loading scores...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top:20px;">
+        <button class="ghost" id="closeLeaderboard" style="width:100%;">Back to Game</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // --- VERCEL ANALYTICS INJECTION ---
+  import { inject } from 'https://esm.sh/@vercel/analytics';
+  inject();
+  // ----------------------------------
+
+  import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
+  import { getDatabase, ref, get, set, update, runTransaction, onValue } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js';
+
+  // ✅ KONFIGURACJA
+  const firebaseConfig = {
+    apiKey: "AIzaSyBW6lBz_l0dsqwucJY0G-qi33z-czsyY7w",
+    authDomain: "phrase-to-guess.firebaseapp.com",
+    projectId: "phrase-to-guess",
+    storageBucket: "phrase-to-guess.firebasestorage.app",
+    messagingSenderId: "335075677462",
+    appId: "1:335075677462:web:40dd37e7b880d7af19ec37",
+    measurementId: "G-S9KC42Z8R1",
+    databaseURL: "https://phrase-to-guess-default-rtdb.europe-west1.firebasedatabase.app"
+  };
+
+  const CONTRACT_ADDRESS = "0x34e1838d8C150f38ABD0b2E5d91aa76A653ed03D"; 
+  const METADATA_URL = "https://ipfs.io/ipfs/bafybeidy2s24mgguq6d5kjrkhaoplxe2ueu7yhutqzb5uedjiydc7l75z4/metadata.json";
+  const CONTRACT_ABI = ["function publicMint(string _uri) payable"];
+  const MAX_MISTAKES = 5; 
+  // ✅ 3 GRY DZIENNIE
+  const MAX_GAMES_PER_DAY = 3;
+
+  // Filtered Categories
+  const CATEGORIES = {
+    Animals: ["BLUE WHALE", "RED FOX", "GOLDEN EAGLE", "BLACK BEAR", "WHITE SHARK", "POLAR BEAR", "BROWN WOLF", "TIGER SHARK", "KING COBRA", "BALD EAGLE", "GRAY WOLF", "WILD BOAR", "SNOW LEOPARD", "SEA TURTLE", "GIANT PANDA", "BLUE HERON", "RED PANDA", "TREE FROG", "SAND CAT"],
+    Crypto: ["LAYER TWO", "MEME TOKEN", "GAS FEES", "BULL MARKET", "BEAR MARKET", "PRIVATE KEY", "COLD WALLET", "SEED PHRASE", "WHITE PAPER", "SMART CHAIN", "BLOCK SIZE", "HASH RATE", "NODE RUNNER", "ALT COIN", "STABLE COIN", "GAS LIMIT", "HARD FORK", "SOFT FORK", "AIR DROP", "MOON BAG"],
+    Economics: ["MARKET CYCLE", "FISCAL POLICY", "INTEREST RATE", "SUPPLY CHAIN", "FREE TRADE", "BEAR TRAP", "BULL TRAP", "GOLD STANDARD", "STOCK MARKET", "HEDGE FUND", "CASH FLOW", "NET WORTH", "GROSS PROFIT", "TAX HAVEN", "TRADE WAR", "BOND YIELD", "DARK POOL"],
+    Web3: ["ON CHAIN", "TOKEN GATED", "DAO MEMBER", "MINT PAGE", "GAS WAR", "FLOOR PRICE", "BLUE CHIP", "PAPER HAND", "DIAMOND HAND", "META VERSE", "NFT DROP", "SOUL BOUND", "SOCIAL GRAPH", "IPFS LINK", "ENS DOMAIN", "LAYER ZERO", "ZK ROLLUP"],
+    DeFi: ["YIELD FARMING", "FLASH LOAN", "LIQUIDITY POOL", "TOTAL VALUE", "SWAP TOKEN", "AUTO COMPOUND", "STAKING POOL", "BRIDGE ASSET", "STABLE PAIR", "SLIPPAGE TOL", "FRONT RUN", "SANDWICH BOT", "LENDING RATE", "BORROW LIMIT", "COLLATERAL"]
+  };
+
+  for (const cat in CATEGORIES) {
+      CATEGORIES[cat] = CATEGORIES[cat].filter(phrase => {
+          const isMultiWord = phrase.includes(" ");
+          const isShortSingle = phrase.length <= 10;
+          return isMultiWord || isShortSingle;
+      });
+  }
+
+  let db;
+  let myUsername = "Guest";
+  let myUserId = "guest";
+  let currentScore = 0;
+  let currentStreak = 0;
+  let gamesPlayedTodayCount = 0; // ✅ Licznik gier w sesji
+  let pendingMint = false; // ✅ Flaga: czy wygrał i musi odebrać
+
+  let currentCategory = "", secret = "", revealed = [], mistakes = 0, moves = 0, gameOver = false;
+  let chartData = []; 
+  let currentPrice = 1000; 
+
+  const ctx = document.getElementById('chart').getContext('2d');
+
+  async function startApp() {
+      if (sdk && sdk.actions) {
+          try {
+              sdk.actions.ready();
+              console.log("Called sdk.actions.ready()");
+          } catch (err) { console.warn(err); }
+      }
+
+      const safeLoad = setTimeout(() => {
+          document.getElementById('loadingScreen').style.display = 'none';
+          blockGame(); 
+      }, 2000);
+
+      try {
+          const app = initializeApp(firebaseConfig);
+          db = getDatabase(app);
+          console.log("Firebase OK");
+
+          if (sdk && sdk.context) {
+              try {
+                  const ctx = await sdk.context;
+                  if(ctx?.user?.username) {
+                      myUsername = "@" + ctx.user.username;
+                      myUserId = myUsername.replace(/[^a-zA-Z0-9]/g, ""); 
+                      document.getElementById('playerDisplay').textContent = myUsername;
+                      document.getElementById('playerDisplay').style.display = 'inline-flex';
+                  }
+              } catch(e) {}
+          } else if (window.ethereum) {
+              try {
+                  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                  if(accounts.length > 0) {
+                      myUsername = accounts[0].substring(0,6) + "..." + accounts[0].substring(38);
+                      myUserId = accounts[0].toLowerCase();
+                      document.getElementById('playerDisplay').textContent = myUsername;
+                      document.getElementById('playerDisplay').style.display = 'inline-flex';
+                  }
+              } catch(e) {}
+          }
+
+          await syncUserProfile();
+          clearTimeout(safeLoad);
+          document.getElementById('loadingScreen').style.display = 'none';
+          
+          // Decyzja czy init czy block
+          if(gamesPlayedTodayCount >= MAX_GAMES_PER_DAY || pendingMint) {
+              blockGame();
+          } else {
+              initGame();
+          }
+
+      } catch(e) {
+          console.error("Critical error during startApp", e);
+          document.getElementById('loadingScreen').style.display = 'none';
+          initGame();
+      }
+  }
+
+  async function syncUserProfile() {
+      if(!db) return;
+      const userRef = ref(db, 'players/' + myUserId);
+      try {
+          const snapshot = await get(userRef);
+          if(snapshot.exists()) {
+              const data = snapshot.val();
+              currentScore = data.score || 0;
+              
+              const today = new Date().toISOString().split('T')[0];
+              const yesterdayDate = new Date();
+              yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+              const yesterday = yesterdayDate.toISOString().split('T')[0];
+
+              if(data.lastPlayed === today) {
+                  gamesPlayedTodayCount = data.gamesPlayedToday || 0;
+                  currentStreak = data.streak || 0;
+                  pendingMint = data.pendingMint || false; // ✅ Odczyt flagi
+              }
+              else if (data.lastPlayed === yesterday) {
+                  currentStreak = data.streak || 0;
+                  gamesPlayedTodayCount = 0;
+                  pendingMint = false;
+                  // Reset dnia
+                  update(userRef, { gamesPlayedToday: 0, pendingMint: false });
+              }
+              else {
+                  currentStreak = 0;
+                  gamesPlayedTodayCount = 0;
+                  pendingMint = false;
+                  if (data.streak > 0) update(userRef, { streak: 0, gamesPlayedToday: 0, pendingMint: false });
+              }
+          }
+      } catch(e) { console.error("Sync Error", e); }
+      document.getElementById('scoreDisplay').innerText = currentScore;
+      document.getElementById('streakDisplay').innerText = currentStreak;
+      updateDailyUI();
+  }
+
+  function initGame(newCat = true) {
+    // ✅ SPRAWDZENIE LIMITÓW PRZED STARTEM
+    if(gamesPlayedTodayCount >= MAX_GAMES_PER_DAY || pendingMint) return blockGame();
+
+    if(newCat || !currentCategory) currentCategory = Object.keys(CATEGORIES)[Math.floor(Math.random()*Object.keys(CATEGORIES).length)];
+    
+    const catArray = CATEGORIES[currentCategory];
+    if (!catArray || catArray.length === 0) { console.error("Category empty!"); return; }
+    
+    secret = catArray[Math.floor(Math.random()*catArray.length)].toUpperCase();
+    
+    revealed = Array.from(secret).map(ch => (ch === " " ? " " : "_"));
+    mistakes = 0; moves = 0; gameOver = false; 
+    
+    chartData = []; currentPrice = 1000; preloadChartHistory(); 
+    
+    document.getElementById('categoryDisplay').textContent = "Category: " + currentCategory;
+    document.getElementById('status').innerHTML = "";
+    document.getElementById('victoryModal').classList.remove('show'); 
+    document.getElementById('tries').textContent = "0";
+    document.getElementById('keyboard').style.pointerEvents = 'auto';
+    document.getElementById('keyboard').style.opacity = '1';
+    document.getElementById('newCategoryBtn').style.display = 'block'; 
+    document.getElementById('recoverMintBtn').style.display = 'none'; 
+    
+    const vBtn = document.getElementById('victoryMintBtn');
+    vBtn.innerHTML = "<span>✨ MINT TROPHY</span>";
+    vBtn.disabled = false;
+    
+    document.getElementById('victoryStatus').textContent = "";
+    document.getElementById('victoryTxLink').innerHTML = "";
+    
+    renderWord(); renderKeyboard(); drawCandleChart(); updateDailyUI();
+  }
+
+  // ✅ LOGIKA BLOKOWANIA I WYŚWIETLANIA PRZYCISKÓW
+  function blockGame() {
+        document.getElementById('wordDisplay').innerHTML = ''; 
+        document.getElementById('status').innerText = "";
+        document.getElementById('keyboard').style.pointerEvents = 'none';
+        document.getElementById('keyboard').style.opacity = '0.3';
+        document.getElementById('newCategoryBtn').style.display = 'none'; 
+        
+        // 1. Jeśli ma nieodebraną nagrodę -> Pokaż Claim
+        if(pendingMint) {
+            document.getElementById('recoverMintBtn').style.display = 'block';
+            document.getElementById('nextGameTimer').style.display = 'none';
+        } 
+        // 2. Jeśli wykorzystał 3 gry -> Pokaż Timer
+        else if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) {
+            document.getElementById('recoverMintBtn').style.display = 'none';
+            document.getElementById('nextGameTimer').style.display = 'block';
+            startCountdown();
+        }
+        // 3. Jeśli może grać dalej (po porażce/mincie) -> Odblokuj
+        else {
+            document.getElementById('recoverMintBtn').style.display = 'none';
+            document.getElementById('nextGameTimer').style.display = 'none';
+            document.getElementById('newCategoryBtn').style.display = 'block';
+            // Jeśli tu trafi, to znaczy że UI się odświeża, ale initGame trzeba wywołać ręcznie przyciskiem
+        }
+
+        updateDailyUI();
+        if(gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) startCountdown(); 
+        setTimeout(showLeaderboard, 500);
+  }
+  
+  function startCountdown() {
+      const timerElem = document.getElementById('countdown');
+      if (!timerElem) return;
+
+      function update() {
+          const now = new Date();
+          const tomorrow = new Date(now);
+          tomorrow.setUTCHours(24, 0, 0, 0); 
+
+          const diff = tomorrow - now;
+
+          if (diff <= 0) { timerElem.textContent = "00:00:00"; return; }
+
+          const h = Math.floor(diff / (1000 * 60 * 60));
+          const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+          timerElem.textContent = `${h<10?"0"+h:h}:${m<10?"0"+m:m}:${s<10?"0"+s:s}`;
+      }
+      update(); setInterval(update, 1000);
+  }
+
+  function preloadChartHistory() { for(let i=0; i<80; i++) { generateCandle((Math.random() - 0.5) * 1.5, 2.5); } }
+
+  function renderWord() {
+    const container = document.getElementById('wordDisplay'); container.innerHTML = '';
+    const words = secret.split(' '); let globalIndex = 0;
+    words.forEach((word) => {
+        const group = document.createElement('div'); group.className = 'word-group';
+        for(let i=0; i<word.length; i++) {
+            const char = revealed[globalIndex];
+            const letterBox = document.createElement('div'); letterBox.className = 'letter-box';
+            if(char !== '_') { letterBox.textContent = char; letterBox.classList.add('revealed'); } else { letterBox.textContent = ''; }
+            group.appendChild(letterBox); globalIndex++;
+        }
+        globalIndex++; container.appendChild(group);
+    });
+  }
+
+  function renderKeyboard() {
+    const k = document.getElementById('keyboard'); k.innerHTML = "";
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(l => {
+      const b = document.createElement('button'); b.className = 'key'; b.id = `key-${l}`; b.textContent = l;
+      b.onclick = () => handleGuess(l); k.appendChild(b);
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+      if(gameOver || (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY)) return;
+      const key = e.key.toUpperCase();
+      if (/^[A-Z]$/.test(key)) handleGuess(key);
+  });
+
+  function handleGuess(l) {
+    if(gameOver) return;
+    const btn = document.getElementById(`key-${l}`);
+    if(btn && btn.disabled) return;
+    if(btn) btn.disabled = true;
+
+    let hit = false;
+    for(let i=0; i<secret.length; i++) { if(secret[i] === l) { revealed[i] = l; hit = true; } }
+    
+    if(hit) { if(btn) btn.classList.add('hit'); } else { if(btn) btn.classList.add('miss'); mistakes++; }
+    
+    document.getElementById('tries').textContent = mistakes;
+    simulateMarketMove(hit ? 'bullish' : 'bearish');
+    renderWord(); drawCandleChart(); checkEnd();
+  }
+
+  function checkEnd() {
+    if(!revealed.includes("_")) {
+      // --- ZWYCIĘSTWO ---
+      gameOver = true; document.getElementById('status').innerHTML = "<span class='won'>VICTORY!</span>";
+      generateHugeCandle('up'); drawCandleChart();
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+
+      document.getElementById('newCategoryBtn').style.display = 'none'; // Blokuj
+      pendingMint = true; // ✅ Ustaw flagę, że musi odebrać
+
+      if(db) {
+          const userRef = ref(db, 'players/' + myUserId);
+          const today = new Date().toISOString().split('T')[0];
+          runTransaction(userRef, (userData) => {
+              const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+              const yesterday = yesterdayDate.toISOString().split('T')[0];
+              if (userData) {
+                  userData.score = (userData.score || 0) + 1;
+                  userData.gamesPlayedToday = (userData.gamesPlayedToday || 0) + 1; // +1 Gra
+                  userData.pendingMint = true; // ✅ Zapisz flagę w DB
+                  
+                  if (userData.lastPlayed === yesterday) userData.streak = (userData.streak || 0) + 1;
+                  else if (userData.lastPlayed !== today) userData.streak = 1;
+                  
+                  userData.lastPlayed = today; userData.name = myUsername;
+              } else {
+                  userData = { name: myUsername, score: 1, streak: 1, lastPlayed: today, gamesPlayedToday: 1, pendingMint: true };
+              }
+              return userData;
+          }).then((res) => {
+              gamesPlayedTodayCount = res.snapshot.val().gamesPlayedToday;
+              currentScore++; currentStreak++; updateScoreUI(); updateDailyUI();
+          });
+      }
+      setTimeout(() => { document.getElementById('victoryModal').classList.add('show'); }, 1000); 
+
+    } else if (mistakes >= MAX_MISTAKES) {
+      // --- PORAŻKA ---
+      gameOver = true; document.getElementById('status').innerHTML = "<span class='dead'>LIQUIDATED!</span>";
+      generateHugeCandle('down'); drawCandleChart();
+      
+      document.getElementById('newCategoryBtn').style.display = 'none';
+
+      if(db) {
+          const today = new Date().toISOString().split('T')[0];
+          const userRef = ref(db, 'players/' + myUserId);
+          runTransaction(userRef, (userData) => {
+              if(userData) {
+                  userData.streak = 0;
+                  userData.gamesPlayedToday = (userData.gamesPlayedToday || 0) + 1; // +1 Gra
+                  userData.lastPlayed = today;
+                  userData.pendingMint = false; // Nie wygrał, nie ma co odbierać
+              } else {
+                  userData = { name: myUsername, streak: 0, gamesPlayedToday: 1, lastPlayed: today, pendingMint: false };
+              }
+              return userData;
+          }).then((res) => {
+              gamesPlayedTodayCount = res.snapshot.val().gamesPlayedToday;
+              currentStreak = 0; updateScoreUI(); updateDailyUI();
+              
+              // Jeśli ma jeszcze życia (np. 1/3), pokaż przycisk New Category
+              if(gamesPlayedTodayCount < MAX_GAMES_PER_DAY) {
+                  document.getElementById('newCategoryBtn').style.display = 'block';
+                  document.getElementById('nextGameTimer').style.display = 'none';
+              } else {
+                  blockGame(); // Timer
+              }
+          });
+      }
+    }
+  }
+
+  function generateCandle(trendBias, volatility) {
+      const open = currentPrice; let movement = trendBias + ((Math.random() - 0.5) * volatility); const close = open + movement;
+      chartData.push({ open, close, high: Math.max(open, close) + Math.random(), low: Math.min(open, close) - Math.random() });
+      currentPrice = close; if(chartData.length > 300) chartData.shift();
+  }
+  function simulateMarketMove(type) { for(let i=0; i<5; i++) { generateCandle(type === 'bullish' ? 1.5 : -1.5, 3); } }
+  function generateHugeCandle(direction) {
+      const open = currentPrice; const movement = currentPrice * 0.5 * (direction === 'up' ? 1 : -1); const close = open + movement;
+      chartData.push({ open, close, high: Math.max(open,close), low: Math.min(open,close), isFinale: true }); currentPrice = close;
+  }
+  
+  function drawCandleChart() {
+    const w = 800, h = 250; ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle = "rgba(255,255,255,0.03)"; ctx.lineWidth = 1; for(let y=0; y<h; y+=h/5) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+    if(chartData.length === 0) return;
+    let scalingData = chartData.filter(c => !c.isFinale); if(scalingData.length === 0) scalingData = chartData;
+    let minP = Math.min(...scalingData.map(c => c.low)); let maxP = Math.max(...scalingData.map(c => c.high));
+    let range = maxP - minP || 1; const margin = range * 0.1; minP -= margin; maxP += margin; range = maxP - minP;
+    const candleWidth = (w - 40) / chartData.length;
+    chartData.forEach((c, i) => {
+        const x = 20 + i * candleWidth;
+        const yOpen = h - ((c.open - minP) / range * h); const yClose = h - ((c.close - minP) / range * h);
+        const yHigh = h - ((c.high - minP) / range * h); const yLow = h - ((c.low - minP) / range * h);
+        const isGreen = c.close >= c.open; ctx.fillStyle = isGreen ? '#22c55e' : '#ef4444'; ctx.strokeStyle = isGreen ? '#22c55e' : '#ef4444';
+        ctx.beginPath(); ctx.moveTo(x+candleWidth/2, yHigh); ctx.lineTo(x+candleWidth/2, yLow); ctx.stroke();
+        ctx.fillRect(x, Math.min(yOpen, yClose), candleWidth-1, Math.max(Math.abs(yClose-yOpen), 1));
+    });
+  }
+
+  // ✅ MINT FUNCTION (FIXED FOR 3 GAMES & PC)
+  async function mintNFT() {
+    const MINT_PRICE = "0x9184e72a000"; 
+
+    const btn = document.getElementById('victoryMintBtn');
+    const statusDiv = document.getElementById('victoryStatus');
+    const txDiv = document.getElementById('victoryTxLink');
+    
+    btn.innerHTML = "Processing...";
+    btn.disabled = true;
+    statusDiv.textContent = "Waiting for wallet...";
+    statusDiv.style.color = "#94a3b8";
+
+    try {
+      const iface = new ethers.utils.Interface(CONTRACT_ABI);
+      const dataHex = iface.encodeFunctionData("publicMint", [METADATA_URL]);
+      let txHash;
+
+      // 1. MOBILE
+      if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
+          const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
+          try {
+             statusDiv.textContent = "Confirm transaction (Pay 0.00001 ETH)...";
+             const result = await sdk.wallet.ethProvider.request({
+                method: 'eth_sendTransaction',
+                params: [{ from: accounts[0], to: CONTRACT_ADDRESS, data: dataHex, value: MINT_PRICE }]
+             });
+             txHash = result;
+          } catch (err) { console.warn("SDK fail", err); }
+      }
+
+      // 2. PC (MetaMask)
+      if (!txHash && window.ethereum) {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          try {
+            await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+          } catch (switchError) {
+            if (switchError.code === 4902) {
+               try {
+                 await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0x2105', chainName: 'Base', rpcUrls: ['https://mainnet.base.org'] }] });
+               } catch (addError) {}
+            }
+          }
+          statusDiv.textContent = "Confirm in MetaMask...";
+          txHash = await window.ethereum.request({
+              method: 'eth_sendTransaction',
+              params: [{ from: accounts[0], to: CONTRACT_ADDRESS, value: MINT_PRICE, data: dataHex, gas: '0x493E0' }]
+          });
+      } else if (!txHash && !sdk?.wallet?.ethProvider) { throw new Error("No wallet found"); }
+
+      // SUKCES
+      if(db) {
+          const userRef = ref(db, 'players/' + myUserId);
+          runTransaction(userRef, (userData) => {
+              if (userData) { 
+                  userData.score = (userData.score || 0) + 2; 
+                  userData.mintCount = (userData.mintCount || 0) + 1;
+                  userData.pendingMint = false; // ✅ Mint wykonany, odblokuj
+              }
+              return userData;
+          }).then(() => { 
+              currentScore += 2; 
+              updateScoreUI();
+              pendingMint = false;
+              
+              // ✅ DECYZJA CO POKAŻ PO MINCIE
+              if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY) {
+                  document.getElementById('recoverMintBtn').style.display = 'none';
+                  document.getElementById('newCategoryBtn').style.display = 'block'; // Graj dalej
+                  document.getElementById('nextGameTimer').style.display = 'none';
+              } else {
+                  blockGame(); // Timer
+              }
+          });
+      }
+
+      statusDiv.textContent = "Success! Trophy Minted. 🏆";
+      statusDiv.style.color = "#4ade80";
+      btn.innerHTML = "MINTED! 🏆";
+      const actualHash = (typeof txHash === 'string') ? txHash : (txHash?.[0] || "tx_sent");
+      txDiv.innerHTML = `<a href="https://basescan.org/tx/${actualHash}" target="_blank">View on BaseScan</a>`;
+      confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
+      
+    } catch(e) { 
+        console.error(e);
+        statusDiv.textContent = "Error: " + (e.message || "Cancelled");
+        statusDiv.style.color = "#ef4444";
+        btn.innerHTML = "Try Again";
+        btn.disabled = false;
+    }
+  }
+
+  function updateScoreUI() { 
+      document.getElementById('scoreDisplay').textContent = currentScore; 
+      document.getElementById('streakDisplay').textContent = currentStreak; 
+  }
+
+  function showLeaderboard() {
+      const tbody = document.getElementById('leaderboardBody');
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">Loading scores...</td></tr>';
+      document.getElementById('leaderboardOverlay').classList.add('show');
+      if (!db) return;
+      const playersRef = ref(db, 'players');
+      onValue(playersRef, (snapshot) => {
+          const data = snapshot.val();
+          if (!data) return;
+          const sortedPlayers = Object.values(data).sort((a, b) => (b.score||0) - (a.score||0)).slice(0, 50);
+          tbody.innerHTML = sortedPlayers.map((p, i) => { 
+              const rank = i + 1;
+              let rankClass = "rank-badge rank-other";
+              if(rank===1) rankClass = "rank-badge rank-1"; else if(rank===2) rankClass = "rank-badge rank-2"; else if(rank===3) rankClass = "rank-badge rank-3";
+              const isMe = p.name === myUsername;
+              const nameStyle = isMe ? 'color: #8b5cf6; font-weight: 700;' : 'color: #fff;';
+              return `<tr><td><div class="${rankClass}">${rank}</div></td><td style="${nameStyle}">${p.name} <span style="font-size:10px; color:#94a3b8; margin-left:4px;">(🔥${p.streak||0})</span></td><td style="text-align:right; font-weight:700;">${p.score||0}</td></tr>`;
+          }).join('');
+      });
+  }
+
+  window.closeVictoryModal = function() {
+      document.getElementById('victoryModal').classList.remove('show');
+  }
+
+  function updateDailyUI() { 
+      document.getElementById('dailyInfo').textContent = `Games: ${gamesPlayedTodayCount}/${MAX_GAMES_PER_DAY}`; 
+  }
+
+  document.getElementById('newCategoryBtn').onclick = () => initGame(true);
+  document.getElementById('leaderboardBtn').onclick = showLeaderboard;
+  document.getElementById('closeLeaderboard').onclick = () => document.getElementById('leaderboardOverlay').classList.remove('show');
+
+  // Funkcje do globalnego scope (dla buttonów onlick)
+  window.mintNFT = mintNFT;
+  window.initGame = initGame;
+
+  window.onload = startApp;
+</script>
+</body>
+</html>
