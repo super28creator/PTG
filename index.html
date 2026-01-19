@@ -405,14 +405,7 @@
           await syncUserProfile();
           clearTimeout(safeLoad);
           document.getElementById('loadingScreen').style.display = 'none';
-          // ✅ POPRAWKA LOGIKI STARTU:
-          if(pendingMint) {
-              blockGame();
-          } else if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) {
-              blockGame();
-          } else {
-              initGame();
-          }
+          if(gamesPlayedTodayCount >= MAX_GAMES_PER_DAY || pendingMint) blockGame(); else initGame();
       } catch(e) {
           console.error("Critical error during startApp", e);
           document.getElementById('loadingScreen').style.display = 'none';
@@ -453,9 +446,7 @@
   }
 
   function initGame(newCat = true) {
-    if(pendingMint) return blockGame();
-    if(gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) return blockGame();
-
+    if(gamesPlayedTodayCount >= MAX_GAMES_PER_DAY || pendingMint) return blockGame();
     if(newCat || !currentCategory) currentCategory = Object.keys(CATEGORIES)[Math.floor(Math.random()*Object.keys(CATEGORIES).length)];
     const catArray = CATEGORIES[currentCategory];
     if (!catArray || catArray.length === 0) return;
@@ -655,6 +646,7 @@
     });
   }
 
+  // ✅ UPDATED MINT (FIX DLA PC/METAMASK + MOBILE + UI + NO LIMIT)
   async function mintNFT() {
     const MINT_PRICE = "0x9184e72a000"; 
     const btn = document.getElementById('victoryMintBtn');
@@ -682,7 +674,7 @@
           } catch (err) { console.warn("SDK fail", err); }
       }
 
-      // 2. PC
+      // 2. PC - ✅ FIX: GAS LIMIT I CHAIN ID
       if (!txHash && window.ethereum) {
           const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
           try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); } catch(e) {
@@ -691,34 +683,38 @@
           statusDiv.textContent = "Confirm in MetaMask...";
           txHash = await window.ethereum.request({
               method: 'eth_sendTransaction',
-              params: [{ from: accounts[0], to: CONTRACT_ADDRESS, value: MINT_PRICE, data: dataHex, gas: '0x493E0' }]
+              params: [{ 
+                  from: accounts[0], 
+                  to: CONTRACT_ADDRESS, 
+                  value: MINT_PRICE, 
+                  data: dataHex, 
+                  gas: '0x7A120' // 500,000 GAS LIMIT - TO NAPRAWIA BŁĄD RPC
+              }]
           });
       } else if (!txHash && !sdk?.wallet?.ethProvider) { throw new Error("No wallet found"); }
 
-      // WAŻNE: Jeśli nie ma hasha, to znaczy że anulowano
-      if(!txHash) throw new Error("Transaction cancelled");
+      // WAŻNE: JEŚLI NIE MA HASHU, PRZERWIJ
+      if(!txHash) throw new Error("Transaction cancelled or failed");
 
-      // SUKCES - ODBLOKUJ GRĘ DALEJ
+      // SUKCES
       if(db) {
           const userRef = ref(db, 'players/' + myUserId);
           runTransaction(userRef, (userData) => {
               if (userData) { 
                   userData.score = (userData.score || 0) + 2; 
                   userData.mintCount = (userData.mintCount || 0) + 1;
-                  userData.pendingMint = false; // ✅ Mint wykonany, flaga OFF
+                  userData.pendingMint = false; 
               }
               return userData;
           }).then(() => { 
               currentScore += 2; updateScoreUI(); pendingMint = false;
               
-              // ✅ WAŻNE: Czy ma jeszcze życia?
+              // ✅ LOGIKA ODBLOKOWANIA GRY
               if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY) {
-                  // ODBLOKUJ KOLEJNĄ GRĘ
                   document.getElementById('recoverMintBtn').style.display = 'none';
                   document.getElementById('newCategoryBtn').style.display = 'block'; 
                   document.getElementById('nextGameTimer').style.display = 'none';
               } else {
-                  // LIMIT WYCZERPANY -> TIMER
                   blockGame(); 
               }
           });
