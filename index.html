@@ -485,8 +485,6 @@
             document.getElementById('nextGameTimer').style.display = 'block';
             startCountdown();
         } else {
-            // ✅ To się wykona, gdy funkcja zostanie wywołana, ale nie ma powodu do blokady
-            // np. po mincie, gdy mamy jeszcze życia.
             document.getElementById('recoverMintBtn').style.display = 'none';
             document.getElementById('nextGameTimer').style.display = 'none';
             document.getElementById('newCategoryBtn').style.display = 'block';
@@ -646,7 +644,6 @@
     });
   }
 
-  // ✅ UPDATED MINT (FIX DLA PC/METAMASK + MOBILE + UI + NO LIMIT)
   async function mintNFT() {
     const MINT_PRICE = "0x9184e72a000"; 
     const btn = document.getElementById('victoryMintBtn');
