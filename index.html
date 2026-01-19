@@ -336,7 +336,10 @@
   const METADATA_URL = "https://ipfs.io/ipfs/bafybeidy2s24mgguq6d5kjrkhaoplxe2ueu7yhutqzb5uedjiydc7l75z4/metadata.json";
   const CONTRACT_ABI = ["function publicMint(string _uri) payable"];
   const MAX_MISTAKES = 5; 
+<<<<<<< HEAD
   // ✅ 3 GRY DZIENNIE
+=======
+>>>>>>> 108370453c116ec28d69715977315766028deec3
   const MAX_GAMES_PER_DAY = 3;
 
   const CATEGORIES = {
@@ -644,20 +647,25 @@
     });
   }
 
+<<<<<<< HEAD
   // ✅ UPDATED MINT (FIX DLA PC/METAMASK + MOBILE + UI + NO LIMIT)
+=======
+>>>>>>> 108370453c116ec28d69715977315766028deec3
   async function mintNFT() {
     const MINT_PRICE = "0x9184e72a000"; 
     const btn = document.getElementById('victoryMintBtn');
     const statusDiv = document.getElementById('victoryStatus');
-    const txDiv = document.getElementById('victoryTxLink');
     
     btn.innerHTML = "Processing..."; btn.disabled = true;
     statusDiv.textContent = "Waiting for wallet..."; statusDiv.style.color = "#94a3b8";
 
     try {
+<<<<<<< HEAD
       // ✅ USUNIĘTA BLOKADA "Already Owned" -> Możesz mintować ile chcesz
       // if (mintCount >= 1) ... -> SKASOWANE
 
+=======
+>>>>>>> 108370453c116ec28d69715977315766028deec3
       const iface = new ethers.utils.Interface(CONTRACT_ABI);
       const dataHex = iface.encodeFunctionData("publicMint", [METADATA_URL]);
       let txHash;
@@ -688,6 +696,10 @@
           });
       } else if (!txHash && !sdk?.wallet?.ethProvider) { throw new Error("No wallet found"); }
 
+<<<<<<< HEAD
+=======
+      // WAŻNE: JEŚLI NIE MA HASHU, PRZERWIJ (ŻEBY NIE ZALICZYŁO SUKCESU PRZY ANULOWANIU)
+>>>>>>> 108370453c116ec28d69715977315766028deec3
       if(!txHash) throw new Error("Transaction cancelled or failed");
 
       // SUKCES
