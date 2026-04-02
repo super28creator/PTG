@@ -941,13 +941,6 @@
   const BASENAME_L2_RESOLVER_PROXY = "0x426fA03fB86E510d0Dd9F70335Cf102a98b10875";
   const BASENAME_L2_RESOLVER_LEGACY = "0xC6d566A56A1aFf6508b41f6c90ff131615583BCD";
   const BASE_RPC_PUBLIC = "https://mainnet.base.org";
-  /** Zapasowe RPC do odczytów / waitForTx, gdy Rainbow/MetaMask zwraca „HTTP client error”. */
-  const BASE_RPC_FALLBACKS = [
-      "https://mainnet.base.org",
-      "https://base.llamarpc.com",
-      "https://1rpc.io/base",
-      "https://base.publicnode.com",
-  ];
   const BASE_NUMERIC_CHAIN_ID = 8453;
   const BASENAME_NAME_ABI = ["function name(bytes32 node) view returns (string)"];
   const REVERSE_REGISTRAR_NODE_ABI = ["function node(address addr) view returns (bytes32)"];
@@ -1917,6 +1910,80 @@
       throw new Error(msg + hint);
   }
 
+  /** Ten sam origin co voucher + produkcja — CORS; wywołania Base idą przez /api/base-jsonrpc na Vercel. */
+  function collectBaseJsonRpcUrls() {
+      const list = [];
+      const add = (u) => {
+          if (u && list.indexOf(u) === -1) list.push(u);
+      };
+      const canonicalOrigin = getCanonicalSiteOrigin();
+      const canonicalApi = `${canonicalOrigin}/api/base-jsonrpc`;
+      const prodApi = PTG_PUBLIC_SITE_ORIGIN + "/api/base-jsonrpc";
+      if (isStaticLocalOrFileHost()) {
+          add(canonicalApi);
+          if (canonicalApi !== prodApi) add(prodApi);
+          return list;
+      }
+      if (location.origin && location.protocol !== "file:") {
+          add(`${location.origin}/api/base-jsonrpc`);
+      }
+      add("/api/base-jsonrpc");
+      add(canonicalApi);
+      if (canonicalApi !== prodApi) add(prodApi);
+      return list;
+  }
+
+  async function baseJsonRpc(payload) {
+      const urls = collectBaseJsonRpcUrls();
+      let lastErr = null;
+      for (let i = 0; i < urls.length; i++) {
+          try {
+              const r = await fetch(urls[i], {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(payload),
+                  mode: "cors",
+                  cache: "no-store",
+              });
+              const text = await r.text();
+              let j;
+              try {
+                  j = JSON.parse(text);
+              } catch {
+                  throw new Error("Invalid JSON from Base RPC proxy");
+              }
+              if (j.error) throw new Error(j.error.message || "jsonrpc error");
+              if (!r.ok) throw new Error("Base RPC proxy HTTP " + r.status);
+              return j.result;
+          } catch (e) {
+              lastErr = e;
+              console.warn("baseJsonRpc", urls[i], e);
+          }
+      }
+      throw lastErr || new Error("Base RPC proxy: all URLs failed");
+  }
+
+  async function waitForTxReceiptViaServer(txHash) {
+      const h = typeof txHash === "string" ? txHash : String(txHash);
+      const deadline = Date.now() + 180000;
+      let delay = 700;
+      while (Date.now() < deadline) {
+          const result = await baseJsonRpc({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "eth_getTransactionReceipt",
+              params: [h],
+          });
+          if (result && result.blockHash) {
+              const ok = result.status === "0x1" || result.status === 1;
+              return { status: ok ? 1 : 0 };
+          }
+          await new Promise((res) => setTimeout(res, delay));
+          delay = Math.min(delay + 350, 3200);
+      }
+      throw new Error("Transaction confirmation timeout (Base via server RPC)");
+  }
+
   function formatMintVoucherApiError(codeOrText) {
       const c = String(codeOrText || "").trim();
       const map = {
@@ -1957,21 +2024,23 @@
               const [wei] = priceIface.decodeFunctionResult("mintPriceWei", hex);
               return ethers.BigNumber.from(wei).toHexString();
           } catch (e) {
-              console.warn("readMintPriceWeiHex: wallet RPC failed, trying public Base RPC", e);
+              console.warn("readMintPriceWeiHex: wallet RPC failed, trying server proxy", e);
           }
       }
-      for (let i = 0; i < BASE_RPC_FALLBACKS.length; i++) {
-          try {
-              const p = new ethers.providers.JsonRpcProvider(BASE_RPC_FALLBACKS[i]);
-              const raw = await p.call({ to: contractAddr, data });
-              const [wei] = priceIface.decodeFunctionResult("mintPriceWei", raw);
-              return ethers.BigNumber.from(wei).toHexString();
-          } catch (e) {
-              console.warn("readMintPriceWeiHex: fallback RPC", BASE_RPC_FALLBACKS[i], e);
-          }
+      try {
+          const hex = await baseJsonRpc({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "eth_call",
+              params: [{ to: contractAddr, data }, "latest"],
+          });
+          const [wei] = priceIface.decodeFunctionResult("mintPriceWei", hex);
+          return ethers.BigNumber.from(wei).toHexString();
+      } catch (e) {
+          console.warn("readMintPriceWeiHex: server proxy failed", e);
       }
       throw new Error(
-          "Could not read mint price on Base (all RPC endpoints failed). Check connection or try another wallet."
+          "Could not read mint price on Base (wallet RPC and site proxy failed). Redeploy with /api/base-jsonrpc or try another wallet."
       );
   }
 
@@ -2141,19 +2210,8 @@
           const web3p = new ethers.providers.Web3Provider(ethProvider, "any");
           receipt = await web3p.waitForTransaction(txHash, 1, 180000);
       } catch (waitErr) {
-          console.warn("waitForTransaction: wallet RPC failed, using public Base RPC", waitErr);
-          let lastErr = waitErr;
-          receipt = null;
-          for (let i = 0; i < BASE_RPC_FALLBACKS.length; i++) {
-              try {
-                  const p = new ethers.providers.JsonRpcProvider(BASE_RPC_FALLBACKS[i]);
-                  receipt = await p.waitForTransaction(txHash, 1, 180000);
-                  break;
-              } catch (e) {
-                  lastErr = e;
-              }
-          }
-          if (!receipt) throw lastErr;
+          console.warn("waitForTransaction: wallet RPC failed, using server Base proxy", waitErr);
+          receipt = await waitForTxReceiptViaServer(txHash);
       }
       if (!receipt || receipt.status !== 1) {
           throw new Error("Transaction reverted or not confirmed");
