@@ -886,6 +886,7 @@
   const PTG_NFT_ABI = [
     "function mintWithSignature(uint256 deadline,uint8 v,bytes32 r,bytes32 s) payable",
     "function mintPriceWei() view returns (uint256)",
+    "function balanceOf(address owner) view returns (uint256)",
   ];
   /** Base mainnet chainId 8453 (0x2105); RPC + explorer per docs.base.org */
   const BASE_CHAIN_ID_HEX = "0x2105";
@@ -1975,13 +1976,80 @@
               params: [h],
           });
           if (result && result.blockHash) {
-              const ok = result.status === "0x1" || result.status === 1;
+              const st = result.status;
+              if (st === undefined || st === null) {
+                  await new Promise((res) => setTimeout(res, delay));
+                  delay = Math.min(delay + 350, 3200);
+                  continue;
+              }
+              const ok = st === "0x1" || st === 1 || st === true;
               return { status: ok ? 1 : 0 };
           }
           await new Promise((res) => setTimeout(res, delay));
           delay = Math.min(delay + 350, 3200);
       }
       throw new Error("Transaction confirmation timeout (Base via server RPC)");
+  }
+
+  function normalizeMintTxHash(h) {
+      let x = h;
+      if (Array.isArray(x)) x = x[0];
+      if (x && typeof x === "object" && typeof x.hash === "string") x = x.hash;
+      x = typeof x === "string" ? x.trim() : "";
+      if (!/^0x[0-9a-fA-F]{64}$/.test(x)) {
+          throw new Error("Invalid transaction hash from wallet");
+      }
+      return x;
+  }
+
+  /** Odrzuć niejednoznaczny receipt — bez tego nie naliczamy +2 punktów. */
+  function receiptIndicatesSuccess(receipt) {
+      if (!receipt) return false;
+      const s = receipt.status;
+      if (s === undefined || s === null) return false;
+      if (typeof s === "number") return s === 1;
+      if (typeof s === "string") {
+          const t = s.toLowerCase();
+          return t === "0x1" || t === "1";
+      }
+      try {
+          if (typeof s.toNumber === "function") return s.toNumber() === 1;
+          if (typeof s.eq === "function") return s.eq(1);
+      } catch (_) {}
+      return false;
+  }
+
+  async function readNftBalanceBn(contractAddr, owner, ethProvider) {
+      const iface = new ethers.utils.Interface([
+          "function balanceOf(address owner) view returns (uint256)",
+      ]);
+      const data = iface.encodeFunctionData("balanceOf", [owner]);
+      let hex = null;
+      if (ethProvider && typeof ethProvider.request === "function") {
+          try {
+              hex = await ethProvider.request({
+                  method: "eth_call",
+                  params: [{ to: contractAddr, data }, "latest"],
+              });
+          } catch (e) {
+              console.warn("readNftBalanceBn: wallet RPC failed", e);
+          }
+      }
+      if (!hex) {
+          try {
+              hex = await baseJsonRpc({
+                  jsonrpc: "2.0",
+                  id: 1,
+                  method: "eth_call",
+                  params: [{ to: contractAddr, data }, "latest"],
+              });
+          } catch (e) {
+              console.warn("readNftBalanceBn: proxy failed", e);
+              throw new Error("Could not read NFT balance on Base");
+          }
+      }
+      const [bn] = iface.decodeFunctionResult("balanceOf", hex);
+      return ethers.BigNumber.from(bn);
   }
 
   function formatMintVoucherApiError(codeOrText) {
@@ -2163,6 +2231,7 @@
       const mintIface = new ethers.utils.Interface(PTG_NFT_ABI);
       const dataHex = mintIface.encodeFunctionData("mintWithSignature", [deadline, v, r, s]);
       const valueHex = await readMintPriceWeiHex(PTG_NFT_ADDRESS, ethProvider);
+      const balBefore = await readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider);
 
       let txHash;
 
@@ -2204,6 +2273,8 @@
 
       if (!txHash) throw new Error("Transaction cancelled or failed");
 
+      txHash = normalizeMintTxHash(txHash);
+
       statusDiv.textContent = "Waiting for confirmation…";
       let receipt;
       try {
@@ -2213,37 +2284,49 @@
           console.warn("waitForTransaction: wallet RPC failed, using server Base proxy", waitErr);
           receipt = await waitForTxReceiptViaServer(txHash);
       }
-      if (!receipt || receipt.status !== 1) {
+      if (!receiptIndicatesSuccess(receipt)) {
           throw new Error("Transaction reverted or not confirmed");
       }
 
-      // SUCCESS
+      statusDiv.textContent = "Verifying mint on-chain…";
+      const balAfter = await readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider);
+      if (!balAfter.gt(balBefore)) {
+          throw new Error(
+              "NFT balance did not increase after the transaction — mint bonus was not applied. Check the tx on BaseScan."
+          );
+      }
+
+      // SUCCESS — dopiero po receipt + balance; Firebase przed UI sukcesu
       const mintDay = localDateKey();
-      if(db) {
+      if (db) {
           const userRef = playerDocRef(myUserId);
-          runTransaction(userRef, (userData) => {
-              if (userData) { 
-                  userData.score = (userData.score || 0) + 2; 
+          await runTransaction(userRef, (userData) => {
+              if (userData) {
+                  userData.score = (userData.score || 0) + 2;
                   userData.mintCount = (userData.mintCount || 0) + 1;
                   userData.pendingMint = false;
-                  if (!userData.mintCalendar || typeof userData.mintCalendar !== "object") userData.mintCalendar = {};
+                  if (!userData.mintCalendar || typeof userData.mintCalendar !== "object") {
+                      userData.mintCalendar = {};
+                  }
                   userData.mintCalendar[mintDay] = true;
               }
               return userData;
-          }).then(() => { 
-              currentScore += 2; updateScoreUI(); pendingMint = false;
-              mintCalendarDays = { ...mintCalendarDays, [mintDay]: true };
-              renderCalendarMonth();
-              checkGameStateAndRender(); 
           });
+          currentScore += 2;
+          updateScoreUI();
+          pendingMint = false;
+          mintCalendarDays = { ...mintCalendarDays, [mintDay]: true };
+          renderCalendarMonth();
+          checkGameStateAndRender();
       } else {
           mintCalendarDays = { ...mintCalendarDays, [mintDay]: true };
           renderCalendarMonth();
       }
-      statusDiv.textContent = "Success! Trophy Minted. 🏆"; statusDiv.style.color = "#66c800";
+      statusDiv.textContent = "Success! Trophy Minted. 🏆";
+      statusDiv.style.color = "#66c800";
       btn.innerHTML = "MINTED! 🏆";
-      const actualHash = (typeof txHash === 'string') ? txHash : (txHash?.[0] || "tx_sent");
-      document.getElementById('victoryTxLink').innerHTML = `<a href="https://basescan.org/tx/${actualHash}" target="_blank">View on BaseScan</a>`;
+      document.getElementById("victoryTxLink").innerHTML =
+          `<a href="https://basescan.org/tx/${txHash}" target="_blank" rel="noopener noreferrer">View on BaseScan</a>`;
       confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
     } catch(e) { 
         console.error(e);
