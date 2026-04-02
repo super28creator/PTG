@@ -1824,6 +1824,8 @@
   }
 
   const PTG_PUBLIC_SITE_ORIGIN = "https://phrasetoguess.xyz";
+  /** Zapasowy deploy Vercel — ten sam /api/base-jsonrpc gdy główna domena ma problem. */
+  const PTG_VERCEL_DEPLOY_ORIGIN = "https://ptg-one.vercel.app";
   const PTG_MINT_VOUCHER_PRODUCTION = PTG_PUBLIC_SITE_ORIGIN + "/api/ptg-voucher";
 
   function getCanonicalSiteOrigin() {
@@ -1923,6 +1925,8 @@
       if (isStaticLocalOrFileHost()) {
           add(canonicalApi);
           if (canonicalApi !== prodApi) add(prodApi);
+          const v0 = `${PTG_VERCEL_DEPLOY_ORIGIN}/api/base-jsonrpc`;
+          if (v0 !== prodApi && v0 !== canonicalApi) add(v0);
           return list;
       }
       if (location.origin && location.protocol !== "file:") {
@@ -1931,6 +1935,8 @@
       add("/api/base-jsonrpc");
       add(canonicalApi);
       if (canonicalApi !== prodApi) add(prodApi);
+      const vercelApi = `${PTG_VERCEL_DEPLOY_ORIGIN}/api/base-jsonrpc`;
+      if (vercelApi !== prodApi && vercelApi !== canonicalApi) add(vercelApi);
       return list;
   }
 
@@ -1969,12 +1975,20 @@
       const deadline = Date.now() + 180000;
       let delay = 700;
       while (Date.now() < deadline) {
-          const result = await baseJsonRpc({
-              jsonrpc: "2.0",
-              id: 1,
-              method: "eth_getTransactionReceipt",
-              params: [h],
-          });
+          let result;
+          try {
+              result = await baseJsonRpc({
+                  jsonrpc: "2.0",
+                  id: 1,
+                  method: "eth_getTransactionReceipt",
+                  params: [h],
+              });
+          } catch (pollErr) {
+              console.warn("waitForTxReceiptViaServer: proxy poll error (retry)", pollErr);
+              await new Promise((res) => setTimeout(res, delay));
+              delay = Math.min(delay + 350, 3200);
+              continue;
+          }
           if (result && result.blockHash) {
               const st = result.status;
               if (st === undefined || st === null) {
@@ -2024,32 +2038,31 @@
           "function balanceOf(address owner) view returns (uint256)",
       ]);
       const data = iface.encodeFunctionData("balanceOf", [owner]);
-      let hex = null;
+      try {
+          const hex = await baseJsonRpc({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "eth_call",
+              params: [{ to: contractAddr, data }, "latest"],
+          });
+          const [bn] = iface.decodeFunctionResult("balanceOf", hex);
+          return ethers.BigNumber.from(bn);
+      } catch (e) {
+          console.warn("readNftBalanceBn: proxy failed, trying wallet", e);
+      }
       if (ethProvider && typeof ethProvider.request === "function") {
           try {
-              hex = await ethProvider.request({
+              const hex = await ethProvider.request({
                   method: "eth_call",
                   params: [{ to: contractAddr, data }, "latest"],
               });
-          } catch (e) {
-              console.warn("readNftBalanceBn: wallet RPC failed", e);
+              const [bn] = iface.decodeFunctionResult("balanceOf", hex);
+              return ethers.BigNumber.from(bn);
+          } catch (e2) {
+              console.warn("readNftBalanceBn: wallet failed", e2);
           }
       }
-      if (!hex) {
-          try {
-              hex = await baseJsonRpc({
-                  jsonrpc: "2.0",
-                  id: 1,
-                  method: "eth_call",
-                  params: [{ to: contractAddr, data }, "latest"],
-              });
-          } catch (e) {
-              console.warn("readNftBalanceBn: proxy failed", e);
-              throw new Error("Could not read NFT balance on Base");
-          }
-      }
-      const [bn] = iface.decodeFunctionResult("balanceOf", hex);
-      return ethers.BigNumber.from(bn);
+      throw new Error("Could not read NFT balance on Base (proxy + wallet failed)");
   }
 
   function formatMintVoucherApiError(codeOrText) {
@@ -2083,18 +2096,6 @@
           "function mintPriceWei() view returns (uint256)",
       ]);
       const data = priceIface.encodeFunctionData("mintPriceWei", []);
-      if (ethProvider && typeof ethProvider.request === "function") {
-          try {
-              const hex = await ethProvider.request({
-                  method: "eth_call",
-                  params: [{ to: contractAddr, data }, "latest"],
-              });
-              const [wei] = priceIface.decodeFunctionResult("mintPriceWei", hex);
-              return ethers.BigNumber.from(wei).toHexString();
-          } catch (e) {
-              console.warn("readMintPriceWeiHex: wallet RPC failed, trying server proxy", e);
-          }
-      }
       try {
           const hex = await baseJsonRpc({
               jsonrpc: "2.0",
@@ -2105,10 +2106,22 @@
           const [wei] = priceIface.decodeFunctionResult("mintPriceWei", hex);
           return ethers.BigNumber.from(wei).toHexString();
       } catch (e) {
-          console.warn("readMintPriceWeiHex: server proxy failed", e);
+          console.warn("readMintPriceWeiHex: proxy failed, trying wallet", e);
+      }
+      if (ethProvider && typeof ethProvider.request === "function") {
+          try {
+              const hex = await ethProvider.request({
+                  method: "eth_call",
+                  params: [{ to: contractAddr, data }, "latest"],
+              });
+              const [wei] = priceIface.decodeFunctionResult("mintPriceWei", hex);
+              return ethers.BigNumber.from(wei).toHexString();
+          } catch (e2) {
+              console.warn("readMintPriceWeiHex: wallet failed", e2);
+          }
       }
       throw new Error(
-          "Could not read mint price on Base (wallet RPC and site proxy failed). Redeploy with /api/base-jsonrpc or try another wallet."
+          "Could not read mint price on Base (site /api/base-jsonrpc and wallet RPC failed). Confirm deploy includes api/base-jsonrpc.js on Vercel."
       );
   }
 
@@ -2278,11 +2291,11 @@
       statusDiv.textContent = "Waiting for confirmation…";
       let receipt;
       try {
+          receipt = await waitForTxReceiptViaServer(txHash);
+      } catch (srvWaitErr) {
+          console.warn("Receipt poll: server proxy failed, trying wallet RPC", srvWaitErr);
           const web3p = new ethers.providers.Web3Provider(ethProvider, "any");
           receipt = await web3p.waitForTransaction(txHash, 1, 180000);
-      } catch (waitErr) {
-          console.warn("waitForTransaction: wallet RPC failed, using server Base proxy", waitErr);
-          receipt = await waitForTxReceiptViaServer(txHash);
       }
       if (!receiptIndicatesSuccess(receipt)) {
           throw new Error("Transaction reverted or not confirmed");
@@ -2333,7 +2346,7 @@
         let msg = e && e.message ? String(e.message) : "Cancelled";
         if (/rpc|http client error|network request failed/i.test(msg)) {
             msg +=
-                " — often a wallet RPC issue; retry or use another browser wallet / check Base RPC in wallet settings.";
+                " If this appears before signing, your wallet’s Base RPC is failing — try MetaMask, or disable “pay gas in another token”. Reads use the site’s /api/base-jsonrpc; only the signed tx uses the wallet.";
         }
         statusDiv.textContent = "Error: " + msg;
         statusDiv.style.color = "#fc401f"; btn.innerHTML = "Try Again"; btn.disabled = false;
