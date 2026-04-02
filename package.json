@@ -5,8 +5,7 @@
     "start": "http-server . -p 3000 --cors -c-1"
   },
   "devDependencies": {
-    "http-server": "^14.1.1",
-    "vercel": "^39.4.2"
+    "http-server": "^14.1.1"
   },
   "dependencies": {
     "@vercel/analytics": "^1.6.1",
