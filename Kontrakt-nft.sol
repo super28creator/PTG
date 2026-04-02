@@ -7,6 +7,8 @@ pragma solidity ^0.8.30;
  *
  * Remix: 0.8.30, optimization on, EVM paris.
  * Mint tylko przez `mintWithSignature` + podpis EIP-712 z serwera (authorizedSigner).
+ * Ostatni argument konstruktora `uniformTokenURI_`: niepusty = ten sam JSON IPFS dla każdego tokena
+ * (nieskończony mint „jednej” grafiki); wtedy `baseUri_` może być pusty `""`.
  */
 
 /* ======================== Interfaces ======================== */
@@ -355,6 +357,8 @@ contract PhraseToGuessNFT is ERC721, Ownable, ReentrancyGuard {
 
     uint256 private _nextTokenId;
     string private _baseUri;
+    /** Jeśli niepusty, każdy token zwraca ten sam tokenURI (jeden plik IPFS — nieskończony mint tej samej grafiki). */
+    string private _uniformTokenURI;
     uint256 public immutable mintPriceWei;
     uint256 public immutable maxSupply;
     address public immutable authorizedSigner;
@@ -378,15 +382,23 @@ contract PhraseToGuessNFT is ERC721, Ownable, ReentrancyGuard {
         uint256 mintPriceWei_,
         uint256 maxSupply_,
         address initialOwner,
-        address authorizedSigner_
+        address authorizedSigner_,
+        string memory uniformTokenURI_
     ) ERC721(name_, symbol_, "PhraseToGuess", "1") Ownable(initialOwner) {
-        if (bytes(baseUri_).length == 0) revert InvalidBaseURI();
-        bytes memory b = bytes(baseUri_);
-        if (b[b.length - 1] != bytes1("/")) revert InvalidBaseURI();
         if (mintPriceWei_ == 0) revert InvalidMintPrice();
         if (authorizedSigner_ == address(0)) revert InvalidSigner();
 
-        _baseUri = baseUri_;
+        if (bytes(uniformTokenURI_).length > 0) {
+            _uniformTokenURI = uniformTokenURI_;
+            _baseUri = "";
+        } else {
+            if (bytes(baseUri_).length == 0) revert InvalidBaseURI();
+            bytes memory b = bytes(baseUri_);
+            if (b[b.length - 1] != bytes1("/")) revert InvalidBaseURI();
+            _baseUri = baseUri_;
+            _uniformTokenURI = "";
+        }
+
         mintPriceWei = mintPriceWei_;
         maxSupply = maxSupply_;
         authorizedSigner = authorizedSigner_;
@@ -394,6 +406,14 @@ contract PhraseToGuessNFT is ERC721, Ownable, ReentrancyGuard {
 
     function _baseURI() internal view override returns (string memory) {
         return _baseUri;
+    }
+
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        _requireOwned(tokenId);
+        if (bytes(_uniformTokenURI).length > 0) {
+            return _uniformTokenURI;
+        }
+        return super.tokenURI(tokenId);
     }
 
     function mintWithSignature(uint256 deadline, uint8 v, bytes32 r, bytes32 s)
