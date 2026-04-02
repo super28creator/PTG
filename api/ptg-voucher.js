@@ -25,6 +25,41 @@ function isAddress(x) {
   return /^0x[a-fA-F0-9]{40}$/.test(String(x || ""));
 }
 
+/** Vercel: często wklejany z cudzysłowami / nową linią; obsługa kilku nazw zmiennych. */
+function getMintSignerPrivateKey() {
+  const names = [
+    "MINT_SIGNER_PRIVATE_KEY",
+    "PTG_MINT_SIGNER_PRIVATE_KEY",
+    "MINT_PRIVATE_KEY",
+  ];
+  for (const n of names) {
+    const raw = process.env[n];
+    if (typeof raw !== "string") continue;
+    let s = raw.trim();
+    if (
+      (s.startsWith('"') && s.endsWith('"')) ||
+      (s.startsWith("'") && s.endsWith("'"))
+    ) {
+      s = s.slice(1, -1).trim();
+    }
+    s = s.replace(/[\s\n\r]/g, "");
+    if (!s) continue;
+    const hex = s.startsWith("0x") ? s.slice(2) : s;
+    if (!/^[a-fA-F0-9]{64}$/i.test(hex)) continue;
+    return "0x" + hex.toLowerCase();
+  }
+  return "";
+}
+
+async function readAuthorizedSigner(contractAddress, provider, ethers) {
+  const c = new ethers.Contract(
+    contractAddress,
+    ["function authorizedSigner() view returns (address)"],
+    provider
+  );
+  return await c.authorizedSigner();
+}
+
 async function fetchPlayerRtd(userId, season) {
   const base = process.env.PTG_RTD_BASE_URL || DEFAULT_RTD;
   const url = `${base}/players_s${season}/${encodeURIComponent(userId)}.json`;
@@ -117,21 +152,10 @@ module.exports = async (req, res) => {
       return res.status(405).json({ error: "method_not_allowed" });
     }
 
-    const rawKey = process.env.MINT_SIGNER_PRIVATE_KEY;
-    const key = typeof rawKey === "string" ? rawKey.trim() : "";
     const rawAddr =
       process.env.PTG_NFT_ADDRESS ||
       process.env.PTG_CIRCLE_NFT_ADDRESS ||
       DEFAULT_PTG_NFT_ADDRESS;
-
-    if (!key) {
-      return res.status(503).json({
-        error: "server_mint_not_configured",
-        missingEnv: ["MINT_SIGNER_PRIVATE_KEY"],
-        hint:
-          "Vercel → Project → Settings → Environment Variables: add MINT_SIGNER_PRIVATE_KEY for Production (and Preview if you use it). Value = 0x… private key of the wallet that is authorizedSigner on the NFT contract. PTG_NFT_ADDRESS is optional; the server defaults to the deployed PhraseToGuess NFT on Base. Redeploy after saving env vars.",
-      });
-    }
 
     const { ethers } = await import("ethers");
     let contractAddress;
@@ -139,6 +163,64 @@ module.exports = async (req, res) => {
       contractAddress = ethers.getAddress(String(rawAddr).trim());
     } catch {
       return res.status(500).json({ error: "bad_contract_address" });
+    }
+
+    const rpc = process.env.BASE_RPC_URL || DEFAULT_RPC;
+    const provider = new ethers.JsonRpcProvider(rpc);
+
+    const key = getMintSignerPrivateKey();
+    if (!key) {
+      let authorizedSignerAddress;
+      try {
+        authorizedSignerAddress = await readAuthorizedSigner(
+          contractAddress,
+          provider,
+          ethers
+        );
+      } catch (_) {
+        authorizedSignerAddress = undefined;
+      }
+      const basescan = `https://basescan.org/address/${contractAddress}#readContract`;
+      return res.status(503).json({
+        error: "server_mint_not_configured",
+        missingEnv: [
+          "MINT_SIGNER_PRIVATE_KEY (or PTG_MINT_SIGNER_PRIVATE_KEY / MINT_PRIVATE_KEY)",
+        ],
+        contractAddress,
+        authorizedSignerAddress,
+        hint:
+          "Open Vercel → your PTG project → Settings → Environment Variables. Add MINT_SIGNER_PRIVATE_KEY = 64 hex chars (with or without 0x) — the private key of wallet authorizedSigner on the NFT contract. Enable for Production, save, then Deployments → Redeploy (env is applied at build/deploy). " +
+          (authorizedSignerAddress
+            ? `On-chain authorizedSigner is ${authorizedSignerAddress}. `
+            : "") +
+          `Contract: ${basescan}`,
+      });
+    }
+
+    let wallet;
+    try {
+      wallet = new ethers.Wallet(key);
+    } catch {
+      return res.status(500).json({ error: "bad_signer_key" });
+    }
+
+    try {
+      const auth = await readAuthorizedSigner(
+        contractAddress,
+        provider,
+        ethers
+      );
+      if (auth.toLowerCase() !== wallet.address.toLowerCase()) {
+        return res.status(500).json({
+          error: "signer_key_mismatch",
+          authorizedSignerAddress: auth,
+          derivedAddressFromKey: wallet.address,
+          hint:
+            "MINT_SIGNER_PRIVATE_KEY is set but belongs to a different wallet than authorizedSigner on the contract. Replace the env value with the correct private key, then Redeploy.",
+        });
+      }
+    } catch (_) {
+      /* RPC issue — dalej spróbujemy podpisać */
     }
 
     let body = req.body;
@@ -165,8 +247,6 @@ module.exports = async (req, res) => {
       return res.status(code).json({ error: e.message || "forbidden" });
     }
 
-    const rpc = process.env.BASE_RPC_URL || DEFAULT_RPC;
-    const provider = new ethers.JsonRpcProvider(rpc);
     const nft = new ethers.Contract(
       contractAddress,
       ["function nonces(address) view returns (uint256)"],
@@ -202,13 +282,6 @@ module.exports = async (req, res) => {
       nonce,
       deadline: BigInt(deadline),
     };
-
-    let wallet;
-    try {
-      wallet = new ethers.Wallet(key.startsWith("0x") ? key : `0x${key}`);
-    } catch {
-      return res.status(500).json({ error: "bad_signer_key" });
-    }
 
     let signature;
     try {
