@@ -7,6 +7,8 @@ const TARGET = process.env.BASE_RPC_URL || "https://mainnet.base.org";
 
 const ALLOWED = new Set([
   "eth_call",
+  "eth_estimateGas",
+  "eth_getBlockByNumber",
   "eth_getTransactionReceipt",
   "eth_chainId",
   "eth_blockNumber",

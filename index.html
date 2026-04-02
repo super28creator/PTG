@@ -670,6 +670,7 @@
             <div style="margin-top:12px; font-size:12px; color:var(--gray-50); font-style:italic;">
                 $PTG token airdrop eligible.
             </div>
+            <div id="victoryMintPriceHint" style="margin-top:10px; font-size:12px; color:#94a3b8; line-height:1.45;"></div>
         </div>
 
         <button id="victoryMintBtn" class="big-mint-btn" onclick="mintNFT()">
@@ -1520,6 +1521,8 @@
     vBtn.disabled = false;
     document.getElementById('victoryStatus').textContent = "";
     document.getElementById('victoryTxLink').innerHTML = "";
+    const mph = document.getElementById('victoryMintPriceHint');
+    if (mph) mph.textContent = "";
     
     checkGameStateAndRender();
     renderWord(); renderKeyboard(); drawCandleChart(); updateDailyUI();
@@ -1552,6 +1555,7 @@
           recoverBtn.style.display = 'block'; // Ensure Claim button is visible
           document.getElementById('keyboard').style.pointerEvents = 'none';
           document.getElementById('keyboard').style.opacity = '0.3';
+          void loadVictoryMintPriceHint();
       } else if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) {
           // STATE: Daily limit reached
           newGameBtn.style.display = 'none';
@@ -1970,6 +1974,52 @@
       throw lastErr || new Error("Base RPC proxy: all URLs failed");
   }
 
+  /**
+   * Gas + EIP-1559 z proxy (ten sam co odczyty) — wiele portfeli wtedy nie robi eth_estimateGas przez zepsuty RPC Rainbow.
+   * Brak block.baseFeePerGas → zwracamy tylko gas albo {}.
+   */
+  async function prepareMintTxGasFields(from, to, data, valueHex) {
+      const out = {};
+      let estHex;
+      try {
+          estHex = await baseJsonRpc({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "eth_estimateGas",
+              params: [{ from, to, data, value: valueHex }, "latest"],
+          });
+      } catch (e) {
+          console.warn("prepareMintTxGasFields: eth_estimateGas failed", e);
+          return out;
+      }
+      let est = ethers.BigNumber.from(estHex);
+      if (est.lt(120000)) est = ethers.BigNumber.from(120000);
+      const gasBn = est.mul(135).div(100);
+      const capped = gasBn.gt(900000) ? ethers.BigNumber.from(900000) : gasBn;
+      out.gas = ethers.utils.hexValue(capped);
+
+      let block;
+      try {
+          block = await baseJsonRpc({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "eth_getBlockByNumber",
+              params: ["latest", false],
+          });
+      } catch (e) {
+          console.warn("prepareMintTxGasFields: eth_getBlockByNumber failed", e);
+          return out;
+      }
+      const bf = block && block.baseFeePerGas;
+      if (bf == null) return out;
+      const baseFee = ethers.BigNumber.from(bf);
+      const tip = ethers.BigNumber.from("100000000");
+      const maxFee = baseFee.mul(2).add(tip);
+      out.maxPriorityFeePerGas = ethers.utils.hexValue(tip);
+      out.maxFeePerGas = ethers.utils.hexValue(maxFee);
+      return out;
+  }
+
   async function waitForTxReceiptViaServer(txHash) {
       const h = typeof txHash === "string" ? txHash : String(txHash);
       const deadline = Date.now() + 180000;
@@ -2125,6 +2175,29 @@
       );
   }
 
+  let victoryMintPriceHintLoading = false;
+  async function loadVictoryMintPriceHint() {
+      const el = document.getElementById("victoryMintPriceHint");
+      if (!el || !PTG_NFT_ADDRESS) return;
+      if (victoryMintPriceHintLoading) return;
+      victoryMintPriceHintLoading = true;
+      el.textContent = "Loading mint fee from contract…";
+      try {
+          const hex = await readMintPriceWeiHex(PTG_NFT_ADDRESS, null);
+          const wei = ethers.BigNumber.from(hex);
+          const ethStr = ethers.utils.formatEther(wei);
+          el.textContent =
+              "On-chain mint fee: " +
+              ethStr +
+              " ETH (sent to the contract). Network gas on Base is usually well under a dollar — that fee is set by your wallet, not the game.";
+      } catch (e) {
+          el.textContent = "";
+          console.warn("loadVictoryMintPriceHint", e);
+      } finally {
+          victoryMintPriceHintLoading = false;
+      }
+  }
+
   // --- MINT LOGIC: PhraseToGuess NFT + serwerowy voucher EIP-712 (brak mintu z samego Basescan) ---
   async function mintNFT() {
     const btn = document.getElementById('victoryMintBtn');
@@ -2246,6 +2319,16 @@
       const valueHex = await readMintPriceWeiHex(PTG_NFT_ADDRESS, ethProvider);
       const balBefore = await readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider);
 
+      statusDiv.textContent = "Preparing transaction (gas via site RPC)…";
+      const gasFields = await prepareMintTxGasFields(accounts[0], PTG_NFT_ADDRESS, dataHex, valueHex);
+      const txPayload = {
+          from: accounts[0],
+          to: PTG_NFT_ADDRESS,
+          data: dataHex,
+          value: valueHex,
+          ...gasFields,
+      };
+
       let txHash;
 
       try {
@@ -2255,12 +2338,7 @@
                   statusDiv.textContent = "Confirm in Wallet (Click 'I'm safe')...";
                   const result = await fe.request({
                       method: "eth_sendTransaction",
-                      params: [{
-                          from: accounts[0],
-                          to: PTG_NFT_ADDRESS,
-                          data: dataHex,
-                          value: valueHex,
-                      }],
+                      params: [txPayload],
                   });
                   txHash = result;
               } catch (err) {
@@ -2275,12 +2353,7 @@
           statusDiv.textContent = "Confirm in your wallet...";
           txHash = await ethProvider.request({
               method: "eth_sendTransaction",
-              params: [{
-                  from: accounts[0],
-                  to: PTG_NFT_ADDRESS,
-                  value: valueHex,
-                  data: dataHex,
-              }],
+              params: [txPayload],
           });
       }
 
@@ -2346,7 +2419,7 @@
         let msg = e && e.message ? String(e.message) : "Cancelled";
         if (/rpc|http client error|network request failed/i.test(msg)) {
             msg +=
-                " If this appears before signing, your wallet’s Base RPC is failing — try MetaMask, or disable “pay gas in another token”. Reads use the site’s /api/base-jsonrpc; only the signed tx uses the wallet.";
+                " Gas/reads use the site’s /api/base-jsonrpc where possible. If this happens when you confirm the tx, set the wallet’s Base network RPC to https://mainnet.base.org, try MetaMask, or turn off “pay gas in another token”.";
         }
         statusDiv.textContent = "Error: " + msg;
         statusDiv.style.color = "#fc401f"; btn.innerHTML = "Try Again"; btn.disabled = false;
