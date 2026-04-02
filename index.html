@@ -2328,6 +2328,17 @@
           value: valueHex,
           ...gasFields,
       };
+      const txPayloadMinimal = {
+          from: accounts[0],
+          to: PTG_NFT_ADDRESS,
+          data: dataHex,
+          value: valueHex,
+      };
+
+      function isWalletRpcSendError(err) {
+          const m = err && err.message != null ? String(err.message) : String(err || "");
+          return /rpc|http client|network request|failed to fetch|aggregate error|could not coalesce/i.test(m);
+      }
 
       let txHash;
 
@@ -2343,6 +2354,17 @@
                   txHash = result;
               } catch (err) {
                   console.warn("SDK tx path fail", err);
+                  if (Object.keys(gasFields).length > 0 && isWalletRpcSendError(err)) {
+                      try {
+                          statusDiv.textContent = "Retry: confirm again (wallet estimates gas)…";
+                          txHash = await fe.request({
+                              method: "eth_sendTransaction",
+                              params: [txPayloadMinimal],
+                          });
+                      } catch (err2) {
+                          console.warn("SDK tx minimal payload fail", err2);
+                      }
+                  }
               }
           }
       } catch (mintTxSdkErr) {
@@ -2351,10 +2373,22 @@
 
       if (!txHash && ethProvider) {
           statusDiv.textContent = "Confirm in your wallet...";
-          txHash = await ethProvider.request({
-              method: "eth_sendTransaction",
-              params: [txPayload],
-          });
+          try {
+              txHash = await ethProvider.request({
+                  method: "eth_sendTransaction",
+                  params: [txPayload],
+              });
+          } catch (err) {
+              if (Object.keys(gasFields).length > 0 && isWalletRpcSendError(err)) {
+                  statusDiv.textContent = "Retry: confirm again (wallet estimates gas)…";
+                  txHash = await ethProvider.request({
+                      method: "eth_sendTransaction",
+                      params: [txPayloadMinimal],
+                  });
+              } else {
+                  throw err;
+              }
+          }
       }
 
       if (!txHash) throw new Error("Transaction cancelled or failed");
@@ -2382,26 +2416,44 @@
           );
       }
 
-      // SUCCESS — dopiero po receipt + balance; Firebase przed UI sukcesu
+      // SUCCESS — dopiero po receipt + balance; Firebase: tylko przy pendingMint + unikalny tx (brak farmy +2)
+      const hadPendingMint = pendingMint;
       const mintDay = localDateKey();
       if (db) {
           const userRef = playerDocRef(myUserId);
           await runTransaction(userRef, (userData) => {
-              if (userData) {
-                  userData.score = (userData.score || 0) + 2;
-                  userData.mintCount = (userData.mintCount || 0) + 1;
-                  userData.pendingMint = false;
-                  if (!userData.mintCalendar || typeof userData.mintCalendar !== "object") {
-                      userData.mintCalendar = {};
-                  }
-                  userData.mintCalendar[mintDay] = true;
+              if (!userData) return userData;
+              if (userData.lastMintBonusTxHash === txHash) {
+                  return userData;
               }
+              if (!userData.pendingMint) {
+                  return userData;
+              }
+              userData.score = (userData.score || 0) + 2;
+              userData.mintCount = (userData.mintCount || 0) + 1;
+              userData.pendingMint = false;
+              userData.lastMintBonusTxHash = txHash;
+              if (!userData.mintCalendar || typeof userData.mintCalendar !== "object") {
+                  userData.mintCalendar = {};
+              }
+              userData.mintCalendar[mintDay] = true;
               return userData;
           });
-          currentScore += 2;
+          const postSnap = await get(userRef);
+          if (postSnap.exists()) {
+              const d = postSnap.val();
+              currentScore = d.score || 0;
+              pendingMint = !!d.pendingMint;
+              if (d.mintCalendar && typeof d.mintCalendar === "object") {
+                  mintCalendarDays = d.mintCalendar;
+              }
+              if (hadPendingMint && d.lastMintBonusTxHash !== txHash) {
+                  throw new Error(
+                      "On-chain mint OK, but +2 was not saved (profile out of sync). Refresh the page. Tx: " + txHash
+                  );
+              }
+          }
           updateScoreUI();
-          pendingMint = false;
-          mintCalendarDays = { ...mintCalendarDays, [mintDay]: true };
           renderCalendarMonth();
           checkGameStateAndRender();
       } else {
