@@ -9,6 +9,7 @@ const ALLOWED = new Set([
   "eth_call",
   "eth_estimateGas",
   "eth_getBlockByNumber",
+  "eth_getTransactionCount",
   "eth_getTransactionReceipt",
   "eth_chainId",
   "eth_blockNumber",

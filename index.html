@@ -2219,6 +2219,146 @@
       }
   }
 
+  function collectPtgBroadcastMintUrls() {
+      const list = [];
+      const add = (u) => {
+          if (u && list.indexOf(u) === -1) list.push(u);
+      };
+      const canonicalOrigin = getCanonicalSiteOrigin();
+      const canonicalApi = `${canonicalOrigin}/api/ptg-broadcast-mint`;
+      const prodApi = PTG_PUBLIC_SITE_ORIGIN + "/api/ptg-broadcast-mint";
+      if (isStaticLocalOrFileHost()) {
+          add(canonicalApi);
+          if (canonicalApi !== prodApi) add(prodApi);
+          const v0 = `${PTG_VERCEL_DEPLOY_ORIGIN}/api/ptg-broadcast-mint`;
+          if (v0 !== prodApi && v0 !== canonicalApi) add(v0);
+          return list;
+      }
+      if (location.origin && location.protocol !== "file:") {
+          add(`${location.origin}/api/ptg-broadcast-mint`);
+      }
+      add("/api/ptg-broadcast-mint");
+      add(canonicalApi);
+      if (canonicalApi !== prodApi) add(prodApi);
+      const vercelApi = `${PTG_VERCEL_DEPLOY_ORIGIN}/api/ptg-broadcast-mint`;
+      if (vercelApi !== prodApi && vercelApi !== canonicalApi) add(vercelApi);
+      return list;
+  }
+
+  async function postBroadcastMintRaw(rawTx) {
+      const urls = collectPtgBroadcastMintUrls();
+      const body = JSON.stringify({ rawTransaction: rawTx });
+      let lastErr = null;
+      for (let i = 0; i < urls.length; i++) {
+          try {
+              const r = await fetch(urls[i], {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body,
+                  mode: "cors",
+                  cache: "no-store",
+              });
+              const t = await r.text();
+              let j;
+              try {
+                  j = JSON.parse(t);
+              } catch {
+                  lastErr = new Error(t.slice(0, 240));
+                  continue;
+              }
+              if (r.ok && j.hash && typeof j.hash === "string") return j.hash;
+              lastErr = new Error(
+                  (j.detail || j.error || t).toString().slice(0, 400)
+              );
+          } catch (e) {
+              lastErr = e;
+          }
+      }
+      throw lastErr || new Error("broadcast_mint_all_urls_failed");
+  }
+
+  async function getTxNonceHexFromProxy(address) {
+      const hex = await baseJsonRpc({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "eth_getTransactionCount",
+          params: [address, "pending"],
+      });
+      return ethers.BigNumber.from(hex).toHexString();
+  }
+
+  async function ensureMintGasHexForSign(from, toAddr, dataHex, valueHex) {
+      let g = await prepareMintTxGasFields(from, toAddr, dataHex, valueHex);
+      if (!g.gas) {
+          const est = await baseJsonRpc({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "eth_estimateGas",
+              params: [{ from, to: toAddr, data: dataHex, value: valueHex }, "latest"],
+          });
+          const cap = ethers.BigNumber.from(est).mul(140).div(100);
+          const hi = ethers.BigNumber.from(900000);
+          g.gas = ethers.utils.hexValue(cap.gt(hi) ? hi : cap);
+      }
+      if (!g.maxFeePerGas || !g.maxPriorityFeePerGas) {
+          const block = await baseJsonRpc({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "eth_getBlockByNumber",
+              params: ["latest", false],
+          });
+          const bf = block && block.baseFeePerGas;
+          if (bf == null) throw new Error("Could not read Base block for gas fees");
+          const baseFee = ethers.BigNumber.from(bf);
+          const tip = ethers.BigNumber.from("100000000");
+          g.maxPriorityFeePerGas = ethers.utils.hexValue(tip);
+          g.maxFeePerGas = ethers.utils.hexValue(baseFee.mul(2).add(tip));
+      }
+      return g;
+  }
+
+  /**
+   * Portfel tylko podpisuje (eth_signTransaction); wysyłka eth_sendRawTransaction przez /api/ptg-broadcast-mint → Base.
+   * Omija zepsuty HTTP RPC używany przy eth_sendTransaction w Rainbow / części WebView.
+   */
+  async function signMintTxAndBroadcastViaSite(ethProvider, from, dataHex, valueHex) {
+      const gas = await ensureMintGasHexForSign(from, PTG_NFT_ADDRESS, dataHex, valueHex);
+      const nonce = await getTxNonceHexFromProxy(from);
+      const signPayload = {
+          from: ethers.utils.getAddress(from),
+          to: PTG_NFT_ADDRESS,
+          data: dataHex,
+          value: valueHex,
+          chainId: BASE_CHAIN_ID_HEX,
+          type: "0x2",
+          nonce,
+          gas: gas.gas,
+          maxFeePerGas: gas.maxFeePerGas,
+          maxPriorityFeePerGas: gas.maxPriorityFeePerGas,
+      };
+      let rawSigned;
+      try {
+          rawSigned = await ethProvider.request({
+              method: "eth_signTransaction",
+              params: [signPayload],
+          });
+      } catch (e) {
+          const m = e && e.message ? String(e.message) : String(e);
+          throw new Error(
+              "eth_signTransaction failed: " +
+                  m +
+                  " Try MetaMask, or a wallet that supports signing without sending."
+          );
+      }
+      if (rawSigned && typeof rawSigned === "object" && rawSigned.raw) {
+          rawSigned = rawSigned.raw;
+      }
+      if (typeof rawSigned !== "string" || !/^0x[0-9a-fA-F]+$/.test(rawSigned)) {
+          throw new Error("Wallet returned an invalid signed transaction");
+      }
+      return postBroadcastMintRaw(rawSigned);
+  }
+
   // --- MINT LOGIC: PhraseToGuess NFT + serwerowy voucher EIP-712 (brak mintu z samego Basescan) ---
   async function mintNFT() {
     const btn = document.getElementById('victoryMintBtn');
@@ -2356,62 +2496,73 @@
           value: valueHex,
       };
 
-      function isWalletRpcSendError(err) {
-          const m = err && err.message != null ? String(err.message) : String(err || "");
-          return /rpc|http client|network request|failed to fetch|aggregate error|could not coalesce/i.test(m);
+      let txHash;
+      let lastSendErr = null;
+
+      async function trySendTransaction(provider, payload) {
+          return await provider.request({
+              method: "eth_sendTransaction",
+              params: [payload],
+          });
       }
 
-      let txHash;
-
-      try {
-          const fe = getEmbeddedEthProvider();
-          if (fe && typeof fe.request === "function" && accounts[0] && ethProvider === fe) {
-              try {
-                  statusDiv.textContent = "Confirm in Wallet (Click 'I'm safe')...";
-                  txHash = await fe.request({
-                      method: "eth_sendTransaction",
-                      params: [txPayloadMinimal],
-                  });
-              } catch (err) {
-                  console.warn("SDK tx minimal fail", err);
-                  if (Object.keys(gasFields).length > 0 && isWalletRpcSendError(err)) {
-                      try {
-                          statusDiv.textContent = "Retry with preset gas (site RPC)…";
-                          txHash = await fe.request({
-                              method: "eth_sendTransaction",
-                              params: [txPayloadFull],
-                          });
-                      } catch (err2) {
-                          console.warn("SDK tx full payload fail", err2);
-                      }
+      async function runMintSendAttempts(provider, embeddedUi) {
+          statusDiv.textContent = embeddedUi
+              ? "Confirm in Wallet (Click 'I'm safe')..."
+              : "Confirm in your wallet...";
+          try {
+              return await trySendTransaction(provider, txPayloadMinimal);
+          } catch (err) {
+              lastSendErr = err;
+              console.warn("mint eth_sendTransaction minimal", err);
+              if (Object.keys(gasFields).length > 0) {
+                  try {
+                      statusDiv.textContent = "Retry with preset gas (site RPC)…";
+                      return await trySendTransaction(provider, txPayloadFull);
+                  } catch (err2) {
+                      lastSendErr = err2;
+                      console.warn("mint eth_sendTransaction full", err2);
                   }
               }
           }
-      } catch (mintTxSdkErr) {
-          console.warn("Mint tx embedded provider", mintTxSdkErr);
+          return null;
       }
 
-      if (!txHash && ethProvider) {
-          statusDiv.textContent = "Confirm in your wallet...";
+      const feMint = getEmbeddedEthProvider();
+      if (
+          feMint &&
+          ethProvider === feMint &&
+          typeof feMint.request === "function" &&
+          accounts[0]
+      ) {
+          txHash = await runMintSendAttempts(feMint, true);
+      } else if (ethProvider && typeof ethProvider.request === "function") {
+          txHash = await runMintSendAttempts(ethProvider, false);
+      }
+
+      if (!txHash && ethProvider && typeof ethProvider.request === "function") {
           try {
-              txHash = await ethProvider.request({
-                  method: "eth_sendTransaction",
-                  params: [txPayloadMinimal],
-              });
-          } catch (err) {
-              if (Object.keys(gasFields).length > 0 && isWalletRpcSendError(err)) {
-                  statusDiv.textContent = "Retry with preset gas (site RPC)…";
-                  txHash = await ethProvider.request({
-                      method: "eth_sendTransaction",
-                      params: [txPayloadFull],
-                  });
-              } else {
-                  throw err;
-              }
+              statusDiv.textContent =
+                  "Sign in wallet — we submit via PhraseToGuess (broken wallet RPC workaround)…";
+              txHash = await signMintTxAndBroadcastViaSite(
+                  ethProvider,
+                  accounts[0],
+                  dataHex,
+                  valueHex
+              );
+          } catch (relayErr) {
+              console.warn("mint sign+broadcast relay", relayErr);
+              lastSendErr = relayErr;
           }
       }
 
-      if (!txHash) throw new Error("Transaction cancelled or failed");
+      if (!txHash) {
+          const m =
+              lastSendErr && lastSendErr.message
+                  ? String(lastSendErr.message)
+                  : "Transaction cancelled or failed";
+          throw new Error(m);
+      }
 
       txHash = normalizeMintTxHash(txHash);
 
@@ -2491,7 +2642,7 @@
         let msg = e && e.message ? String(e.message) : "Cancelled";
         if (/rpc|http client error|network request failed/i.test(msg)) {
             msg +=
-                " Gas/reads use the site’s /api/base-jsonrpc where possible. If this happens when you confirm the tx, set the wallet’s Base network RPC to https://mainnet.base.org, try MetaMask, or turn off “pay gas in another token”.";
+                " The app also tries sign-only + site broadcast. If it still fails, set Base RPC to https://mainnet.base.org, use MetaMask, or turn off “pay gas in another token”.";
         }
         statusDiv.textContent = "Error: " + msg;
         statusDiv.style.color = "#fc401f"; btn.innerHTML = "Try Again"; btn.disabled = false;
