@@ -13,7 +13,7 @@ const CHAIN_ID = 8453n;
 
 /** Base mainnet PhraseToGuessNFT — ten sam co `PTG_NFT_ADDRESS` w index.html. Nadpisz przez PTG_NFT_ADDRESS w Vercel po nowym deployu kontraktu. */
 const DEFAULT_PTG_NFT_ADDRESS =
-  "0x399943E0d93860C764A21Fd45c008c3633419687";
+  "0xca78D7E55eE9B9a2683e0d0134978614cf2dB761";
 
 function normUid(s) {
   return String(s || "")
