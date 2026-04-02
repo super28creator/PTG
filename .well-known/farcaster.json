@@ -1,28 +1,27 @@
 {
-  "accountAssociation": {
-    "header": "eyJmaWQiOjEwNzYyNjQsInR5cGUiOiJhdXRoIiwia2V5IjoiMHhmYWM3NjkzOUMzMWU2Y0I4MEUwNGM0NkFFNWY4MTMyRWE1MzRDODU1In0",
-    "payload": "eyJkb21haW4iOiJwdGctb25lLnZlcmNlbC5hcHAifQ",
-    "signature": "OcvxnLJLLNIZa8/5LhBeOtl07lTJOtMZLreGg4mzBMA8AgysJxN6rGsGdixgPaFBVvzb2CLwrtJ7YAECQbebRRs="
-  },
   "miniapp": {
     "version": "1",
     "name": "Phrase To Guess",
-    "homeUrl": "https://ptg-one.vercel.app",
-    "iconUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "imageUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "heroImageUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "splashImageUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "splashBackgroundColor": "#0a0e1a",
-    "webhookUrl": "https://ptg-one.vercel.app/api/webhook",
-    "description": "Daily Web3 word-guessing game.",
-    "subtitle": "Guess the phrase, watch the market.",
-    "tagline": "Guess. Win. Mint.",
+    "homeUrl": "https://phrasetoguess.xyz",
+    "canonicalDomain": "phrasetoguess.xyz",
+    "iconUrl": "https://phrasetoguess.xyz/PTG-main.png",
+    "imageUrl": "https://phrasetoguess.xyz/PTG-main.png",
+    "heroImageUrl": "https://phrasetoguess.xyz/PTG-main.png",
+    "splashImageUrl": "https://phrasetoguess.xyz/PTG-main.png",
+    "splashBackgroundColor": "#0a0b0d",
+    "webhookUrl": "https://phrasetoguess.xyz/api/webhook",
+    "description": "Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain.",
+    "subtitle": "Guess the phrase, watch the chart.",
+    "tagline": "Guess. Win. Mint on Base.",
     "primaryCategory": "social",
-    "tags": ["game", "daily", "web3", "puzzle", "base"],
-    "screenshotUrls": ["https://ptg-one.vercel.app/icon-512.png"],
+    "tags": ["game", "daily", "onchain", "puzzle", "base"],
+    "requiredChains": ["eip155:8453"],
+    "screenshotUrls": [
+      "https://phrasetoguess.xyz/PTG-main.png"
+    ],
     "ogTitle": "Phrase To Guess",
-    "ogDescription": "Daily Web3 word-guessing game.",
-    "ogImageUrl": "https://ptg-one.vercel.app/icon-512.png",
+    "ogDescription": "Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain.",
+    "ogImageUrl": "https://phrasetoguess.xyz/PTG-main.png",
     "noindex": false
   }
 }

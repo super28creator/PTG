@@ -3,43 +3,62 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Phrase To Guess - Pro Edition</title>
+  <title>Phrase To Guess</title>
   
+  <!-- Base App: base:app_id + Base.dev project metadata. After 2026-04-09 prefer wallet (EIP-1193) + optional wagmi/SIWE per docs.base.org migration guides. -->
   <meta name="base:app_id" content="6963e5868a6eeb04b568def8" />
-  
+  <meta name="application-name" content="Phrase To Guess" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Phrase To Guess" />
+  <meta name="theme-color" content="#0000ff" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain." />
+
+  <link rel="canonical" href="https://phrasetoguess.xyz/" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" href="/PTG-main.png" />
+  <link rel="apple-touch-icon" href="/PTG-main.png" />
+
   <meta property="og:title" content="Phrase To Guess" />
-  <meta property="og:description" content="Daily Web3 word-guessing game on Base." />
-  <meta property="og:image" content="https://ptg-one.vercel.app/icon-512.png" />
-  <meta property="og:url" content="https://ptg-one.vercel.app" />
+  <meta property="og:description" content="Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain." />
+  <meta property="og:image" content="https://phrasetoguess.xyz/PTG-main.png" />
+  <meta property="og:image:alt" content="Phrase To Guess" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:url" content="https://phrasetoguess.xyz/" />
   <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Phrase To Guess" />
+  <meta property="og:locale" content="en_US" />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Phrase To Guess" />
-  <meta name="twitter:description" content="Daily Web3 word-guessing game on Base." />
-  <meta name="twitter:image" content="https://ptg-one.vercel.app/icon-512.png" />
+  <meta name="twitter:description" content="Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain." />
+  <meta name="twitter:image" content="https://phrasetoguess.xyz/PTG-main.png" />
+  <meta name="twitter:image:alt" content="Phrase To Guess" />
+  <meta name="twitter:site" content="@Super_Guess_" />
   
   <meta name="fc:miniapp" content='{
     "version": "next",
-    "imageUrl": "https://ptg-one.vercel.app/icon-512.png",
+    "imageUrl": "https://phrasetoguess.xyz/PTG-main.png",
     "button": {
       "title": "Play Phrase To Guess",
       "action": {
         "type": "launch_frame",
         "name": "Phrase To Guess",
-        "url": "https://ptg-one.vercel.app",
-        "splashImageUrl": "https://ptg-one.vercel.app/icon-512.png",
-        "splashBackgroundColor": "#0a0e1a"
+        "url": "https://phrasetoguess.xyz",
+        "splashImageUrl": "https://phrasetoguess.xyz/PTG-main.png",
+        "splashBackgroundColor": "#0a0b0d"
       }
     }
   }' />
 
   <meta property="fc:frame" content="vNext" />
-  <meta property="fc:frame:image" content="https://ptg-one.vercel.app/icon-512.png" />
+  <meta property="fc:frame:image" content="https://phrasetoguess.xyz/PTG-main.png" />
   <meta property="fc:frame:image:aspect_ratio" content="1:1" />
-  <meta property="fc:frame:post_url" content="https://ptg-one.vercel.app" />
+  <meta property="fc:frame:post_url" content="https://phrasetoguess.xyz" />
   <meta property="fc:frame:button:1" content="Play Phrase To Guess" />
   <meta property="fc:frame:button:1:action" content="link" />
-  <meta property="fc:frame:button:1:target" content="https://ptg-one.vercel.app" />
+  <meta property="fc:frame:button:1:target" content="https://phrasetoguess.xyz" />
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
   
@@ -47,30 +66,41 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
   <style>
-    /* --- PROFESSIONAL CONFIGURATION & VARIABLES --- */
+    /* Base brand palette (screen) — zasady-base-kolory.md */
     :root {
-      --bg-main: #0a0e1a;
-      --bg-gradient-start: #1e1335;
-      --bg-gradient-end: #0a0e1a;
-      
-      --accent-primary: #8b5cf6;
-      --accent-primary-hover: #7c3aed;
-      --accent-secondary: #06b6d4;
-      
+      --base-blue: #0000ff;
+      --cerulean: #3c8aff;
+      --gray-100: #0a0b0d;
+      --gray-80: #32353d;
+      --gray-50: #717886;
+      --gray-30: #b1b7c3;
+      --green-base: #66c800;
+      --red-base: #fc401f;
+      --yellow-base: #ffd12f;
+
+      --bg-main: var(--gray-100);
+      --bg-gradient-start: #0a1533;
+      --bg-gradient-end: var(--gray-100);
+
+      --accent-primary: var(--base-blue);
+      --accent-primary-hover: var(--cerulean);
+      --accent-secondary: var(--cerulean);
+
       --text-bright: #ffffff;
-      --text-muted: #94a3b8;
-      --text-dark: #0f172a;
-      
-      --success: #10b981;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      
+      --text-muted: var(--gray-30);
+      --text-dark: var(--gray-100);
+
+      --success: var(--green-base);
+      --danger: var(--red-base);
+      --warning: var(--yellow-base);
+
       --glass-border: 1px solid rgba(255, 255, 255, 0.08);
-      --glass-bg: rgba(19, 26, 45, 0.7);
-      --card-glow: 0 8px 32px rgba(0, 0, 0, 0.5);
-      
+      --glass-bg: rgba(50, 53, 61, 0.72);
+      --card-glow: 0 8px 32px rgba(0, 0, 0, 0.45);
+
       --font-main: 'Inter', system-ui, sans-serif;
       --font-mono: 'Roboto Mono', monospace;
+      --ease-base: cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
@@ -79,7 +109,7 @@
 
     body { 
         min-height: 100vh; margin: 0; padding: 0;
-        background: radial-gradient(circle at top right, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 60%);
+        background: radial-gradient(circle at 85% 0%, rgba(0, 0, 255, 0.18) 0%, var(--bg-gradient-end) 55%);
         background-attachment: fixed;
         font-family: var(--font-main); 
         color: var(--text-bright); 
@@ -105,49 +135,70 @@
         border-radius: 24px; padding: 24px; 
         box-shadow: var(--card-glow); border: var(--glass-border);
         width: 100%;
-        transition: transform 0.3s ease;
+        transition: transform 0.2s var(--ease-base);
     }
 
     /* --- TYPOGRAPHY --- */
     h1 { 
         margin: 0 0 8px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; 
-        background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%); 
+        background: linear-gradient(135deg, #fff 0%, var(--cerulean) 100%); 
         -webkit-background-clip: text; background-clip: text; 
         -webkit-text-fill-color: transparent; 
-        text-shadow: 0 4px 12px rgba(165, 180, 252, 0.15);
+        text-shadow: 0 4px 12px rgba(60, 138, 255, 0.2);
     } 
     
     p.lead { margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.5; font-weight: 500; }
     
     /* --- WORD DISPLAY AREA --- */
     .word-container {
-        display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; 
+        display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start;
+        gap: clamp(6px, 2vw, 14px); 
         margin-top: 24px; margin-bottom: 24px;
         min-height: 70px;
-        padding: 20px;
+        padding: clamp(10px, 3vw, 20px);
         background: rgba(0, 0, 0, 0.3); 
-        border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.15);
+        border-radius: 16px; border: 1px solid rgba(0, 0, 255, 0.2);
         box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
-    .word-group { display: flex; gap: 6px; }
+    .word-group { display: flex; flex-wrap: nowrap; gap: clamp(3px, 1.2vw, 6px); flex-shrink: 0; }
 
     .letter-box { 
         font-family: var(--font-mono);
-        font-size: 26px; 
-        width: 32px; height: 44px;
+        font-size: clamp(15px, 4.2vw, 26px); 
+        width: clamp(18px, 7.2vw, 32px);
+        min-width: 14px;
+        height: clamp(34px, 11vw, 44px);
         display: flex; align-items: center; justify-content: center;
-        border-bottom: 3px solid #334155;
-        color: transparent; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+        border-bottom: 3px solid var(--gray-80);
+        color: transparent; transition: color 0.18s var(--ease-base), border-color 0.18s var(--ease-base), transform 0.18s var(--ease-base); 
         font-weight: 700;
         text-transform: uppercase;
     }
 
+    .word-container--dense .letter-box {
+        font-size: clamp(13px, 3.6vw, 20px);
+        width: clamp(15px, 6vw, 26px);
+        height: clamp(30px, 9vw, 38px);
+        border-bottom-width: 2px;
+    }
+    .word-container--xdense .letter-box {
+        font-size: clamp(11px, 3vw, 17px);
+        width: clamp(13px, 5.2vw, 22px);
+        height: clamp(26px, 8vw, 34px);
+        border-bottom-width: 2px;
+    }
+    .word-container--dense .word-group { gap: 3px; }
+    .word-container--xdense .word-group { gap: 2px; }
+
     .letter-box.revealed { 
-        border-bottom-color: var(--accent-secondary); 
+        border-bottom-color: var(--cerulean); 
         color: var(--text-bright); 
-        text-shadow: 0 0 15px rgba(6, 182, 212, 0.6); 
-        animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        text-shadow: 0 0 12px rgba(60, 138, 255, 0.45); 
+        animation: popIn 0.24s var(--ease-base) forwards;
     }
 
     /* --- VIRTUAL KEYBOARD --- */
@@ -171,12 +222,11 @@
     .key:active { transform: scale(0.92); }
     .key:disabled { opacity: 0.8; cursor: not-allowed; transform: none; }
     
-    /* ✅ FIX KOLORY KLAWIATURY */
     .key.hit { 
-        background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary)) !important; 
+        background: linear-gradient(135deg, var(--cerulean), var(--base-blue)) !important; 
         color: #fff !important; 
-        border: 1px solid var(--accent-secondary) !important;
-        box-shadow: 0 0 15px rgba(6, 182, 212, 0.5) !important; 
+        border: 1px solid var(--cerulean) !important;
+        box-shadow: 0 0 14px rgba(0, 0, 255, 0.35) !important; 
         opacity: 1 !important;
     }
     .key.miss { 
@@ -198,13 +248,14 @@
     .controls { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
     
     button.btn { 
-        background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); 
+        background: linear-gradient(90deg, var(--base-blue), var(--cerulean)); 
         border: none; color: white; padding: 14px 24px; border-radius: 12px; cursor: pointer; 
         font-weight: 700; font-size: 15px;
-        transition: all 0.2s; box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4); width: 100%;
+        transition: filter 0.2s var(--ease-base), transform 0.2s var(--ease-base), box-shadow 0.2s var(--ease-base);
+        box-shadow: 0 4px 20px rgba(0, 0, 255, 0.35); width: 100%;
         text-transform: uppercase; letter-spacing: 0.5px;
     }
-    button.btn:hover { filter: brightness(1.15); transform: translateY(-2px); box-shadow: 0 6px 25px rgba(139, 92, 246, 0.6); }
+    button.btn:hover { filter: brightness(1.12); transform: translateY(-2px); box-shadow: 0 6px 28px rgba(60, 138, 255, 0.45); }
     button.btn:active { transform: scale(0.98); }
 
     button.ghost { 
@@ -215,26 +266,139 @@
     button.ghost:hover { border-color: var(--text-bright); color: var(--text-bright); background: rgba(255,255,255,0.08);}
 
     .status { font-weight: 800; font-size: 20px; margin-top: 18px; text-align: center; letter-spacing: 2px; min-height: 30px; text-transform: uppercase; }
-    .dead { color: var(--danger); text-shadow: 0 0 20px rgba(239, 68, 68, 0.6); animation: shake 0.5s ease-in-out; } 
-    .won { color: var(--success); text-shadow: 0 0 20px rgba(16, 185, 129, 0.6); animation: bounce 0.6s ease; }
+    .dead { color: var(--danger); text-shadow: 0 0 20px rgba(252, 64, 31, 0.45); animation: shake 0.5s var(--ease-base); } 
+    .won { color: var(--success); text-shadow: 0 0 20px rgba(102, 200, 0, 0.45); animation: bounce 0.6s var(--ease-base); }
 
     .meta { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 18px; font-size: 13px;}
     .chip { padding: 8px 14px; background: rgba(255,255,255,0.03); border-radius: 999px; font-weight: 600; border: var(--glass-border); display: flex; align-items: center; gap: 6px;}
-    .user-chip { border-color: var(--accent-primary); background: rgba(139, 92, 246, 0.15); color: #fff; text-shadow: 0 0 10px rgba(139, 92, 246, 0.5); }
+    .user-chip { border-color: var(--cerulean); background: rgba(0, 0, 255, 0.12); color: #fff; text-shadow: 0 0 10px rgba(60, 138, 255, 0.35); }
+    .user-chip--base { border-color: rgba(0, 82, 255, 0.55); background: rgba(0, 40, 120, 0.2); }
+    .user-chip--farcaster { border-color: rgba(138, 99, 255, 0.5); background: rgba(70, 40, 120, 0.18); }
+    .user-chip--browser { border-color: rgba(60, 138, 255, 0.5); }
 
-    /* --- SOCIAL & FOOTER --- */
-    .social-section { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+    /* --- CATEGORY LIST (two columns, bullets) --- */
+    .available-cats {
+      columns: 2;
+      column-gap: 1.5rem;
+      padding-left: 1.15rem;
+      margin: 0;
+      list-style: disc;
+      list-style-position: outside;
+      color: #cbd5e1;
+      font-size: 14px;
+      line-height: 1.55;
+      max-width: 100%;
+    }
+    .available-cats li {
+      break-inside: avoid;
+      padding-left: 0.15rem;
+      margin-bottom: 0.3rem;
+    }
+
+    /* --- SOCIAL & FOOTER: te same błękity co reszta UI (base blue / cerulean), lekko przygaszone --- */
+    .social-section {
+        margin-top: 30px;
+        border-top: 1px solid rgba(60, 138, 255, 0.18);
+        padding-top: 20px;
+    }
+    .social-section-label {
+        margin: 0 0 12px;
+        font-weight: 700;
+        font-size: 11px;
+        letter-spacing: 1px;
+        color: rgba(140, 175, 235, 0.55);
+    }
     .social-btn {
-        flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px;
-        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-        padding: 12px; border-radius: 12px; color: var(--text-muted);
-        text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s ease;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        min-height: 48px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        color: rgba(232, 240, 255, 0.92);
+        background: linear-gradient(
+            118deg,
+            rgba(20, 35, 110, 0.9) 0%,
+            rgba(35, 55, 150, 0.88) 35%,
+            rgba(45, 85, 195, 0.82) 68%,
+            rgba(60, 138, 255, 0.38) 100%
+        );
+        border: 1px solid rgba(60, 138, 255, 0.32);
+        box-shadow:
+            0 2px 0 rgba(0, 0, 0, 0.1) inset,
+            0 8px 28px rgba(0, 25, 140, 0.38),
+            0 0 0 1px rgba(255, 255, 255, 0.06);
+        transition: transform 0.22s var(--ease-base), border-color 0.22s, box-shadow 0.22s, color 0.22s, background 0.22s;
     }
     .social-btn:hover {
-        background: rgba(255,255,255,0.1); color: var(--text-bright);
-        border-color: var(--accent-primary); transform: translateY(-2px);
+        color: rgba(255, 255, 255, 0.98);
+        border-color: rgba(100, 170, 255, 0.45);
+        background: linear-gradient(
+            118deg,
+            rgba(28, 48, 135, 0.95) 0%,
+            rgba(42, 72, 175, 0.92) 38%,
+            rgba(55, 105, 215, 0.86) 72%,
+            rgba(80, 155, 255, 0.48) 100%
+        );
+        box-shadow:
+            0 2px 0 rgba(255, 255, 255, 0.08) inset,
+            0 12px 36px rgba(0, 40, 180, 0.48);
+        transform: translateY(-2px);
     }
-    .social-icon { width: 18px; height: 18px; fill: currentColor; }
+    .social-btn:hover .social-icon-sq {
+        background: rgba(60, 138, 255, 0.18);
+        border-color: rgba(140, 190, 255, 0.28);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14) inset;
+    }
+    /* Halo pod ikoną — w tonacji cerulean */
+    .social-icon-sq {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 11px;
+        background: rgba(60, 138, 255, 0.12);
+        border: 1px solid rgba(100, 165, 255, 0.22);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+    }
+    .social-icon-sq .social-icon {
+        width: 20px;
+        height: 20px;
+        fill: rgba(220, 232, 248, 0.88);
+        opacity: 0.95;
+    }
+    .social-btn:hover .social-icon-sq .social-icon:not(.social-icon--basescan) {
+        fill: rgba(236, 244, 255, 0.95);
+    }
+    /* BaseScan: gruby pierścień (evenodd) + 4 słupki jak Etherscan — wyblakłe błękity */
+    .social-icon-sq svg.social-icon--basescan {
+        width: 22px;
+        height: 22px;
+        fill: none;
+        opacity: 1;
+    }
+    .social-icon-sq .basescan-ring {
+        fill: rgba(168, 198, 232, 0.42);
+    }
+    .social-icon-sq g.basescan-bars {
+        fill: rgba(232, 240, 255, 0.96);
+    }
+    .social-btn:hover .social-icon-sq .basescan-ring {
+        fill: rgba(195, 218, 248, 0.55);
+    }
+    .social-btn:hover .social-icon-sq g.basescan-bars {
+        fill: rgba(248, 252, 255, 1);
+    }
+    .social-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .social-row + .social-row { margin-top: 12px; }
 
     /* --- MODALS --- */
     .modal-overlay { 
@@ -245,10 +409,44 @@
         animation: fadeIn 0.3s ease;
     }
     .modal-overlay.show { display: flex; }
+
+    .auth-gate-card { padding-top: 28px; padding-bottom: 28px; }
+    .auth-gate-title {
+        margin: 0 0 8px;
+        font-size: 1.35rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: #fff;
+        text-align: center;
+        line-height: 1.2;
+    }
+    .auth-gate-hint {
+        margin: 0 0 22px;
+        text-align: center;
+        max-width: 22rem;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .auth-gate-hint .auth-gate-lead {
+        display: block;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: rgba(232, 240, 255, 0.94);
+        line-height: 1.5;
+        margin-bottom: 12px;
+    }
+    .auth-gate-hint .auth-gate-detail {
+        display: block;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: rgba(177, 183, 195, 0.88);
+        line-height: 1.62;
+    }
+    .auth-gate-hint .hint-accent { color: var(--cerulean); font-weight: 600; }
     
     .mint-card { 
-        background: rgba(26, 31, 53, 0.95);
-        border: 1px solid rgba(139, 92, 246, 0.4);
+        background: rgba(26, 31, 46, 0.96);
+        border: 1px solid rgba(60, 138, 255, 0.35);
         padding: 32px; border-radius: 32px; max-width: 480px; width: 100%; 
         box-shadow: 0 25px 60px rgba(0,0,0,0.8);
         text-align: center;
@@ -258,13 +456,13 @@
 
     /* --- VICTORY & LOSS MODAL STYLES --- */
     .victory-modal-content {
-        border: 2px solid #4ade80;
-        box-shadow: 0 0 80px rgba(74, 222, 128, 0.2);
+        border: 2px solid var(--green-base);
+        box-shadow: 0 0 80px rgba(102, 200, 0, 0.18);
         background: radial-gradient(circle at center, #1a2035 0%, #0f121d 100%);
     }
     .loss-modal-content {
-        border: 2px solid #ef4444;
-        box-shadow: 0 0 80px rgba(239, 68, 68, 0.2);
+        border: 2px solid var(--red-base);
+        box-shadow: 0 0 80px rgba(252, 64, 31, 0.2);
         background: radial-gradient(circle at center, #2b1111 0%, #0f121d 100%);
     }
 
@@ -296,18 +494,17 @@
     }
 
     .victory-subtitle {
-        color: #4ade80; font-size: 20px; margin-bottom: 30px; font-weight: 700;
-        text-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
+        color: var(--green-base); font-size: 20px; margin-bottom: 30px; font-weight: 700;
+        text-shadow: 0 0 15px rgba(102, 200, 0, 0.35);
     }
     
-    /* BIG MINT BUTTON */
     .big-mint-btn {
-        background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+        background: linear-gradient(135deg, var(--base-blue) 0%, var(--cerulean) 100%);
         color: white; font-size: 24px; font-weight: 900;
         padding: 24px 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.25);
         width: 100%; cursor: pointer;
-        box-shadow: 0 10px 50px rgba(124, 58, 237, 0.5);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 10px 50px rgba(0, 0, 255, 0.35);
+        transition: transform 0.2s var(--ease-base), box-shadow 0.2s var(--ease-base), filter 0.2s var(--ease-base);
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-transform: uppercase; letter-spacing: 1.5px;
         position: relative; overflow: hidden;
@@ -317,7 +514,7 @@
         content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         background: linear-gradient(to bottom, rgba(255,255,255,0.2), transparent);
     }
-    .big-mint-btn:hover:not(:disabled) { transform: translateY(-5px) scale(1.03); box-shadow: 0 20px 60px rgba(124, 58, 237, 0.7); }
+    .big-mint-btn:hover:not(:disabled) { transform: translateY(-5px) scale(1.03); box-shadow: 0 20px 60px rgba(60, 138, 255, 0.5); }
     .big-mint-btn:active:not(:disabled) { transform: scale(0.97); }
     .big-mint-btn:disabled { 
         background: #334155; color: #94a3b8; 
@@ -341,12 +538,98 @@
     .rank-2 { background: #94a3b8; color: #000; }
     .rank-3 { background: #b45309; color: #fff; }
     .rank-other { color: var(--text-muted); font-weight: 600; }
+
+    /* Nagłówek karty: lewa kolumna tylko szerokość treści — odznaka OG tuż przy tytule, nie „w połowie” */
+    .card-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    .card-header-left {
+        width: fit-content;
+        max-width: calc(100% - 168px);
+        min-width: 0;
+    }
+    .card-header-right {
+        flex: 0 0 auto;
+        min-width: 0;
+    }
+    /* Season 1 OG badge — bezpośrednio na prawo od tytułu */
+    .hero-title-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        gap: 6px;
+        margin: 0 0 8px 0;
+        width: max-content;
+        max-width: 100%;
+    }
+    .hero-title-row h1 {
+        margin: 0;
+        line-height: 1.1;
+        flex: 0 0 auto;
+    }
+    .og-badge {
+        height: clamp(28px, 5vw, 40px);
+        width: auto;
+        object-fit: contain;
+        flex-shrink: 0;
+        transition: filter 0.25s ease, opacity 0.25s ease;
+        user-select: none;
+        -webkit-user-drag: none;
+    }
+    .og-badge--dim {
+        filter: grayscale(1) brightness(0.5);
+        opacity: 0.38;
+    }
+    .og-badge--active {
+        filter: none;
+        opacity: 1;
+    }
     
     /* ANIMATIONS */
     .loader {
-        border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent-primary);
+        border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--base-blue);
         border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 30px auto;
-        box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+        box-shadow: 0 0 20px rgba(0, 0, 255, 0.35);
+    }
+
+    /* --- MINI CALENDAR --- */
+    .calendar-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+    .cal-toggle { padding: 8px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; width: auto; text-transform: uppercase; letter-spacing: 0.5px;
+      border-color: rgba(60, 138, 255, 0.35); color: var(--cerulean); }
+    .calendar-panel {
+      margin-top: 12px; padding: 14px; border-radius: 16px;
+      background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08);
+      animation: fadeIn 0.2s var(--ease-base);
+    }
+    .calendar-panel[hidden] { display: none !important; }
+    .cal-month-label { font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .calendar-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+    }
+    .cal-dow {
+      font-size: 10px; font-weight: 700; color: var(--gray-50); text-align: center; text-transform: uppercase;
+    }
+    .cal-cell {
+      aspect-ratio: 1; max-height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--gray-30);
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+    }
+    .cal-cell.other-month { opacity: 0.35; }
+    .cal-cell.today { border-color: var(--cerulean); color: #fff; box-shadow: 0 0 0 1px rgba(60,138,255,0.3); }
+    .cal-cell.ptg-day {
+      background: rgba(0, 0, 255, 0.15); border-color: rgba(60, 138, 255, 0.45); color: #fff;
+      padding: 2px;
+    }
+    .cal-badge-img { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; display: block; }
+    .cal-badge-fallback {
+      font-size: 9px; font-weight: 900; letter-spacing: -0.5px; color: var(--cerulean); line-height: 1;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -360,7 +643,18 @@
 <div class="modal-overlay show" id="loadingScreen">
     <div style="text-align:center;">
         <div class="loader"></div>
-        <div style="margin-top:15px; font-size:14px; color:#94a3b8; font-weight: 600; letter-spacing: 1px;">INITIALIZING...</div>
+        <div style="margin-top:15px; font-size:14px; color:var(--gray-30); font-weight: 600; letter-spacing: 1px;">INITIALIZING...</div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="authGateOverlay" aria-hidden="true" role="dialog" aria-labelledby="authGateTitle" aria-modal="true">
+    <div class="mint-card auth-gate-card" style="max-width: 440px;">
+        <h2 id="authGateTitle" class="auth-gate-title">Sign in to play</h2>
+        <div id="authGateHint" class="auth-gate-hint" role="text"></div>
+        <button type="button" id="connectWalletBtn" class="big-mint-btn" style="width: 100%; font-size: 15px;">
+            <span id="connectWalletBtnLabel">Connect wallet</span>
+        </button>
+        <p id="authGateError" style="margin: 14px 0 0; min-height: 22px; font-size: 13px; color: var(--danger); font-weight: 600; text-align: center;"></p>
     </div>
 </div>
 
@@ -372,8 +666,8 @@
         
         <div style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 24px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
             <div style="color:#94a3b8; font-size: 13px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Your Reward</div>
-            <div style="color:#a78bfa; font-weight:800; font-size: 22px;"> PhraseToGuess OG NFT</div>
-            <div style="margin-top:12px; font-size:12px; color:#6b7280; font-style:italic;">
+            <div style="color:var(--cerulean); font-weight:800; font-size: 22px;"> PhraseToGuess OG NFT</div>
+            <div style="margin-top:12px; font-size:12px; color:var(--gray-50); font-style:italic;">
                 $PTG token airdrop eligible.
             </div>
         </div>
@@ -395,7 +689,7 @@
     <div class="mint-card loss-modal-content">
         <div class="victory-icon">💀</div>
         <div class="loss-title">LIQUIDATED!</div>
-        <div class="victory-subtitle" style="color: #ef4444;">Out of attempts</div>
+        <div class="victory-subtitle" style="color: var(--red-base);">Out of attempts</div>
         
         <div style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 24px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.3);">
             <div style="color:#94a3b8; font-size: 13px; margin-bottom: 8px; text-transform: uppercase;">The Correct Phrase Was:</div>
@@ -410,25 +704,29 @@
 
 <div class="wrap">
   <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom: 15px;">
-        <div>
-            <h1>Phrase To Guess</h1>
+    <div class="card-header-row">
+        <div class="card-header-left">
+            <div class="hero-title-row">
+              <h1>Phrase To Guess</h1>
+              <img id="ogBadge" class="og-badge og-badge--dim" src="OG-Badge.png" width="40" height="40" alt="OG badge" title="Season 1 players see this badge in full color" decoding="async" />
+            </div>
             <p class="lead">Guess the phrase. Watch the market.</p>
             
-            <div style="margin: 12px 0; font-size: 14px; font-weight: 600; color: #94a3b8; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 10px; display: inline-flex; gap: 15px;">
+            <div style="margin: 12px 0; font-size: 14px; font-weight: 600; color: var(--gray-30); background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 10px; display: inline-flex; gap: 15px;">
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span>🏆 Win:</span> <span style="color: #4ade80;">+1 </span>
+                <span>🏆 Win:</span> <span style="color: var(--green-base);">+1 </span>
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span>✨ Mint:</span> <span style="color: #a78bfa;">+2 </span>
+                <span>✨ Mint:</span> <span style="color: var(--cerulean);">+2 </span>
               </div>
             </div>
         </div>
-        <div style="text-align:right;">
-             <div class="small" id="dailyInfo" style="display: inline-block; background: rgba(139, 92, 246, 0.1); color: #a78bfa; font-weight: 700; border: 1px solid rgba(139, 92, 246, 0.3); padding:6px 12px; border-radius:8px; font-size: 12px; margin-bottom: 8px; box-shadow: 0 0 15px rgba(139, 92, 246, 0.1);">Games: 0/3</div>
+        <div class="card-header-right" style="text-align:right;">
+             <div class="small" id="dailyInfo" style="display: inline-block; background: rgba(0, 0, 255, 0.1); color: var(--cerulean); font-weight: 700; border: 1px solid rgba(60, 138, 255, 0.35); padding:6px 12px; border-radius:8px; font-size: 12px; margin-bottom: 8px;">Games: 0/3</div>
              
              <div style="display:flex; gap:8px; justify-content: flex-end; align-items:center;">
-                 <button id="leaderboardBtn" class="ghost" style="padding: 8px; border-radius: 10px; font-size: 18px; border-color:rgba(255,255,255,0.1); width: auto;">🏆</button>
+                 <button type="button" id="calendarToggle" class="ghost cal-toggle" aria-expanded="false" aria-controls="calendarPanel">Calendar</button>
+                 <button type="button" id="leaderboardBtn" class="ghost" style="padding: 8px; border-radius: 10px; font-size: 18px; border-color:rgba(255,255,255,0.1); width: auto;">🏆</button>
                  <div class="small" id="scoreDisplay" style="background:rgba(245, 158, 11, 0.15); color:#fbbf24; padding:8px 12px; border-radius:10px; font-weight:800; font-size: 14px; border: 1px solid rgba(245, 158, 11, 0.2);">0</div>
                  <div class="small" title="Streak" style="background:rgba(249, 115, 22, 0.15); color:#f97316; padding:8px 12px; border-radius:10px; font-weight:800; font-size: 14px; display:flex; align-items:center; gap:4px; border: 1px solid rgba(249, 115, 22, 0.2);">
                    🔥 <span id="streakDisplay">0</span>
@@ -440,8 +738,13 @@
     </div>
     
     <div class="meta">
-        <div class="chip" id="categoryDisplay" style="color: var(--accent-secondary); border-color: rgba(6, 182, 212, 0.3);">Category: Loading...</div>
-        <div class="chip" style="border-color: rgba(239, 68, 68, 0.3);">Mistakes: <span id="tries" style="color:var(--danger); margin-left:4px; font-weight: 800;">0</span>/5</div>
+        <div class="chip" id="categoryDisplay" style="color: var(--cerulean); border-color: rgba(60, 138, 255, 0.35);">Category: Loading...</div>
+        <div class="chip" style="border-color: rgba(252, 64, 31, 0.35);">Mistakes: <span id="tries" style="color:var(--danger); margin-left:4px; font-weight: 800;">0</span>/5</div>
+    </div>
+
+    <div id="calendarPanel" class="calendar-panel" hidden>
+      <div class="cal-month-label" id="calendarMonthLabel"></div>
+      <div class="calendar-grid" id="calendarGrid" aria-label="Mint calendar"></div>
     </div>
 
     <div class="word-container" id="wordDisplay"></div>
@@ -458,35 +761,63 @@
     </div>
     
     <div id="nextGameTimer" style="display:none; text-align:center; margin-top:20px; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
-        <div style="margin-bottom: 10px; font-size: 16px; color:#a78bfa; font-weight: 700; font-style:italic;">
+        <div style="margin-bottom: 10px; font-size: 16px; color:var(--cerulean); font-weight: 700; font-style:italic;">
             $PTG Token is coming soon.
         </div>
-        <div style="font-size:13px; color:#94a3b8; margin-bottom:5px;">Daily limit reached (3/3).</div>
-        <div style="font-size: 14px; color: #fff;">Next game in: <span id="countdown" style="color:var(--accent-secondary); font-weight:800; font-family:'Roboto Mono', monospace; font-size: 18px;">--:--:--</span></div>
+        <div style="font-size:13px; color:var(--gray-30); margin-bottom:5px;">Daily limit reached (3/3).</div>
+        <div style="font-size: 14px; color: #fff;">Next game in: <span id="countdown" style="color:var(--cerulean); font-weight:800; font-family:'Roboto Mono', monospace; font-size: 18px;">--:--:--</span></div>
     </div>
     
     <div id="keyboard" class="keyboard"></div>
   </div>
 
   <div class="card">
-    <h3 style="margin-top:0; font-size: 16px; color: var(--accent-secondary); text-transform: uppercase; letter-spacing: 1px;">Categories</h3>
-    <ul class="available-cats" style="padding-left:20px; line-height:1.8; color: #cbd5e1; font-size: 14px;">
-      <li>Animals & Nature</li>
-      <li>Crypto & Web3</li>
-      <li>Economics & Finance</li>
-      <li>DeFi Protocols</li>
+    <h3 style="margin-top:0; font-size: 16px; color: var(--cerulean); text-transform: uppercase; letter-spacing: 1px;">Categories</h3>
+    <ul class="available-cats">
+      <li>Animals</li>
+      <li>Crypto</li>
+      <li>Onchain</li>
+      <li>Economics</li>
+      <li>Finance</li>
+      <li>DeFi</li>
+      <li>Protocols</li>
+      <li>Science</li>
+      <li>Sports</li>
+      <li>Games</li>
+      <li>Movies</li>
+      <li>Culture</li>
     </ul>
 
     <div class="social-section">
-        <p class="small" style="margin-bottom: 12px; font-weight: 700; font-size: 11px; color: var(--text-muted); letter-spacing: 1px;">JOIN COMMUNITY</p>
-        <div style="display: flex; gap: 12px;">
-            <a href="https://x.com/Super_Apps_" target="_blank" class="social-btn">
-                <svg class="social-icon" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                Twitter
+        <p class="social-section-label">JOIN COMMUNITY</p>
+        <div class="social-row">
+            <a href="https://x.com/Super_Guess_" target="_blank" rel="noopener noreferrer" class="social-btn" title="@Super_Guess_ on X">
+                <span class="social-icon-sq" aria-hidden="true"><svg class="social-icon" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span>
+                X
             </a>
-            <a href="https://discord.gg/m99P3DXr5t" target="_blank" class="social-btn">
-                <svg class="social-icon" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z"/></svg>
+            <a href="https://discord.gg/7scpTxCrj" target="_blank" rel="noopener noreferrer" class="social-btn" title="PhraseToGuess on Discord">
+                <span class="social-icon-sq" aria-hidden="true"><svg class="social-icon" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z"/></svg></span>
                 Discord
+            </a>
+        </div>
+        <div class="social-row">
+            <a href="https://basescan.org/address/0x399943E0d93860C764A21Fd45c008c3633419687" target="_blank" rel="noopener noreferrer" class="social-btn" title="PhraseToGuess NFT contract on Base">
+                <span class="social-icon-sq" aria-hidden="true">
+                  <svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">
+                    <path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/>
+                    <g class="basescan-bars">
+                      <rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/>
+                      <rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/>
+                      <rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/>
+                      <rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/>
+                    </g>
+                  </svg>
+                </span>
+                BaseScan
+            </a>
+            <a href="https://social-connect28.vercel.app/" target="_blank" rel="noopener noreferrer" class="social-btn" title="Super Creator — founder hub">
+                <span class="social-icon-sq" aria-hidden="true"><svg class="social-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>
+                About Founder
             </a>
         </div>
     </div>
@@ -498,7 +829,7 @@
   <div class="mint-card" style="max-height: 80vh; display: flex; flex-direction: column;">
     <div class="leaderboard-header">
         <h2 style="margin:0; font-size:20px; color: #fff;">🏆 Global Leaderboard</h2>
-        <div style="font-size: 12px; color: var(--text-muted);">Season 1</div>
+        <div id="leaderboardSeasonLabel" style="font-size: 12px; color: var(--text-muted);">Season —</div>
     </div>
     
     <div style="overflow-y: auto; flex: 1;">
@@ -543,28 +874,507 @@
     databaseURL: "https://phrase-to-guess-default-rtdb.europe-west1.firebasedatabase.app"
   };
 
-  const CONTRACT_ADDRESS = "0x34e1838d8C150f38ABD0b2E5d91aa76A653ed03D"; 
+  /** Legacy trophy (publicMint) — tylko referencja; aktywny mint używa PhraseToGuess NFT + podpis serwera. */
+  const LEGACY_TROPHY_CONTRACT = "0x34e1838d8C150f38ABD0b2E5d91aa76A653ed03D";
   const METADATA_URL = "https://ipfs.io/ipfs/bafybeidy2s24mgguq6d5kjrkhaoplxe2ueu7yhutqzb5uedjiydc7l75z4/metadata.json";
-  const CONTRACT_ABI = ["function publicMint(string _uri) payable"];
+
+  /**
+   * Kontrakt PhraseToGuessNFT (Base mainnet) — wpisz po deployu.
+   * Na Vercel: PTG_NFT_ADDRESS + MINT_SIGNER_PRIVATE_KEY (ten sam signer co authorizedSigner w konstruktorze).
+   */
+  const PTG_NFT_ADDRESS = "0x399943E0d93860C764A21Fd45c008c3633419687";
+  const PTG_NFT_ABI = [
+    "function mintWithSignature(uint256 deadline,uint8 v,bytes32 r,bytes32 s) payable",
+    "function mintPriceWei() view returns (uint256)",
+  ];
+  /** Base mainnet chainId 8453 (0x2105); RPC + explorer per docs.base.org */
+  const BASE_CHAIN_ID_HEX = "0x2105";
+  /** Base App Mini App host FID (see docs.base.org mini-apps). */
+  const BASE_APP_CLIENT_FID = 309857;
+
+  /** Gdzie działa klient: wpływa na kolejność logowania i źródło portfela. */
+  let ptgHost = "browser";
+
+  function getInjectedProvider() {
+      const eth = globalThis.ethereum;
+      if (!eth) return null;
+      if (Array.isArray(eth.providers) && eth.providers.length > 0) {
+          return (
+              eth.providers.find((p) => p?.isCoinbaseWallet) ||
+              eth.providers.find((p) => p?.isMetaMask) ||
+              eth.providers[0]
+          );
+      }
+      return eth;
+  }
+
+  async function ensureBaseMainnet(provider) {
+      try {
+          await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: BASE_CHAIN_ID_HEX }] });
+      } catch (e) {
+          if (e?.code === 4902) {
+              await provider.request({
+                  method: "wallet_addEthereumChain",
+                  params: [
+                      {
+                          chainId: BASE_CHAIN_ID_HEX,
+                          chainName: "Base",
+                          nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+                          rpcUrls: ["https://mainnet.base.org"],
+                          blockExplorerUrls: ["https://basescan.org"],
+                      },
+                  ],
+              });
+              await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: BASE_CHAIN_ID_HEX }] });
+          } else {
+              throw e;
+          }
+      }
+  }
+
+  /**
+   * Basenames (*.base.eth) — reverse jak w Base ReverseRegistrar:
+   * labelHash = keccak256(40 bajtów ASCII małego hex bez "0x"), nie hash 20 bajtów adresu (Sha3.hexAddress).
+   * Zob. https://github.com/base/basenames/blob/main/src/lib/Sha3.sol
+   */
+  const BASE_REVERSE_REGISTRAR = "0x79ea96012eea67a83431f1701b3dff7e37f9e282";
+  const BASENAME_L2_RESOLVER_PROXY = "0x426fA03fB86E510d0Dd9F70335Cf102a98b10875";
+  const BASENAME_L2_RESOLVER_LEGACY = "0xC6d566A56A1aFf6508b41f6c90ff131615583BCD";
+  const BASE_RPC_PUBLIC = "https://mainnet.base.org";
+  const BASE_NUMERIC_CHAIN_ID = 8453;
+  const BASENAME_NAME_ABI = ["function name(bytes32 node) view returns (string)"];
+  const REVERSE_REGISTRAR_NODE_ABI = ["function node(address addr) view returns (bytes32)"];
+
+  let basenameReadProvider = null;
+
+  /** Zgodne z Sha3.hexAddress(addr) z Base ReverseRegistrar. */
+  function sha3HexAddressLabel(address) {
+      const hexOnly = ethers.utils.getAddress(address).toLowerCase().slice(2);
+      return ethers.utils.keccak256(ethers.utils.toUtf8Bytes(hexOnly));
+  }
+
+  function computeBasenameReverseNodeLocal(address) {
+      const chk = ethers.utils.getAddress(address);
+      const labelHash = sha3HexAddressLabel(chk);
+      const coinHex = ((0x80000000 | BASE_NUMERIC_CHAIN_ID) >>> 0).toString(16).toUpperCase();
+      const reverseRoot = ethers.utils.namehash(`${coinHex}.reverse`);
+      return ethers.utils.keccak256(
+          ethers.utils.solidityPack(["bytes32", "bytes32"], [reverseRoot, labelHash])
+      );
+  }
+
+  async function resolveBasenameForAddress(address) {
+      try {
+          if (!basenameReadProvider) {
+              basenameReadProvider = new ethers.providers.JsonRpcProvider(BASE_RPC_PUBLIC);
+          }
+          const chk = ethers.utils.getAddress(address);
+          let n = await basenameReadProvider.lookupAddress(chk).catch(() => null);
+          if (n && typeof n === "string" && n.trim().length > 0) return n.trim();
+
+          let nodeBytes;
+          try {
+              const rr = new ethers.Contract(BASE_REVERSE_REGISTRAR, REVERSE_REGISTRAR_NODE_ABI, basenameReadProvider);
+              nodeBytes = await rr.node(chk);
+          } catch (_) {
+              nodeBytes = computeBasenameReverseNodeLocal(address);
+          }
+
+          for (const resolverAddr of [BASENAME_L2_RESOLVER_PROXY, BASENAME_L2_RESOLVER_LEGACY]) {
+              try {
+                  const res = new ethers.Contract(resolverAddr, BASENAME_NAME_ABI, basenameReadProvider);
+                  n = await res.name(nodeBytes);
+                  if (n && typeof n === "string") {
+                      const t = n.trim();
+                      if (t.length > 0) return t;
+                  }
+              } catch (_) {}
+          }
+      } catch (e) {
+          console.warn("Basename reverse lookup", e);
+      }
+      return null;
+  }
+
+  function truncateDisplayName(s, maxLen) {
+      if (!s || s.length <= maxLen) return s;
+      return s.slice(0, Math.max(0, maxLen - 1)) + "…";
+  }
+
+  /** Po zalogowaniu portfelem: pokaż Basename zamiast samego 0x… (klucz RTDB zostaje adresem). */
+  async function applyBasenameToUiIfAny(hostKind) {
+      if (!myUserId || typeof myUserId !== "string" || !myUserId.startsWith("0x")) return;
+      const basename = await resolveBasenameForAddress(myUserId);
+      if (!basename) return;
+      myUsername = basename;
+      let chipCore = basename;
+      if (hostKind === "base") chipCore = "Base · " + basename;
+      else if (hostKind === "farcaster") chipCore = "FC · " + basename;
+      setPlayerChip(truncateDisplayName(chipCore, 36), hostKind);
+      const chip = document.getElementById("playerDisplay");
+      if (chip) chip.title = basename + " · " + myUserId;
+      if (db && isLoggedIn()) {
+          try {
+              await update(playerDocRef(myUserId), { name: myUsername });
+          } catch (e) {
+              console.warn("RTDB display name (basename)", e);
+          }
+      }
+  }
+
   const MAX_MISTAKES = 5; 
-  // ✅ 3 GAMES PER DAY LIMIT
   const MAX_GAMES_PER_DAY = 3;
+  /**
+   * Zwiększ po resecie rankingu (nowe drzewo w RTDB: players_s{N}).
+   * Zasady punktów bez zmian; stare sezony zostają w bazie jako archiwum.
+   */
+  const LEADERBOARD_SEASON = 2;
+  function playerDocRef(userId) {
+    return ref(db, `players_s${LEADERBOARD_SEASON}/` + userId);
+  }
+  function playersRootRef() {
+    return ref(db, `players_s${LEADERBOARD_SEASON}`);
+  }
+
+  function isLoggedIn() {
+      return myUserId !== "guest";
+  }
+
+  function setAuthGateVisible(visible) {
+      const el = document.getElementById("authGateOverlay");
+      if (!el) return;
+      el.classList.toggle("show", !!visible);
+      el.setAttribute("aria-hidden", visible ? "false" : "true");
+  }
+
+  function getEmbeddedEthProvider() {
+      try {
+          const w = sdk && typeof sdk === "object" ? sdk.wallet : null;
+          const fe = w && w.ethProvider;
+          if (fe && typeof fe.request === "function") return fe;
+      } catch (_) {}
+      return null;
+  }
+
+  function defaultConnectButtonLabel() {
+      if (ptgHost === "base") return "Connect Base wallet";
+      if (ptgHost === "farcaster") return "Continue with Farcaster";
+      return "Connect wallet";
+  }
+
+  function updateAuthGateUI() {
+      const hint = document.getElementById("authGateHint");
+      const label = document.getElementById("connectWalletBtnLabel");
+      if (hint) {
+          if (ptgHost === "base") {
+              hint.innerHTML =
+                  '<span class="auth-gate-lead">You\'re in the <span class="hint-accent">Base</span> app.</span>' +
+                  '<span class="auth-gate-detail">We connect through your Base wallet first. If it isn\'t linked yet, we quietly fall back to the Farcaster profile tied to your Base account—so nothing is lost.</span>';
+          } else if (ptgHost === "farcaster") {
+              hint.innerHTML =
+                  '<span class="auth-gate-lead">You\'re in <span class="hint-accent">Farcaster</span>.</span>' +
+                  '<span class="auth-gate-detail">Your Farcaster identity is enough to play. The in-app wallet only appears when something needs to land onchain—like a mint.</span>';
+          } else {
+              hint.innerHTML =
+                  '<span class="auth-gate-lead">Tie this session to <span class="hint-accent">Base</span> so scores and trophies stay yours.</span>' +
+                  '<span class="auth-gate-detail">Inside the <span class="hint-accent">Base</span> or <span class="hint-accent">Farcaster</span> apps, we recognize you in the background. Here in the browser, tap below and approve your wallet on the Base network.</span>';
+          }
+      }
+      if (label) label.textContent = defaultConnectButtonLabel();
+  }
+
+  function setPlayerChip(text, variant) {
+      const chip = document.getElementById("playerDisplay");
+      if (!chip) return;
+      chip.textContent = text;
+      chip.style.display = "inline-flex";
+      chip.classList.remove("user-chip--base", "user-chip--farcaster", "user-chip--browser");
+      if (variant === "base") chip.classList.add("user-chip--base");
+      else if (variant === "farcaster") chip.classList.add("user-chip--farcaster");
+      else if (variant === "browser") chip.classList.add("user-chip--browser");
+  }
+
+  function applyWalletIdentity(addr, hostKind) {
+      const a = String(addr).trim();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(a)) return false;
+      myUsername = a.substring(0, 6) + "..." + a.substring(38);
+      myUserId = a.toLowerCase();
+      if (hostKind === "base") {
+          setPlayerChip("Base · " + myUsername, "base");
+      } else if (hostKind === "farcaster") {
+          setPlayerChip("FC · " + myUsername, "farcaster");
+      } else {
+          setPlayerChip(myUsername, "browser");
+      }
+      const chip = document.getElementById("playerDisplay");
+      if (chip) chip.title = "Wallet on Base · " + myUserId;
+      void applyBasenameToUiIfAny(hostKind);
+      return true;
+  }
+
+  function applyFarcasterProfileUser(u, viaBase) {
+      if (!u) return false;
+      const chipVariant = viaBase ? "base" : "farcaster";
+      if (u.username) {
+          myUsername = "@" + u.username;
+          myUserId = myUsername.replace(/[^a-zA-Z0-9]/g, "");
+          const label = viaBase ? "Base · " + myUsername : myUsername;
+          setPlayerChip(label, chipVariant);
+          const chip = document.getElementById("playerDisplay");
+          if (chip) chip.title = viaBase ? "Farcaster profile via Base App" : "Farcaster profile";
+          return true;
+      }
+      if (u.fid != null && String(u.fid).length > 0) {
+          const fidStr = String(u.fid);
+          myUsername = "FID " + fidStr;
+          myUserId = "fcfid" + fidStr.replace(/\D/g, "");
+          const label = viaBase ? "Base · FID " + fidStr : "FC · FID " + fidStr;
+          setPlayerChip(label, chipVariant);
+          const chip = document.getElementById("playerDisplay");
+          if (chip) chip.title = viaBase ? "Farcaster FID via Base App" : "Farcaster FID";
+          return true;
+      }
+      return false;
+  }
+
+  /**
+   * Base App: najpierw portfel (eth_accounts), potem profil Farcaster z kontekstu.
+   * Farcaster: profil z kontekstu; opcjonalnie portfel osadzony.
+   * Przeglądarka: bez auto-loginu (guest + przycisk).
+   */
+  async function resolveMiniAppIdentity() {
+      ptgHost = "browser";
+      if (!sdk || sdk.context == null) return;
+
+      let ctx;
+      try {
+          ctx = await sdk.context;
+      } catch (e) {
+          console.warn("Mini App context", e);
+          return;
+      }
+      if (!ctx || typeof ctx !== "object") return;
+
+      const rawFid = ctx.client && ctx.client.clientFid;
+      const clientNum = rawFid != null && String(rawFid) !== "" ? Number(rawFid) : NaN;
+      const isBaseApp = clientNum === BASE_APP_CLIENT_FID;
+
+      if (isBaseApp) {
+          ptgHost = "base";
+          try {
+              const fe = getEmbeddedEthProvider();
+              if (fe) {
+                  const acc = await fe.request({ method: "eth_accounts" });
+                  if (acc && acc[0] && applyWalletIdentity(acc[0], "base")) return;
+              }
+          } catch (e) {
+              console.warn("Base eth_accounts", e);
+          }
+          if (applyFarcasterProfileUser(ctx.user, true)) return;
+          return;
+      }
+
+      if (ctx.user && (ctx.user.username || ctx.user.fid != null)) {
+          ptgHost = "farcaster";
+          if (applyFarcasterProfileUser(ctx.user, false)) return;
+      }
+
+      try {
+          const fe = getEmbeddedEthProvider();
+          if (fe) {
+              ptgHost = "farcaster";
+              const acc = await fe.request({ method: "eth_accounts" });
+              if (acc && acc[0] && applyWalletIdentity(acc[0], "farcaster")) return;
+              return;
+          }
+      } catch (e) {
+          console.warn("Mini app eth_accounts", e);
+      }
+
+      ptgHost = "browser";
+  }
+
+  async function finishLoginAfterIdentity() {
+      setAuthGateVisible(false);
+      refreshOgBadge();
+      await syncUserProfile();
+      if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY && !pendingMint) {
+          initGame(true);
+      } else {
+          checkGameStateAndRender();
+      }
+  }
+
+  async function connectWalletForPlay() {
+      const errEl = document.getElementById("authGateError");
+      const btn = document.getElementById("connectWalletBtn");
+      const labelEl = document.getElementById("connectWalletBtnLabel");
+      if (errEl) errEl.textContent = "";
+      if (btn) btn.disabled = true;
+      if (labelEl) labelEl.textContent = "Connecting…";
+      try {
+          if (ptgHost === "base") {
+              const provider = getEmbeddedEthProvider();
+              if (!provider) {
+                  throw new Error("Base wallet not available. Open this game inside the Base app.");
+              }
+              await ensureBaseMainnet(provider);
+              const accounts = await provider.request({ method: "eth_requestAccounts" });
+              if (!accounts || !accounts[0]) {
+                  throw new Error("Approve the wallet request in Base.");
+              }
+              if (!applyWalletIdentity(accounts[0], "base")) {
+                  throw new Error("Invalid address from Base wallet.");
+              }
+              await finishLoginAfterIdentity();
+              return;
+          }
+
+          if (ptgHost === "farcaster") {
+              let ctx;
+              try {
+                  ctx = await sdk.context;
+              } catch (_) {}
+              if (ctx && applyFarcasterProfileUser(ctx.user, false)) {
+                  await finishLoginAfterIdentity();
+                  return;
+              }
+              const provider = getEmbeddedEthProvider();
+              if (!provider) {
+                  throw new Error("Open this game inside Farcaster and try again, or use a browser with a wallet.");
+              }
+              await ensureBaseMainnet(provider);
+              const accounts = await provider.request({ method: "eth_requestAccounts" });
+              if (!accounts || !accounts[0]) {
+                  throw new Error("Approve the request in your Farcaster client.");
+              }
+              if (!applyWalletIdentity(accounts[0], "farcaster")) {
+                  throw new Error("Invalid address from wallet.");
+              }
+              await finishLoginAfterIdentity();
+              return;
+          }
+
+          /* Przeglądarka — tylko wstrzyknięty portfel (MetaMask itd.), bez Mini App. */
+          const provider = getInjectedProvider();
+          if (!provider) {
+              throw new Error("No wallet found. Install MetaMask or Coinbase Wallet, or open the app in Base / Farcaster.");
+          }
+          await ensureBaseMainnet(provider);
+          const accounts = await provider.request({ method: "eth_requestAccounts" });
+          if (!accounts || !accounts[0]) {
+              throw new Error("No account — unlock your wallet and try again.");
+          }
+          if (!applyWalletIdentity(accounts[0], "browser")) {
+              throw new Error("Wallet returned an invalid address.");
+          }
+          await finishLoginAfterIdentity();
+      } catch (e) {
+          console.warn(e);
+          if (errEl) {
+              const msg =
+                  e instanceof Error
+                      ? e.message
+                      : typeof e === "string"
+                        ? e
+                        : e && typeof e.message === "string"
+                          ? e.message
+                          : "Could not connect.";
+              errEl.textContent = msg || "Could not connect.";
+          }
+      } finally {
+          if (btn) btn.disabled = false;
+          if (labelEl) labelEl.textContent = defaultConnectButtonLabel();
+      }
+  }
+
+  /** Zgodne z myUserId: Farcaster = @username bez znaków specjalnych; portfel = 0x… małymi literami. */
+  const SEASON1_OG_USER_IDS = new Set([
+    "kaszmirekbaseeth",
+    "fiutek",
+    "kosto133",
+    "cryptostpneth",
+    "mjk1oto",
+    "feiyukabaseeth",
+    "masoretami",
+    "hengky420",
+    "tjmax",
+    "lestermo",
+    "winnerrr000",
+    "efliardian",
+    "ronicachandler2",
+    "anisbishws",
+    "bituzin",
+    "neefulf",
+    "pytek",
+    "sianidamir",
+    "wwwojti",
+    "0x2a55e68727eb3409947431e13d57c84ca2c5178e",
+    "0x70d908dc3513903689520714a71b5d161ce9a32f",
+    "0x8b0a121074acead69b4ae6adb5dc50a3269ec0d6",
+    "0xacf6fd9ad5998650bd9ee63f4478cf457dac2a76",
+    "0x05a588ba793b64ae6b74a74fc86ee1c33f6c5742",
+    "0xfb0ee350336412c6331ed44fdd8ea37c6508c82",
+    "0x8ebacfffd67fd05828e86d69b2404ae51ae873f3",
+    "0x1008668f0dca010f60f59ec6518d70a2ccc7b70c",
+    "0xac507b6c76708a34663d895fc4bdb40922d04ed5",
+    "0x066d8d434501d7f8269ce0b2b1b52e3c828e58d7",
+    "0x7884261a1a71e6b88041462b1a6940f6f8ab7269",
+    "0x55d6dd17d38d5861ca62f1534d40af27092c84d3",
+    "0xec3a781db5af09f277dfa81f073c4875e5345a29",
+    "0xc417f09b0cf30c12e5721c4c98142ba5674f37de",
+    "0x1495d3a454eb1301a0b4530176099456639ef110",
+    "0x2e99896041ccef9352bfca5ec0cee25298053541",
+    "0xc4ffd985ac717af0cb69933feaee36abf1de8798",
+    "0x6b5ca4508ebb2f3c87d3a17298d21a9345103fd9",
+    "0xbf8aaac1442d2f799260b46fe1e78b3c72a5acd2",
+  ]);
+
+  function refreshOgBadge() {
+    const img = document.getElementById("ogBadge");
+    if (!img) return;
+    const uid = String(myUserId || "guest").toLowerCase();
+    const isOg = SEASON1_OG_USER_IDS.has(uid);
+    img.classList.toggle("og-badge--active", isOg);
+    img.classList.toggle("og-badge--dim", !isOg);
+    img.title = isOg
+      ? "Season 1 OG — thanks for playing early!"
+      : "OG badge — full color for Season 1 players";
+  }
+  /** Mint-day badge in calendar (PTG-circle.png at site root). */
+  const PTG_DAY_BADGE_IMAGE_URL = typeof window !== "undefined" ? `${window.location.origin}/PTG-circle.png` : "";
+
+  const MAX_LETTERS = 15;
+  const MAX_PHRASE_LEN = 22;
+  const MAX_WORDS = 4;
+  function phraseFitsLayout(phrase) {
+      const u = phrase.toUpperCase().trim();
+      if (!u) return false;
+      const letters = u.replace(/ /g, "").length;
+      const words = u.split(/\s+/).length;
+      if (letters > MAX_LETTERS || u.length > MAX_PHRASE_LEN || words > MAX_WORDS) return false;
+      const isMultiWord = u.includes(" ");
+      const isShortSingle = letters <= 9;
+      return isMultiWord || isShortSingle;
+  }
 
   const CATEGORIES = {
     Animals: ["BLUE WHALE", "RED FOX", "GOLDEN EAGLE", "BLACK BEAR", "WHITE SHARK", "POLAR BEAR", "BROWN WOLF", "TIGER SHARK", "KING COBRA", "BALD EAGLE", "GRAY WOLF", "WILD BOAR", "SNOW LEOPARD", "SEA TURTLE", "GIANT PANDA", "BLUE HERON", "RED PANDA", "TREE FROG", "SAND CAT"],
-    Crypto: ["LAYER TWO", "MEME TOKEN", "GAS FEES", "BULL MARKET", "BEAR MARKET", "PRIVATE KEY", "COLD WALLET", "SEED PHRASE", "WHITE PAPER", "SMART CHAIN", "BLOCK SIZE", "HASH RATE", "NODE RUNNER", "ALT COIN", "STABLE COIN", "GAS LIMIT", "HARD FORK", "SOFT FORK", "AIR DROP", "MOON BAG"],
-    Economics: ["MARKET CYCLE", "FISCAL POLICY", "INTEREST RATE", "SUPPLY CHAIN", "FREE TRADE", "BEAR TRAP", "BULL TRAP", "GOLD STANDARD", "STOCK MARKET", "HEDGE FUND", "CASH FLOW", "NET WORTH", "GROSS PROFIT", "TAX HAVEN", "TRADE WAR", "BOND YIELD", "DARK POOL"],
-    Web3: ["ON CHAIN", "TOKEN GATED", "DAO MEMBER", "MINT PAGE", "GAS WAR", "FLOOR PRICE", "BLUE CHIP", "PAPER HAND", "DIAMOND HAND", "META VERSE", "NFT DROP", "SOUL BOUND", "SOCIAL GRAPH", "IPFS LINK", "ENS DOMAIN", "LAYER ZERO", "ZK ROLLUP"],
-    DeFi: ["YIELD FARMING", "FLASH LOAN", "LIQUIDITY POOL", "TOTAL VALUE", "SWAP TOKEN", "AUTO COMPOUND", "STAKING POOL", "BRIDGE ASSET", "STABLE PAIR", "SLIPPAGE TOL", "FRONT RUN", "SANDWICH BOT", "LENDING RATE", "BORROW LIMIT", "COLLATERAL"]
+    Crypto: ["LAYER TWO", "MEME COIN", "GAS FEES", "BULL MARKET", "BEAR MARKET", "PRIVATE KEY", "COLD WALLET", "SEED PHRASE", "WHITE PAPER", "BLOCK TIME", "HASH RATE", "NODE RUNNER", "ALT COIN", "STABLE COIN", "GAS LIMIT", "HARD FORK", "SOFT FORK", "AIR DROP", "BASE CHAIN"],
+    Onchain: ["TOKEN GATE", "DAO VOTER", "MINT PAGE", "GAS SPIKE", "FLOOR PRICE", "BLUE CHIP", "PAPER HAND", "DIAMOND HAND", "METAVERSE", "NFT MINT", "SOULBOUND", "SOCIAL FEED", "IPFS HASH", "ENS NAME", "LAYER TWO", "ZK PROOF", "BASE APP", "ONCHAIN"],
+    Economics: ["MARKET CYCLE", "FISCAL POLICY", "INTEREST RATE", "SUPPLY CHAIN", "FREE TRADE", "BEAR TRAP", "BULL TRAP", "GOLD STANDARD", "STOCK MARKET", "HEDGE FUND"],
+    Finance: ["CASH FLOW", "NET WORTH", "GROSS PROFIT", "TAX HAVEN", "TRADE WAR", "BOND YIELD", "DARK POOL"],
+    DeFi: ["FLASH LOAN", "LIQUID POOL", "TOTAL VALUE", "SWAP PAIR", "AUTO STAKE", "STAKE POOL", "BRIDGE OUT"],
+    Protocols: ["STABLE PAIR", "SLIPPAGE", "FRONT RUN", "LEND RATE", "BORROW CAP", "POOL DEPTH"],
+    Science: ["BLACK HOLE", "DARK MATTER", "DNA STRAND", "ATOM CORE", "SOLAR WIND", "MILKY WAY", "BIG BANG", "RED SHIFT", "LAB COAT", "ICE CORE", "RNA WORLD", "CELL WALL", "LASER BEAM", "MOON WALK", "SPACE WALK", "ROCKET LAB", "STAR MAP", "ORBIT PATH", "MARS ROVER", "SOLAR PANEL", "DEEP SPACE", "LUNAR BASE", "COMET TAIL"],
+    Sports: ["HOME RUN", "FREE KICK", "FULL TIME", "MVP AWARD", "DRAFT PICK", "PLAY OFFS", "GOAL LINE", "FAST BREAK", "ACE SERVE", "PENALTY BOX", "SLAM DUNK", "HAT TRICK"],
+    Games: ["SPEED RUN", "BOSS FIGHT", "SIDE QUEST", "LOOT DROP", "SAVE POINT", "E SPORTS", "OPEN WORLD", "LOAD SCREEN", "PATCH NOTES"],
+    Movies: ["BOX OFFICE", "POST CREDIT", "FILM NOIR", "OSCAR WIN", "DIRECTORS CUT", "GREEN SCREEN", "PLOT TWIST", "ORIGIN STORY", "SPIN OFF", "BOX SET"],
+    Culture: ["ART DECO", "OPEN MIC", "BOOK CLUB", "JAZZ NIGHT", "STAGE PLAY", "FINE ART", "POP CULT", "FILM FEST", "COMIC CON", "FAN FICTION"]
   };
 
-  // Filter Categories
   for (const cat in CATEGORIES) {
-      CATEGORIES[cat] = CATEGORIES[cat].filter(phrase => {
-          const isMultiWord = phrase.includes(" ");
-          const isShortSingle = phrase.length <= 10;
-          return isMultiWord || isShortSingle;
-      });
+      CATEGORIES[cat] = CATEGORIES[cat].filter(phraseFitsLayout);
   }
 
   // --- STATE VARIABLES ---
@@ -575,6 +1385,7 @@
   let currentStreak = 0;
   let gamesPlayedTodayCount = 0;
   let pendingMint = false; 
+  let mintCalendarDays = {};
 
   let currentCategory = "", secret = "", revealed = [], mistakes = 0, moves = 0, gameOver = false;
   let chartData = []; 
@@ -582,62 +1393,62 @@
 
   const ctx = document.getElementById('chart').getContext('2d');
 
-  // --- STARTUP LOGIC ---
   async function startApp() {
+      /* Farcaster Mini App: signals splash removal. Base App: no-op / safe to ignore. */
       if (sdk && sdk.actions) {
-          try { sdk.actions.ready(); console.log("Called sdk.actions.ready()"); } catch (err) { console.warn(err); }
+          try { sdk.actions.ready(); } catch (err) { console.warn(err); }
       }
       const safeLoad = setTimeout(() => {
-          document.getElementById('loadingScreen').style.display = 'none';
-          checkGameStateAndRender(); 
+          document.getElementById("loadingScreen").style.display = "none";
       }, 2000);
       try {
           const app = initializeApp(firebaseConfig);
           db = getDatabase(app);
-          console.log("Firebase OK");
-          
-          if (sdk && sdk.context) {
-              try {
-                  const ctx = await sdk.context;
-                  if(ctx?.user?.username) {
-                      myUsername = "@" + ctx.user.username;
-                      myUserId = myUsername.replace(/[^a-zA-Z0-9]/g, ""); 
-                      document.getElementById('playerDisplay').textContent = myUsername;
-                      document.getElementById('playerDisplay').style.display = 'inline-flex';
-                  }
-              } catch(e) {}
-          } else if (window.ethereum) {
-              try {
-                  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                  if(accounts.length > 0) {
-                      myUsername = accounts[0].substring(0,6) + "..." + accounts[0].substring(38);
-                      myUserId = accounts[0].toLowerCase();
-                      document.getElementById('playerDisplay').textContent = myUsername;
-                      document.getElementById('playerDisplay').style.display = 'inline-flex';
-                  }
-              } catch(e) {}
-          }
-          await syncUserProfile();
+          const seasonEl = document.getElementById("leaderboardSeasonLabel");
+          if (seasonEl) seasonEl.textContent = "Season " + LEADERBOARD_SEASON;
+
+          await resolveMiniAppIdentity();
+          updateAuthGateUI();
+
+          refreshOgBadge();
           clearTimeout(safeLoad);
-          document.getElementById('loadingScreen').style.display = 'none';
-          
-          // Logic: If games left and no pending mint -> Start Game. Else -> Block.
-          if(gamesPlayedTodayCount < MAX_GAMES_PER_DAY && !pendingMint) {
-              initGame(true);
+          document.getElementById("loadingScreen").style.display = "none";
+
+          if (isLoggedIn()) {
+              setAuthGateVisible(false);
+              await syncUserProfile();
+              if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY && !pendingMint) {
+                  initGame(true);
+              } else {
+                  checkGameStateAndRender();
+              }
           } else {
+              setAuthGateVisible(true);
+              await syncUserProfile();
               checkGameStateAndRender();
           }
-      } catch(e) {
+      } catch (e) {
           console.error("Critical error during startApp", e);
-          document.getElementById('loadingScreen').style.display = 'none';
-          initGame();
+          clearTimeout(safeLoad);
+          document.getElementById("loadingScreen").style.display = "none";
+          refreshOgBadge();
+          updateAuthGateUI();
+          setAuthGateVisible(true);
+          await syncUserProfile();
+          checkGameStateAndRender();
       }
   }
 
   // --- DB SYNC & STREAK LOGIC ---
   async function syncUserProfile() {
-      if(!db) return;
-      const userRef = ref(db, 'players/' + myUserId);
+      if (!db) return;
+      if (!isLoggedIn()) {
+          updateScoreUI();
+          updateDailyUI();
+          renderCalendarMonth();
+          return;
+      }
+      const userRef = playerDocRef(myUserId);
       try {
           const snapshot = await get(userRef);
           if(snapshot.exists()) {
@@ -646,6 +1457,8 @@
               const today = new Date().toISOString().split('T')[0];
               const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
               const yesterday = yesterdayDate.toISOString().split('T')[0];
+
+              mintCalendarDays = (data.mintCalendar && typeof data.mintCalendar === "object") ? data.mintCalendar : {};
 
               if(data.lastPlayed === today) {
                   gamesPlayedTodayCount = data.gamesPlayedToday || 0;
@@ -660,14 +1473,21 @@
                   currentStreak = 0; gamesPlayedTodayCount = 0; pendingMint = false;
                   if (data.streak > 0) update(userRef, { streak: 0, gamesPlayedToday: 0, pendingMint: false });
               }
+          } else {
+              mintCalendarDays = {};
           }
       } catch(e) { console.error("Sync Error", e); }
       updateScoreUI();
       updateDailyUI();
+      renderCalendarMonth();
   }
 
   // --- CORE GAME INIT ---
   function initGame(newCat = true) {
+    if (!isLoggedIn()) {
+        checkGameStateAndRender();
+        return;
+    }
     document.getElementById('keyboard').style.pointerEvents = 'auto';
     document.getElementById('keyboard').style.opacity = '1';
     gameOver = false;
@@ -677,7 +1497,11 @@
         return;
     }
     
-    if(newCat || !currentCategory) currentCategory = Object.keys(CATEGORIES)[Math.floor(Math.random()*Object.keys(CATEGORIES).length)];
+    const catKeys = Object.keys(CATEGORIES).filter((k) => CATEGORIES[k].length > 0);
+    if (catKeys.length === 0) return;
+    if (newCat || !currentCategory || !CATEGORIES[currentCategory]?.length) {
+        currentCategory = catKeys[Math.floor(Math.random() * catKeys.length)];
+    }
     const catArray = CATEGORIES[currentCategory];
     if (!catArray || catArray.length === 0) return;
     secret = catArray[Math.floor(Math.random()*catArray.length)].toUpperCase();
@@ -705,8 +1529,20 @@
       const newGameBtn = document.getElementById('newCategoryBtn');
       const recoverBtn = document.getElementById('recoverMintBtn');
       const timer = document.getElementById('nextGameTimer');
-      
+      const keyboardEl = document.getElementById('keyboard');
+
       updateDailyUI();
+
+      if (!isLoggedIn()) {
+          newGameBtn.style.display = 'none';
+          recoverBtn.style.display = 'none';
+          timer.style.display = 'none';
+          if (keyboardEl) {
+              keyboardEl.style.pointerEvents = 'none';
+              keyboardEl.style.opacity = '0.35';
+          }
+          return;
+      }
 
       if(pendingMint) {
           // STATE: Player won but didn't mint yet.
@@ -757,7 +1593,11 @@
   function preloadChartHistory() { for(let i=0; i<80; i++) { generateCandle((Math.random() - 0.5) * 1.5, 2.5); } }
 
   function renderWord() {
-    const container = document.getElementById('wordDisplay'); container.innerHTML = '';
+    const container = document.getElementById('wordDisplay');
+    container.innerHTML = '';
+    const letterCount = secret.replace(/ /g, "").length;
+    container.classList.toggle("word-container--dense", letterCount > 11);
+    container.classList.toggle("word-container--xdense", letterCount > 14);
     const words = secret.split(' '); let globalIndex = 0;
     words.forEach((word) => {
         const group = document.createElement('div'); group.className = 'word-group';
@@ -771,6 +1611,81 @@
     });
   }
 
+  function pad2(n) { return n < 10 ? "0" + n : String(n); }
+  function isoDate(y, m, d) { return y + "-" + pad2(m + 1) + "-" + pad2(d); }
+  function localDateKey(d = new Date()) {
+      return isoDate(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  function renderCalendarMonth() {
+      const grid = document.getElementById("calendarGrid");
+      const label = document.getElementById("calendarMonthLabel");
+      if (!grid || !label) return;
+      grid.innerHTML = "";
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+      const todayIso = localDateKey(now);
+      label.textContent = now.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+      const dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      dow.forEach((d) => {
+          const h = document.createElement("div");
+          h.className = "cal-dow";
+          h.textContent = d;
+          grid.appendChild(h);
+      });
+
+      const first = new Date(y, m, 1);
+      const startPad = first.getDay();
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      const prevDays = new Date(y, m, 0).getDate();
+
+      for (let i = 0; i < startPad; i++) {
+          const dayNum = prevDays - startPad + i + 1;
+          const cell = document.createElement("div");
+          cell.className = "cal-cell other-month";
+          cell.textContent = String(dayNum);
+          grid.appendChild(cell);
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+          const iso = isoDate(y, m, d);
+          const cell = document.createElement("div");
+          cell.className = "cal-cell";
+          if (iso === todayIso) cell.classList.add("today");
+          if (mintCalendarDays[iso]) {
+              cell.classList.add("ptg-day");
+              cell.innerHTML = "";
+              if (PTG_DAY_BADGE_IMAGE_URL) {
+                  const img = document.createElement("img");
+                  img.className = "cal-badge-img";
+                  img.src = PTG_DAY_BADGE_IMAGE_URL;
+                  img.alt = "PTG";
+                  cell.appendChild(img);
+              } else {
+                  const span = document.createElement("span");
+                  span.className = "cal-badge-fallback";
+                  span.textContent = "PTG";
+                  cell.appendChild(span);
+              }
+              cell.title = "Trophy minted on " + iso;
+          } else {
+              cell.textContent = String(d);
+          }
+          grid.appendChild(cell);
+      }
+
+      const totalCells = startPad + daysInMonth;
+      const tail = (7 - (totalCells % 7)) % 7;
+      for (let i = 1; i <= tail; i++) {
+          const cell = document.createElement("div");
+          cell.className = "cal-cell other-month";
+          cell.textContent = String(i);
+          grid.appendChild(cell);
+      }
+  }
+
   function renderKeyboard() {
     const k = document.getElementById('keyboard'); k.innerHTML = "";
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(l => {
@@ -780,12 +1695,14 @@
   }
 
   document.addEventListener('keydown', (e) => {
+      if (!isLoggedIn()) return;
       if(gameOver || (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY && !pendingMint)) return;
       const key = e.key.toUpperCase();
       if (/^[A-Z]$/.test(key)) handleGuess(key);
   });
 
   function handleGuess(l) {
+    if (!isLoggedIn()) return;
     if(gameOver) return;
     const btn = document.getElementById(`key-${l}`); if(btn && btn.disabled) return; if(btn) btn.disabled = true;
     let hit = false;
@@ -815,7 +1732,7 @@
       checkGameStateAndRender(); 
       
       if(db) {
-          const userRef = ref(db, 'players/' + myUserId);
+          const userRef = playerDocRef(myUserId);
           const today = new Date().toISOString().split('T')[0];
           runTransaction(userRef, (userData) => {
               const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
@@ -850,7 +1767,7 @@
 
       if(db) {
           const today = new Date().toISOString().split('T')[0];
-          const userRef = ref(db, 'players/' + myUserId);
+          const userRef = playerDocRef(myUserId);
           runTransaction(userRef, (userData) => {
               if(userData) {
                   // Keep Streak on Loss (unless skipped day)
@@ -891,77 +1808,324 @@
         const x = 20 + i * candleWidth;
         const yOpen = h - ((c.open - minP) / range * h); const yClose = h - ((c.close - minP) / range * h);
         const yHigh = h - ((c.high - minP) / range * h); const yLow = h - ((c.low - minP) / range * h);
-        const isGreen = c.close >= c.open; ctx.fillStyle = isGreen ? '#22c55e' : '#ef4444'; ctx.strokeStyle = isGreen ? '#22c55e' : '#ef4444';
+        const isGreen = c.close >= c.open; ctx.fillStyle = isGreen ? '#66c800' : '#fc401f'; ctx.strokeStyle = isGreen ? '#66c800' : '#fc401f';
         ctx.beginPath(); ctx.moveTo(x+candleWidth/2, yHigh); ctx.lineTo(x+candleWidth/2, yLow); ctx.stroke();
         ctx.fillRect(x, Math.min(yOpen, yClose), candleWidth-1, Math.max(Math.abs(yClose-yOpen), 1));
     });
   }
 
-  // --- MINT LOGIC (NO LIMIT, PC FIX) ---
+  async function getFcQuickAuthToken() {
+      try {
+          const q = sdk?.quickAuth;
+          if (q && typeof q.getToken === "function") return await q.getToken();
+      } catch (e) { console.warn("FC quick auth token", e); }
+      return null;
+  }
+
+  const PTG_PUBLIC_SITE_ORIGIN = "https://phrasetoguess.xyz";
+  const PTG_MINT_VOUCHER_PRODUCTION = PTG_PUBLIC_SITE_ORIGIN + "/api/ptg-voucher";
+
+  function getCanonicalSiteOrigin() {
+      try {
+          const link = document.querySelector('link[rel="canonical"]');
+          if (link && link.href) return new URL(link.href).origin;
+      } catch (_) {}
+      return PTG_PUBLIC_SITE_ORIGIN;
+  }
+
+  /** http-server / live-server nie mają /api — POST kończy się 405; wtedy tylko Vercel. */
+  function isStaticLocalOrFileHost() {
+      if (typeof location === "undefined") return false;
+      if (location.protocol === "file:") return true;
+      const h = String(location.hostname || "").toLowerCase();
+      return (
+          h === "localhost" ||
+          h === "127.0.0.1" ||
+          h === "0.0.0.0" ||
+          h === "[::1]" ||
+          h.endsWith(".local")
+      );
+  }
+
+  /**
+   * Produkcja (canonical) najpierw na localhost / file.
+   * Na prawdziwym deployu: ten sam origin, potem zapas canonical + PTG_PUBLIC_SITE_ORIGIN.
+   */
+  function collectMintVoucherUrls() {
+      const list = [];
+      const add = (u) => {
+          if (u && list.indexOf(u) === -1) list.push(u);
+      };
+      const canonicalOrigin = getCanonicalSiteOrigin();
+      const canonicalApi = `${canonicalOrigin}/api/ptg-voucher`;
+
+      if (isStaticLocalOrFileHost()) {
+          add(canonicalApi);
+          if (canonicalApi !== PTG_MINT_VOUCHER_PRODUCTION) add(PTG_MINT_VOUCHER_PRODUCTION);
+          return list;
+      }
+
+      if (location.origin && location.protocol !== "file:") {
+          add(`${location.origin}/api/ptg-voucher`);
+      }
+      add("/api/ptg-voucher");
+      add(canonicalApi);
+      if (canonicalApi !== PTG_MINT_VOUCHER_PRODUCTION) add(PTG_MINT_VOUCHER_PRODUCTION);
+      return list;
+  }
+
+  async function fetchMintVoucher(body) {
+      const urls = collectMintVoucherUrls();
+      const payload = JSON.stringify(body);
+      let lastErr = null;
+      let lastFailRes = null;
+      let lastFailUrl = null;
+      for (let i = 0; i < urls.length; i++) {
+          const voucherUrl = urls[i];
+          try {
+              const voucherRes = await fetch(voucherUrl, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: payload,
+                  mode: "cors",
+                  cache: "no-store",
+              });
+              if (voucherRes.ok) return { voucherRes, voucherUrl };
+              if (voucherRes.status === 404 || voucherRes.status === 405) {
+                  lastFailRes = voucherRes;
+                  lastFailUrl = voucherUrl;
+                  continue;
+              }
+              return { voucherRes, voucherUrl };
+          } catch (e) {
+              lastErr = e;
+          }
+      }
+      if (lastFailRes) return { voucherRes: lastFailRes, voucherUrl: lastFailUrl };
+      const msg = lastErr && lastErr.message ? String(lastErr.message) : "network_error";
+      const hint =
+          /failed to fetch|networkerror|load failed/i.test(msg)
+              ? " Try opening " + PTG_PUBLIC_SITE_ORIGIN + " in Chrome/Safari, disable ad blockers, or use the system browser instead of an in-app WebView."
+              : "";
+      throw new Error(msg + hint);
+  }
+
+  function formatMintVoucherApiError(codeOrText) {
+      const c = String(codeOrText || "").trim();
+      const map = {
+          server_mint_not_configured:
+              "Mint API not configured: in Vercel set MINT_SIGNER_PRIVATE_KEY and PTG_NFT_ADDRESS (same key as authorizedSigner on the contract).",
+          no_pending_mint:
+              "No pending trophy for this account — win a round first, or wait a moment and try again.",
+          wallet_not_linked_to_player:
+              "This wallet is not linked to this player. Use the same profile you played with, or reconnect your wallet.",
+          invalid_fc_token: "Farcaster session expired — reopen the app and try again.",
+          fc_token_username_mismatch: "Farcaster profile does not match this game account.",
+          bad_request: "Invalid mint request.",
+          nonce_rpc_failed: "Could not read the NFT contract on Base — try again later.",
+          bad_contract_address: "Invalid PTG_NFT_ADDRESS on the server.",
+          bad_signer_key: "Server signer key is invalid.",
+          sign_failed: "Server could not sign the mint voucher.",
+          method_not_allowed: "Mint API method not allowed.",
+          internal_error: "Mint API crashed on the server. Check Vercel function logs.",
+      };
+      if (map[c]) return map[c];
+      if (c.length > 0 && c.length < 200 && !/^[<\s]/.test(c)) return c;
+      return null;
+  }
+
+  async function readMintPriceWeiHex(contractAddr, ethProvider) {
+      const priceIface = new ethers.utils.Interface([
+          "function mintPriceWei() view returns (uint256)",
+      ]);
+      const data = priceIface.encodeFunctionData("mintPriceWei", []);
+      const hex = await ethProvider.request({
+          method: "eth_call",
+          params: [{ to: contractAddr, data }, "latest"],
+      });
+      const [wei] = priceIface.decodeFunctionResult("mintPriceWei", hex);
+      return ethers.BigNumber.from(wei).toHexString();
+  }
+
+  // --- MINT LOGIC: PhraseToGuess NFT + serwerowy voucher EIP-712 (brak mintu z samego Basescan) ---
   async function mintNFT() {
-    const MINT_PRICE = "0x9184e72a000"; 
     const btn = document.getElementById('victoryMintBtn');
     const statusDiv = document.getElementById('victoryStatus');
-    const txDiv = document.getElementById('victoryTxLink');
     btn.innerHTML = "Processing..."; btn.disabled = true;
     statusDiv.textContent = "Check your wallet! (Click 'I'm Safe' if warned)"; statusDiv.style.color = "#94a3b8";
 
     try {
-      const iface = new ethers.utils.Interface(CONTRACT_ABI);
-      const dataHex = iface.encodeFunctionData("publicMint", [METADATA_URL]);
-      let txHash;
-
-      // MOBILE
-      if (sdk && sdk.wallet && sdk.wallet.ethProvider) {
-          const accounts = await sdk.wallet.ethProvider.request({ method: 'eth_requestAccounts' });
-          try {
-             statusDiv.textContent = "Confirm in Wallet (Click 'I'm safe')...";
-             const result = await sdk.wallet.ethProvider.request({
-                method: 'eth_sendTransaction',
-                params: [{ from: accounts[0], to: CONTRACT_ADDRESS, data: dataHex, value: MINT_PRICE }]
-             });
-             txHash = result;
-          } catch (err) { console.warn("SDK fail", err); }
+      const zero = "0x0000000000000000000000000000000000000000";
+      if (!PTG_NFT_ADDRESS || PTG_NFT_ADDRESS.toLowerCase() === zero) {
+          throw new Error("PTG_NFT_ADDRESS not set — deploy contract and paste address in index.html");
       }
 
-      // PC - FIX GAS
-      if (!txHash && window.ethereum) {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); } catch(e) {
-             if (e.code === 4902) try { await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0x2105', chainName: 'Base', rpcUrls: ['https://mainnet.base.org'] }] }); } catch(err){}
-          }
-          statusDiv.textContent = "Confirm in MetaMask...";
-          txHash = await window.ethereum.request({
-              method: 'eth_sendTransaction',
-              params: [{ from: accounts[0], to: CONTRACT_ADDRESS, value: MINT_PRICE, data: dataHex, gas: '0x7A120' }]
-          });
-      } else if (!txHash && !sdk?.wallet?.ethProvider) { throw new Error("No wallet found"); }
+      let accounts;
+      let ethProvider = null;
 
-      if(!txHash) throw new Error("Transaction cancelled or failed");
+      try {
+          const fe = getEmbeddedEthProvider();
+          if (fe) {
+              await ensureBaseMainnet(fe);
+              accounts = await fe.request({ method: "eth_requestAccounts" });
+              ethProvider = fe;
+          }
+      } catch (mintSdkErr) {
+          console.warn("Mint: embedded wallet path skipped", mintSdkErr);
+      }
+      if (!accounts || !accounts[0]) {
+          if (ptgHost === "base" || ptgHost === "farcaster") {
+              throw new Error("Connect the wallet inside Base or Farcaster to mint.");
+          }
+          const injected = getInjectedProvider();
+          if (injected) {
+              await ensureBaseMainnet(injected);
+              accounts = await injected.request({ method: "eth_requestAccounts" });
+              ethProvider = injected;
+          }
+      }
+
+      if (!accounts || !accounts[0] || !ethProvider) {
+          throw new Error("No wallet found");
+      }
+
+      const minter = accounts[0];
+      const minterLc = minter.toLowerCase();
+      const userLc = String(myUserId || "").toLowerCase();
+
+      if (db && myUserId && myUserId !== "guest" && userLc !== minterLc) {
+          statusDiv.textContent = "Linking wallet for mint…";
+          try {
+              await update(playerDocRef(myUserId), {
+                  mintWalletForMint: minterLc,
+              });
+          } catch (e) {
+              console.error("mintWalletForMint update", e);
+              throw new Error(
+                  "Could not save wallet link in Firebase. Check RTDB rules and your connection."
+              );
+          }
+      }
+
+      statusDiv.textContent = "Getting mint authorization…";
+      const fcQuickAuthToken = await getFcQuickAuthToken();
+      const { voucherRes, voucherUrl } = await fetchMintVoucher({
+          minter,
+          userId: myUserId,
+          fcQuickAuthToken,
+      });
+      const voucherText = await voucherRes.text();
+      let voucherJson;
+      try {
+          voucherJson = JSON.parse(voucherText);
+      } catch {
+          voucherJson = {};
+      }
+      if (!voucherRes.ok) {
+          const rawErr = voucherJson && typeof voucherJson === "object" ? voucherJson.error : null;
+          const detail =
+              voucherJson && typeof voucherJson === "object" && voucherJson.detail
+                  ? String(voucherJson.detail)
+                  : "";
+          let friendly = formatMintVoucherApiError(rawErr);
+          if (rawErr === "internal_error" && detail) {
+              friendly = (friendly || "Server error") + " — " + detail;
+          }
+          throw new Error(
+              friendly ||
+                  formatMintVoucherApiError(voucherText) ||
+                  (voucherText && voucherText.length < 300 ? voucherText : null) ||
+                  `Mint voucher failed (HTTP ${voucherRes.status}). Last tried: ${voucherUrl} — deploy /api on Vercel and set env vars.`
+          );
+      }
+
+      const { deadline, v, r, s } = voucherJson;
+      if (deadline == null || v == null || !r || !s) {
+          throw new Error("Invalid voucher response");
+      }
+
+      const mintIface = new ethers.utils.Interface(PTG_NFT_ABI);
+      const dataHex = mintIface.encodeFunctionData("mintWithSignature", [deadline, v, r, s]);
+      const valueHex = await readMintPriceWeiHex(PTG_NFT_ADDRESS, ethProvider);
+
+      let txHash;
+
+      try {
+          const fe = getEmbeddedEthProvider();
+          if (fe && typeof fe.request === "function" && accounts[0] && ethProvider === fe) {
+              try {
+                  statusDiv.textContent = "Confirm in Wallet (Click 'I'm safe')...";
+                  const result = await fe.request({
+                      method: "eth_sendTransaction",
+                      params: [{
+                          from: accounts[0],
+                          to: PTG_NFT_ADDRESS,
+                          data: dataHex,
+                          value: valueHex,
+                      }],
+                  });
+                  txHash = result;
+              } catch (err) {
+                  console.warn("SDK tx path fail", err);
+              }
+          }
+      } catch (mintTxSdkErr) {
+          console.warn("Mint tx embedded provider", mintTxSdkErr);
+      }
+
+      if (!txHash && ethProvider) {
+          statusDiv.textContent = "Confirm in your wallet...";
+          txHash = await ethProvider.request({
+              method: "eth_sendTransaction",
+              params: [{
+                  from: accounts[0],
+                  to: PTG_NFT_ADDRESS,
+                  value: valueHex,
+                  data: dataHex,
+              }],
+          });
+      }
+
+      if (!txHash) throw new Error("Transaction cancelled or failed");
+
+      statusDiv.textContent = "Waiting for confirmation…";
+      const web3p = new ethers.providers.Web3Provider(ethProvider, "any");
+      const receipt = await web3p.waitForTransaction(txHash, 1);
+      if (!receipt || receipt.status !== 1) {
+          throw new Error("Transaction reverted or not confirmed");
+      }
 
       // SUCCESS
+      const mintDay = localDateKey();
       if(db) {
-          const userRef = ref(db, 'players/' + myUserId);
+          const userRef = playerDocRef(myUserId);
           runTransaction(userRef, (userData) => {
               if (userData) { 
                   userData.score = (userData.score || 0) + 2; 
                   userData.mintCount = (userData.mintCount || 0) + 1;
-                  userData.pendingMint = false; 
+                  userData.pendingMint = false;
+                  if (!userData.mintCalendar || typeof userData.mintCalendar !== "object") userData.mintCalendar = {};
+                  userData.mintCalendar[mintDay] = true;
               }
               return userData;
           }).then(() => { 
               currentScore += 2; updateScoreUI(); pendingMint = false;
+              mintCalendarDays = { ...mintCalendarDays, [mintDay]: true };
+              renderCalendarMonth();
               checkGameStateAndRender(); 
           });
+      } else {
+          mintCalendarDays = { ...mintCalendarDays, [mintDay]: true };
+          renderCalendarMonth();
       }
-      statusDiv.textContent = "Success! Trophy Minted. 🏆"; statusDiv.style.color = "#4ade80";
+      statusDiv.textContent = "Success! Trophy Minted. 🏆"; statusDiv.style.color = "#66c800";
       btn.innerHTML = "MINTED! 🏆";
       const actualHash = (typeof txHash === 'string') ? txHash : (txHash?.[0] || "tx_sent");
       document.getElementById('victoryTxLink').innerHTML = `<a href="https://basescan.org/tx/${actualHash}" target="_blank">View on BaseScan</a>`;
       confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
     } catch(e) { 
         console.error(e); statusDiv.textContent = "Error: " + (e.message || "Cancelled");
-        statusDiv.style.color = "#ef4444"; btn.innerHTML = "Try Again"; btn.disabled = false;
+        statusDiv.style.color = "#fc401f"; btn.innerHTML = "Try Again"; btn.disabled = false;
     }
   }
 
@@ -977,13 +2141,13 @@
       tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">Loading scores...</td></tr>';
       document.getElementById('leaderboardOverlay').classList.add('show');
       if (!db) return;
-      const playersRef = ref(db, 'players');
+      const playersRef = playersRootRef();
       onValue(playersRef, (snapshot) => {
           const data = snapshot.val(); if (!data) return;
           const sortedPlayers = Object.values(data).sort((a, b) => (b.score||0) - (a.score||0)).slice(0, 50);
           tbody.innerHTML = sortedPlayers.map((p, i) => { 
               const rank = i + 1; let rankClass = "rank-badge rank-other"; if(rank===1) rankClass = "rank-badge rank-1"; else if(rank===2) rankClass = "rank-badge rank-2"; else if(rank===3) rankClass = "rank-badge rank-3";
-              const isMe = p.name === myUsername; const nameStyle = isMe ? 'color: #8b5cf6; font-weight: 700;' : 'color: #fff;';
+              const isMe = p.name === myUsername; const nameStyle = isMe ? 'color: #3c8aff; font-weight: 700;' : 'color: #fff;';
               return `<tr><td><div class="${rankClass}">${rank}</div></td><td style="${nameStyle}">${p.name} <span style="font-size:10px; color:#94a3b8; margin-left:4px;">(🔥${p.streak||0})</span></td><td style="text-align:right; font-weight:700;">${p.score||0}</td></tr>`;
           }).join('');
       });
@@ -1004,8 +2168,25 @@
   }
 
   document.getElementById('newCategoryBtn').onclick = () => initGame(true);
+  document.getElementById('connectWalletBtn')?.addEventListener('click', () => connectWalletForPlay());
   document.getElementById('leaderboardBtn').onclick = showLeaderboard;
   document.getElementById('closeLeaderboard').onclick = () => document.getElementById('leaderboardOverlay').classList.remove('show');
+
+  const calendarToggle = document.getElementById("calendarToggle");
+  const calendarPanel = document.getElementById("calendarPanel");
+  if (calendarToggle && calendarPanel) {
+      calendarToggle.addEventListener("click", () => {
+          const open = calendarPanel.hasAttribute("hidden");
+          if (open) {
+              calendarPanel.removeAttribute("hidden");
+              calendarToggle.setAttribute("aria-expanded", "true");
+              renderCalendarMonth();
+          } else {
+              calendarPanel.setAttribute("hidden", "");
+              calendarToggle.setAttribute("aria-expanded", "false");
+          }
+      });
+  }
 
   window.mintNFT = mintNFT;
   window.initGame = initGame;

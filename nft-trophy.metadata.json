@@ -1,0 +1,20 @@
+{
+  "name": "Phrase To Guess — OG Trophy",
+  "description": "Daily phrase game trophy minted on Base. Play at https://phrasetoguess.xyz",
+  "image": "https://phrasetoguess.xyz/PTG-main.png",
+  "external_url": "https://phrasetoguess.xyz/",
+  "attributes": [
+    { "trait_type": "Collection", "value": "Phrase To Guess" },
+    { "trait_type": "Network", "value": "Base" },
+    { "trait_type": "Type", "value": "Trophy" }
+  ],
+  "properties": {
+    "category": "image",
+    "files": [
+      {
+        "uri": "https://phrasetoguess.xyz/PTG-main.png",
+        "type": "image/png"
+      }
+    ]
+  }
+}

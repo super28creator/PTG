@@ -1,44 +1,44 @@
 {
   "name": "Phrase To Guess",
   "short_name": "PhraseGuess",
-  "description": "Daily Web3 word-guessing game.",
+  "description": "Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain.",
   "version": "1.0.0",
   "icons": [
     {
-      "src": "https://ptg-one.vercel.app/icon-192.png",
+      "src": "https://phrasetoguess.xyz/PTG-main.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://ptg-one.vercel.app/icon-512.png",
+      "src": "https://phrasetoguess.xyz/PTG-main.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }
   ],
-  "start_url": "https://ptg-one.vercel.app/",
+  "start_url": "https://phrasetoguess.xyz/",
+  "scope": "https://phrasetoguess.xyz/",
   "display": "standalone",
-  "background_color": "#071028",
-  "theme_color": "#7c3aed",
-  "home_url": "https://ptg-one.vercel.app",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0b0d",
+  "theme_color": "#0000ff",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["games", "entertainment"],
+  "home_url": "https://phrasetoguess.xyz",
   "developer": {
     "name": "PhraseToGuess Team",
-    "url": "https://ptg-one.vercel.app"
+    "url": "https://phrasetoguess.xyz"
   },
   "farcaster": {
     "name": "Phrase To Guess",
     "version": "1",
-    "homeUrl": "https://ptg-one.vercel.app",
-    "iconUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "splashImageUrl": "https://ptg-one.vercel.app/icon-512.png",
-    "splashBackgroundColor": "#071028",
-    "description": "Daily Web3 word-guessing game.",
-    "tags": ["game", "daily", "web3", "puzzle", "base"],
-    "accountAssociation": {
-      "header": "eyJmaWQiOjEwNzYyNjQsInR5cGUiOiJhdXRoIiwia2V5IjoiMHhmYWM3NjkzOUMzMWU2Y0I4MEUwNGM0NkFFNWY4MTMyRWE1MzRDODU1In0",
-      "payload": "eyJkb21haW4iOiJwdGctb25lLnZlcmNlbC5hcHAifQ",
-      "signature": "OcvxnLJLLNIZa8/5LhBeOtl07lTJOtMZLreGg4mzBMA8AgysJxN6rGsGdixgPaFBVvzb2CLwrtJ7YAECQbebRRs="
-    }
+    "homeUrl": "https://phrasetoguess.xyz",
+    "iconUrl": "https://phrasetoguess.xyz/PTG-main.png",
+    "splashImageUrl": "https://phrasetoguess.xyz/PTG-main.png",
+    "splashBackgroundColor": "#0a0b0d",
+    "description": "Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain.",
+    "tags": ["game", "daily", "onchain", "puzzle", "base"]
   }
 }

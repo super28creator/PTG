@@ -1,0 +1,20 @@
+{
+  "name": "Phrase To Guess",
+  "description": "Phrase To Guess collectible on Base. Play at https://phrasetoguess.xyz",
+  "image": "ipfs://bafybeicakcxklwo266gjlz2seoc2qiielnm7ruhafisuuqiivy2vhkm5n4",
+  "external_url": "https://phrasetoguess.xyz/",
+  "attributes": [
+    { "trait_type": "Collection", "value": "Phrase To Guess" },
+    { "trait_type": "Network", "value": "Base" },
+    { "trait_type": "Type", "value": "Collectible" }
+  ],
+  "properties": {
+    "category": "image",
+    "files": [
+      {
+        "uri": "ipfs://bafybeicakcxklwo266gjlz2seoc2qiielnm7ruhafisuuqiivy2vhkm5n4",
+        "type": "image/png"
+      }
+    ]
+  }
+}

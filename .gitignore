@@ -1,3 +1,9 @@
 node_modules/
 .env
 coinbase_key.json
+.deps/
+artifacts/
+Kontrakt-nft_sol_*.bin
+
+# Lokalne snapshoty / rankingi NFT — nie commitujemy
+private/

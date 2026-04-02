@@ -5,5 +5,11 @@
       "destination": "https://api.farcaster.xyz/miniapps/hosted-manifest/019bb823-972c-a411-2159-1f26c93aa3d4",
       "permanent": false
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/mint-voucher",
+      "destination": "/api/ptg-voucher"
+    }
   ]
 }
