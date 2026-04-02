@@ -1463,7 +1463,12 @@
               mintCalendarDays = (data.mintCalendar && typeof data.mintCalendar === "object") ? data.mintCalendar : {};
 
               if(data.lastPlayed === today) {
-                  gamesPlayedTodayCount = data.gamesPlayedToday || 0;
+                  let g = Number(data.gamesPlayedToday) || 0;
+                  if (g > MAX_GAMES_PER_DAY) {
+                      g = MAX_GAMES_PER_DAY;
+                      update(userRef, { gamesPlayedToday: MAX_GAMES_PER_DAY });
+                  }
+                  gamesPlayedTodayCount = g;
                   currentStreak = data.streak || 0;
                   pendingMint = data.pendingMint || false;
               } else if (data.lastPlayed === yesterday) {
@@ -1701,14 +1706,15 @@
 
   document.addEventListener('keydown', (e) => {
       if (!isLoggedIn()) return;
-      if(gameOver || (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY && !pendingMint)) return;
+      if (gameOver || gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) return;
       const key = e.key.toUpperCase();
       if (/^[A-Z]$/.test(key)) handleGuess(key);
   });
 
   function handleGuess(l) {
     if (!isLoggedIn()) return;
-    if(gameOver) return;
+    if (gameOver) return;
+    if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) return;
     const btn = document.getElementById(`key-${l}`); if(btn && btn.disabled) return; if(btn) btn.disabled = true;
     let hit = false;
     for(let i=0; i<secret.length; i++) { if(secret[i] === l) { revealed[i] = l; hit = true; } }
@@ -1743,8 +1749,12 @@
               const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
               const yesterday = yesterdayDate.toISOString().split('T')[0];
               if (userData) {
+                  const played = userData.gamesPlayedToday || 0;
+                  if (played >= MAX_GAMES_PER_DAY) {
+                      return undefined;
+                  }
                   userData.score = (userData.score || 0) + 1;
-                  userData.gamesPlayedToday = (userData.gamesPlayedToday || 0) + 1; 
+                  userData.gamesPlayedToday = played + 1;
                   userData.pendingMint = true; 
                   // Streak Logic: If played yesterday -> streak+1. If played today -> same. Else -> 1.
                   if (userData.lastPlayed === yesterday) userData.streak = (userData.streak || 0) + 1;
@@ -1755,7 +1765,11 @@
               }
               return userData;
           }).then((res) => {
-              gamesPlayedTodayCount = res.snapshot.val().gamesPlayedToday;
+              const ok = !res || typeof res.committed !== "boolean" || res.committed;
+              if (!ok) return;
+              const snap = res && res.snapshot;
+              if (!snap || typeof snap.val !== "function") return;
+              gamesPlayedTodayCount = snap.val().gamesPlayedToday;
               currentScore++; currentStreak++; updateScoreUI(); checkGameStateAndRender();
           });
       }
@@ -1775,8 +1789,11 @@
           const userRef = playerDocRef(myUserId);
           runTransaction(userRef, (userData) => {
               if(userData) {
-                  // Keep Streak on Loss (unless skipped day)
-                  userData.gamesPlayedToday = (userData.gamesPlayedToday || 0) + 1; 
+                  const played = userData.gamesPlayedToday || 0;
+                  if (played >= MAX_GAMES_PER_DAY) {
+                      return undefined;
+                  }
+                  userData.gamesPlayedToday = played + 1; 
                   userData.lastPlayed = today;
                   userData.pendingMint = false; 
               } else {
@@ -1784,7 +1801,11 @@
               }
               return userData;
           }).then((res) => {
-              gamesPlayedTodayCount = res.snapshot.val().gamesPlayedToday;
+              const ok = !res || typeof res.committed !== "boolean" || res.committed;
+              if (!ok) return;
+              const snap = res && res.snapshot;
+              if (!snap || typeof snap.val !== "function") return;
+              gamesPlayedTodayCount = snap.val().gamesPlayedToday;
               updateScoreUI(); checkGameStateAndRender();
           });
       }
@@ -2319,9 +2340,9 @@
       const valueHex = await readMintPriceWeiHex(PTG_NFT_ADDRESS, ethProvider);
       const balBefore = await readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider);
 
-      statusDiv.textContent = "Preparing transaction (gas via site RPC)…";
+      statusDiv.textContent = "Preparing transaction…";
       const gasFields = await prepareMintTxGasFields(accounts[0], PTG_NFT_ADDRESS, dataHex, valueHex);
-      const txPayload = {
+      const txPayloadFull = {
           from: accounts[0],
           to: PTG_NFT_ADDRESS,
           data: dataHex,
@@ -2347,22 +2368,21 @@
           if (fe && typeof fe.request === "function" && accounts[0] && ethProvider === fe) {
               try {
                   statusDiv.textContent = "Confirm in Wallet (Click 'I'm safe')...";
-                  const result = await fe.request({
+                  txHash = await fe.request({
                       method: "eth_sendTransaction",
-                      params: [txPayload],
+                      params: [txPayloadMinimal],
                   });
-                  txHash = result;
               } catch (err) {
-                  console.warn("SDK tx path fail", err);
+                  console.warn("SDK tx minimal fail", err);
                   if (Object.keys(gasFields).length > 0 && isWalletRpcSendError(err)) {
                       try {
-                          statusDiv.textContent = "Retry: confirm again (wallet estimates gas)…";
+                          statusDiv.textContent = "Retry with preset gas (site RPC)…";
                           txHash = await fe.request({
                               method: "eth_sendTransaction",
-                              params: [txPayloadMinimal],
+                              params: [txPayloadFull],
                           });
                       } catch (err2) {
-                          console.warn("SDK tx minimal payload fail", err2);
+                          console.warn("SDK tx full payload fail", err2);
                       }
                   }
               }
@@ -2376,14 +2396,14 @@
           try {
               txHash = await ethProvider.request({
                   method: "eth_sendTransaction",
-                  params: [txPayload],
+                  params: [txPayloadMinimal],
               });
           } catch (err) {
               if (Object.keys(gasFields).length > 0 && isWalletRpcSendError(err)) {
-                  statusDiv.textContent = "Retry: confirm again (wallet estimates gas)…";
+                  statusDiv.textContent = "Retry with preset gas (site RPC)…";
                   txHash = await ethProvider.request({
                       method: "eth_sendTransaction",
-                      params: [txPayloadMinimal],
+                      params: [txPayloadFull],
                   });
               } else {
                   throw err;
@@ -2483,7 +2503,7 @@
       document.getElementById('streakDisplay').textContent = currentStreak; 
   }
   function updateDailyUI() { 
-      document.getElementById('dailyInfo').textContent = `Games: ${gamesPlayedTodayCount}/${MAX_GAMES_PER_DAY}`; 
+      document.getElementById('dailyInfo').textContent = `Games: ${Math.min(gamesPlayedTodayCount, MAX_GAMES_PER_DAY)}/${MAX_GAMES_PER_DAY}`; 
   }
   function showLeaderboard() {
       const tbody = document.getElementById('leaderboardBody');
