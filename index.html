@@ -941,6 +941,13 @@
   const BASENAME_L2_RESOLVER_PROXY = "0x426fA03fB86E510d0Dd9F70335Cf102a98b10875";
   const BASENAME_L2_RESOLVER_LEGACY = "0xC6d566A56A1aFf6508b41f6c90ff131615583BCD";
   const BASE_RPC_PUBLIC = "https://mainnet.base.org";
+  /** Zapasowe RPC do odczytów / waitForTx, gdy Rainbow/MetaMask zwraca „HTTP client error”. */
+  const BASE_RPC_FALLBACKS = [
+      "https://mainnet.base.org",
+      "https://base.llamarpc.com",
+      "https://1rpc.io/base",
+      "https://base.publicnode.com",
+  ];
   const BASE_NUMERIC_CHAIN_ID = 8453;
   const BASENAME_NAME_ABI = ["function name(bytes32 node) view returns (string)"];
   const REVERSE_REGISTRAR_NODE_ABI = ["function node(address addr) view returns (bytes32)"];
@@ -1941,12 +1948,31 @@
           "function mintPriceWei() view returns (uint256)",
       ]);
       const data = priceIface.encodeFunctionData("mintPriceWei", []);
-      const hex = await ethProvider.request({
-          method: "eth_call",
-          params: [{ to: contractAddr, data }, "latest"],
-      });
-      const [wei] = priceIface.decodeFunctionResult("mintPriceWei", hex);
-      return ethers.BigNumber.from(wei).toHexString();
+      if (ethProvider && typeof ethProvider.request === "function") {
+          try {
+              const hex = await ethProvider.request({
+                  method: "eth_call",
+                  params: [{ to: contractAddr, data }, "latest"],
+              });
+              const [wei] = priceIface.decodeFunctionResult("mintPriceWei", hex);
+              return ethers.BigNumber.from(wei).toHexString();
+          } catch (e) {
+              console.warn("readMintPriceWeiHex: wallet RPC failed, trying public Base RPC", e);
+          }
+      }
+      for (let i = 0; i < BASE_RPC_FALLBACKS.length; i++) {
+          try {
+              const p = new ethers.providers.JsonRpcProvider(BASE_RPC_FALLBACKS[i]);
+              const raw = await p.call({ to: contractAddr, data });
+              const [wei] = priceIface.decodeFunctionResult("mintPriceWei", raw);
+              return ethers.BigNumber.from(wei).toHexString();
+          } catch (e) {
+              console.warn("readMintPriceWeiHex: fallback RPC", BASE_RPC_FALLBACKS[i], e);
+          }
+      }
+      throw new Error(
+          "Could not read mint price on Base (all RPC endpoints failed). Check connection or try another wallet."
+      );
   }
 
   // --- MINT LOGIC: PhraseToGuess NFT + serwerowy voucher EIP-712 (brak mintu z samego Basescan) ---
@@ -2110,8 +2136,25 @@
       if (!txHash) throw new Error("Transaction cancelled or failed");
 
       statusDiv.textContent = "Waiting for confirmation…";
-      const web3p = new ethers.providers.Web3Provider(ethProvider, "any");
-      const receipt = await web3p.waitForTransaction(txHash, 1);
+      let receipt;
+      try {
+          const web3p = new ethers.providers.Web3Provider(ethProvider, "any");
+          receipt = await web3p.waitForTransaction(txHash, 1, 180000);
+      } catch (waitErr) {
+          console.warn("waitForTransaction: wallet RPC failed, using public Base RPC", waitErr);
+          let lastErr = waitErr;
+          receipt = null;
+          for (let i = 0; i < BASE_RPC_FALLBACKS.length; i++) {
+              try {
+                  const p = new ethers.providers.JsonRpcProvider(BASE_RPC_FALLBACKS[i]);
+                  receipt = await p.waitForTransaction(txHash, 1, 180000);
+                  break;
+              } catch (e) {
+                  lastErr = e;
+              }
+          }
+          if (!receipt) throw lastErr;
+      }
       if (!receipt || receipt.status !== 1) {
           throw new Error("Transaction reverted or not confirmed");
       }
@@ -2145,7 +2188,13 @@
       document.getElementById('victoryTxLink').innerHTML = `<a href="https://basescan.org/tx/${actualHash}" target="_blank">View on BaseScan</a>`;
       confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
     } catch(e) { 
-        console.error(e); statusDiv.textContent = "Error: " + (e.message || "Cancelled");
+        console.error(e);
+        let msg = e && e.message ? String(e.message) : "Cancelled";
+        if (/rpc|http client error|network request failed/i.test(msg)) {
+            msg +=
+                " — often a wallet RPC issue; retry or use another browser wallet / check Base RPC in wallet settings.";
+        }
+        statusDiv.textContent = "Error: " + msg;
         statusDiv.style.color = "#fc401f"; btn.innerHTML = "Try Again"; btn.disabled = false;
     }
   }
