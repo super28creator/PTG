@@ -8,8 +8,8 @@ const TARGET = process.env.BASE_RPC_URL || "https://mainnet.base.org";
 const DEFAULT_PTG_NFT_ADDRESS =
   "0xca78D7E55eE9B9a2683e0d0134978614cf2dB761";
 
-const MINT_SIG =
-  "mintWithSignature(uint256,uint8,bytes32,bytes32)";
+/** Tylko `mint()` — bez mintWithSignature. */
+const MINT_SIG = "mint()";
 const MAX_GAS_LIMIT = 900000n;
 
 function setCors(req, res) {

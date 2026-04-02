@@ -6,7 +6,7 @@ pragma solidity ^0.8.30;
  * Łatwa weryfikacja na Basescan: wklej ten sam plik (Contract verification → Solidity single file).
  *
  * Remix: 0.8.30, optimization on, EVM paris.
- * Mint tylko przez `mintWithSignature` + podpis EIP-712 z serwera (authorizedSigner).
+ * Mint publiczny: `mint()` + opłata `mintPriceWei` (bez podpisu / bez serwera).
  * Ostatni argument konstruktora `uniformTokenURI_`: niepusty = ten sam JSON IPFS dla każdego tokena
  * (nieskończony mint „jednej” grafiki); wtedy `baseUri_` może być pusty `""`.
  */
@@ -62,19 +62,6 @@ library Strings {
             value /= 10;
         }
         return string(buffer);
-    }
-}
-
-library ECDSA {
-    error ECDSAInvalidSignature();
-
-    function recover(bytes32 hash, uint8 v, bytes32 r, bytes32 s) internal pure returns (address) {
-        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
-            revert ECDSAInvalidSignature();
-        }
-        address signer = ecrecover(hash, v, r, s);
-        if (signer == address(0)) revert ECDSAInvalidSignature();
-        return signer;
     }
 }
 
@@ -352,28 +339,19 @@ abstract contract ERC721 is IERC721Metadata, EIP712 {
 /* ======================== PhraseToGuess NFT ======================== */
 
 contract PhraseToGuessNFT is ERC721, Ownable, ReentrancyGuard {
-    bytes32 private constant MINT_TYPEHASH =
-        keccak256("Mint(address minter,uint256 nonce,uint256 deadline)");
-
     uint256 private _nextTokenId;
     string private _baseUri;
     /** Jeśli niepusty, każdy token zwraca ten sam tokenURI (jeden plik IPFS — nieskończony mint tej samej grafiki). */
     string private _uniformTokenURI;
     uint256 public immutable mintPriceWei;
     uint256 public immutable maxSupply;
-    address public immutable authorizedSigner;
-
-    mapping(address => uint256) public nonces;
 
     error InvalidBaseURI();
     error InvalidMintPrice();
-    error InvalidSigner();
     error InsufficientPayment(uint256 required, uint256 sent);
     error SoldOut();
     error WithdrawFailed();
     error RefundFailed();
-    error SignatureExpired();
-    error InvalidSignature();
 
     constructor(
         string memory name_,
@@ -382,11 +360,9 @@ contract PhraseToGuessNFT is ERC721, Ownable, ReentrancyGuard {
         uint256 mintPriceWei_,
         uint256 maxSupply_,
         address initialOwner,
-        address authorizedSigner_,
         string memory uniformTokenURI_
     ) ERC721(name_, symbol_, "PhraseToGuess", "1") Ownable(initialOwner) {
         if (mintPriceWei_ == 0) revert InvalidMintPrice();
-        if (authorizedSigner_ == address(0)) revert InvalidSigner();
 
         if (bytes(uniformTokenURI_).length > 0) {
             _uniformTokenURI = uniformTokenURI_;
@@ -401,7 +377,6 @@ contract PhraseToGuessNFT is ERC721, Ownable, ReentrancyGuard {
 
         mintPriceWei = mintPriceWei_;
         maxSupply = maxSupply_;
-        authorizedSigner = authorizedSigner_;
     }
 
     function _baseURI() internal view override returns (string memory) {
@@ -416,28 +391,12 @@ contract PhraseToGuessNFT is ERC721, Ownable, ReentrancyGuard {
         return super.tokenURI(tokenId);
     }
 
-    function mintWithSignature(uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external
-        payable
-        nonReentrant
-    {
-        if (block.timestamp > deadline) revert SignatureExpired();
+    function mint() external payable nonReentrant {
         if (msg.value < mintPriceWei) {
             revert InsufficientPayment(mintPriceWei, msg.value);
         }
 
         address minter = msg.sender;
-        uint256 nonce = nonces[minter];
-        bytes32 structHash =
-            keccak256(abi.encode(MINT_TYPEHASH, minter, nonce, deadline));
-        bytes32 digest = _hashTypedDataV4(structHash);
-        address recovered = ECDSA.recover(digest, v, r, s);
-        if (recovered != authorizedSigner) revert InvalidSignature();
-
-        unchecked {
-            nonces[minter] = nonce + 1;
-        }
-
         uint256 id = _nextTokenId;
         if (maxSupply != 0 && id >= maxSupply) revert SoldOut();
         unchecked {

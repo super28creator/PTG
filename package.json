@@ -10,7 +10,6 @@
   "dependencies": {
     "@vercel/analytics": "^1.6.1",
     "ethers": "^6.13.5",
-    "firebase": "^12.7.0",
-    "jose": "^5.9.6"
+    "firebase": "^12.7.0"
   }
 }

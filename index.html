@@ -880,12 +880,12 @@
   const METADATA_URL = "https://ipfs.io/ipfs/bafybeidy2s24mgguq6d5kjrkhaoplxe2ueu7yhutqzb5uedjiydc7l75z4/metadata.json";
 
   /**
-   * Kontrakt PhraseToGuessNFT (Base mainnet) — wpisz po deployu.
-   * Na Vercel: PTG_NFT_ADDRESS + MINT_SIGNER_PRIVATE_KEY (ten sam signer co authorizedSigner w konstruktorze).
+   * PhraseToGuessNFT (Base) — `mint()` bez podpisu; po deployu nowego Kontrakt-nft.sol wklej adres tutaj.
+   * Stary kontrakt z mintWithSignature nie zadziała z tym frontem.
    */
   const PTG_NFT_ADDRESS = "0xca78D7E55eE9B9a2683e0d0134978614cf2dB761";
   const PTG_NFT_ABI = [
-    "function mintWithSignature(uint256 deadline,uint8 v,bytes32 r,bytes32 s) payable",
+    "function mint() payable",
     "function mintPriceWei() view returns (uint256)",
     "function balanceOf(address owner) view returns (uint256)",
   ];
@@ -1840,18 +1840,9 @@
     });
   }
 
-  async function getFcQuickAuthToken() {
-      try {
-          const q = sdk?.quickAuth;
-          if (q && typeof q.getToken === "function") return await q.getToken();
-      } catch (e) { console.warn("FC quick auth token", e); }
-      return null;
-  }
-
   const PTG_PUBLIC_SITE_ORIGIN = "https://phrasetoguess.xyz";
   /** Zapasowy deploy Vercel — ten sam /api/base-jsonrpc gdy główna domena ma problem. */
   const PTG_VERCEL_DEPLOY_ORIGIN = "https://ptg-one.vercel.app";
-  const PTG_MINT_VOUCHER_PRODUCTION = PTG_PUBLIC_SITE_ORIGIN + "/api/ptg-voucher";
 
   function getCanonicalSiteOrigin() {
       try {
@@ -1875,70 +1866,7 @@
       );
   }
 
-  /**
-   * Produkcja (canonical) najpierw na localhost / file.
-   * Na prawdziwym deployu: ten sam origin, potem zapas canonical + PTG_PUBLIC_SITE_ORIGIN.
-   */
-  function collectMintVoucherUrls() {
-      const list = [];
-      const add = (u) => {
-          if (u && list.indexOf(u) === -1) list.push(u);
-      };
-      const canonicalOrigin = getCanonicalSiteOrigin();
-      const canonicalApi = `${canonicalOrigin}/api/ptg-voucher`;
-
-      if (isStaticLocalOrFileHost()) {
-          add(canonicalApi);
-          if (canonicalApi !== PTG_MINT_VOUCHER_PRODUCTION) add(PTG_MINT_VOUCHER_PRODUCTION);
-          return list;
-      }
-
-      if (location.origin && location.protocol !== "file:") {
-          add(`${location.origin}/api/ptg-voucher`);
-      }
-      add("/api/ptg-voucher");
-      add(canonicalApi);
-      if (canonicalApi !== PTG_MINT_VOUCHER_PRODUCTION) add(PTG_MINT_VOUCHER_PRODUCTION);
-      return list;
-  }
-
-  async function fetchMintVoucher(body) {
-      const urls = collectMintVoucherUrls();
-      const payload = JSON.stringify(body);
-      let lastErr = null;
-      let lastFailRes = null;
-      let lastFailUrl = null;
-      for (let i = 0; i < urls.length; i++) {
-          const voucherUrl = urls[i];
-          try {
-              const voucherRes = await fetch(voucherUrl, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: payload,
-                  mode: "cors",
-                  cache: "no-store",
-              });
-              if (voucherRes.ok) return { voucherRes, voucherUrl };
-              if (voucherRes.status === 404 || voucherRes.status === 405) {
-                  lastFailRes = voucherRes;
-                  lastFailUrl = voucherUrl;
-                  continue;
-              }
-              return { voucherRes, voucherUrl };
-          } catch (e) {
-              lastErr = e;
-          }
-      }
-      if (lastFailRes) return { voucherRes: lastFailRes, voucherUrl: lastFailUrl };
-      const msg = lastErr && lastErr.message ? String(lastErr.message) : "network_error";
-      const hint =
-          /failed to fetch|networkerror|load failed/i.test(msg)
-              ? " Try opening " + PTG_PUBLIC_SITE_ORIGIN + " in Chrome/Safari, disable ad blockers, or use the system browser instead of an in-app WebView."
-              : "";
-      throw new Error(msg + hint);
-  }
-
-  /** Ten sam origin co voucher + produkcja — CORS; wywołania Base idą przez /api/base-jsonrpc na Vercel. */
+  /** CORS; wywołania Base idą przez /api/base-jsonrpc na Vercel. */
   function collectBaseJsonRpcUrls() {
       const list = [];
       const add = (u) => {
@@ -2134,32 +2062,6 @@
           }
       }
       throw new Error("Could not read NFT balance on Base (proxy + wallet failed)");
-  }
-
-  function formatMintVoucherApiError(codeOrText) {
-      const c = String(codeOrText || "").trim();
-      const map = {
-          server_mint_not_configured:
-              "Mint signer not configured: add MINT_SIGNER_PRIVATE_KEY in Vercel (Settings → Environment Variables), enable for Production, then Redeploy. See API error details for on-chain authorizedSigner address.",
-          signer_key_mismatch:
-              "The MINT_SIGNER_PRIVATE_KEY in Vercel is not the private key of authorizedSigner on the NFT contract. Fix the env value and Redeploy.",
-          no_pending_mint:
-              "No pending trophy for this account — win a round first, or wait a moment and try again.",
-          wallet_not_linked_to_player:
-              "This wallet is not linked to this player. Use the same profile you played with, or reconnect your wallet.",
-          invalid_fc_token: "Farcaster session expired — reopen the app and try again.",
-          fc_token_username_mismatch: "Farcaster profile does not match this game account.",
-          bad_request: "Invalid mint request.",
-          nonce_rpc_failed: "Could not read the NFT contract on Base — try again later.",
-          bad_contract_address: "Invalid PTG_NFT_ADDRESS on the server.",
-          bad_signer_key: "Server signer key is invalid.",
-          sign_failed: "Server could not sign the mint voucher.",
-          method_not_allowed: "Mint API method not allowed.",
-          internal_error: "Mint API crashed on the server. Check Vercel function logs.",
-      };
-      if (map[c]) return map[c];
-      if (c.length > 0 && c.length < 200 && !/^[<\s]/.test(c)) return c;
-      return null;
   }
 
   async function readMintPriceWeiHex(contractAddr, ethProvider) {
@@ -2419,64 +2321,9 @@
           }
       }
 
-      statusDiv.textContent = "Getting mint authorization…";
-      const fcQuickAuthToken = await getFcQuickAuthToken();
-      const { voucherRes, voucherUrl } = await fetchMintVoucher({
-          minter,
-          userId: myUserId,
-          fcQuickAuthToken,
-      });
-      const voucherText = await voucherRes.text();
-      let voucherJson;
-      try {
-          voucherJson = JSON.parse(voucherText);
-      } catch {
-          voucherJson = {};
-      }
-      if (!voucherRes.ok) {
-          const rawErr = voucherJson && typeof voucherJson === "object" ? voucherJson.error : null;
-          const detail =
-              voucherJson && typeof voucherJson === "object" && voucherJson.detail
-                  ? String(voucherJson.detail)
-                  : "";
-          let friendly = formatMintVoucherApiError(rawErr);
-          if (rawErr === "server_mint_not_configured" && voucherJson.hint) {
-              friendly = String(voucherJson.hint);
-          }
-          if (rawErr === "signer_key_mismatch" && voucherJson.hint) {
-              friendly = String(voucherJson.hint);
-          }
-          if (
-              rawErr === "signer_key_mismatch" &&
-              voucherJson.authorizedSignerAddress &&
-              voucherJson.derivedAddressFromKey
-          ) {
-              friendly =
-                  (friendly || "") +
-                  " Contract authorizedSigner: " +
-                  voucherJson.authorizedSignerAddress +
-                  ". Key derives to: " +
-                  voucherJson.derivedAddressFromKey +
-                  ".";
-          }
-          if (rawErr === "internal_error" && detail) {
-              friendly = (friendly || "Server error") + " — " + detail;
-          }
-          throw new Error(
-              friendly ||
-                  formatMintVoucherApiError(voucherText) ||
-                  (voucherText && voucherText.length < 300 ? voucherText : null) ||
-                  `Mint voucher failed (HTTP ${voucherRes.status}). Last tried: ${voucherUrl} — deploy /api on Vercel and set env vars.`
-          );
-      }
-
-      const { deadline, v, r, s } = voucherJson;
-      if (deadline == null || v == null || !r || !s) {
-          throw new Error("Invalid voucher response");
-      }
-
+      statusDiv.textContent = "Building mint transaction…";
       const mintIface = new ethers.utils.Interface(PTG_NFT_ABI);
-      const dataHex = mintIface.encodeFunctionData("mintWithSignature", [deadline, v, r, s]);
+      const dataHex = mintIface.encodeFunctionData("mint", []);
       const valueHex = await readMintPriceWeiHex(PTG_NFT_ADDRESS, ethProvider);
       const balBefore = await readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider);
 
