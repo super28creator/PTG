@@ -1914,7 +1914,7 @@
       const c = String(codeOrText || "").trim();
       const map = {
           server_mint_not_configured:
-              "Mint API not configured: in Vercel set MINT_SIGNER_PRIVATE_KEY and PTG_NFT_ADDRESS (same key as authorizedSigner on the contract).",
+              "Mint signer not configured on the server: in Vercel add Environment Variable MINT_SIGNER_PRIVATE_KEY (0x… private key of authorizedSigner on the NFT contract). Redeploy. PTG_NFT_ADDRESS is optional.",
           no_pending_mint:
               "No pending trophy for this account — win a round first, or wait a moment and try again.",
           wallet_not_linked_to_player:
@@ -2028,6 +2028,9 @@
                   ? String(voucherJson.detail)
                   : "";
           let friendly = formatMintVoucherApiError(rawErr);
+          if (rawErr === "server_mint_not_configured" && voucherJson.hint) {
+              friendly = String(voucherJson.hint);
+          }
           if (rawErr === "internal_error" && detail) {
               friendly = (friendly || "Server error") + " — " + detail;
           }

@@ -11,6 +11,10 @@ const DEFAULT_RTD =
 const DEFAULT_RPC = "https://mainnet.base.org";
 const CHAIN_ID = 8453n;
 
+/** Base mainnet PhraseToGuessNFT — ten sam co `PTG_NFT_ADDRESS` w index.html. Nadpisz przez PTG_NFT_ADDRESS w Vercel po nowym deployu kontraktu. */
+const DEFAULT_PTG_NFT_ADDRESS =
+  "0x399943E0d93860C764A21Fd45c008c3633419687";
+
 function normUid(s) {
   return String(s || "")
     .toLowerCase()
@@ -113,10 +117,20 @@ module.exports = async (req, res) => {
       return res.status(405).json({ error: "method_not_allowed" });
     }
 
-    const key = process.env.MINT_SIGNER_PRIVATE_KEY;
-    const rawAddr = process.env.PTG_NFT_ADDRESS || process.env.PTG_CIRCLE_NFT_ADDRESS;
-    if (!key || !rawAddr) {
-      return res.status(503).json({ error: "server_mint_not_configured" });
+    const rawKey = process.env.MINT_SIGNER_PRIVATE_KEY;
+    const key = typeof rawKey === "string" ? rawKey.trim() : "";
+    const rawAddr =
+      process.env.PTG_NFT_ADDRESS ||
+      process.env.PTG_CIRCLE_NFT_ADDRESS ||
+      DEFAULT_PTG_NFT_ADDRESS;
+
+    if (!key) {
+      return res.status(503).json({
+        error: "server_mint_not_configured",
+        missingEnv: ["MINT_SIGNER_PRIVATE_KEY"],
+        hint:
+          "Vercel → Project → Settings → Environment Variables: add MINT_SIGNER_PRIVATE_KEY for Production (and Preview if you use it). Value = 0x… private key of the wallet that is authorizedSigner on the NFT contract. PTG_NFT_ADDRESS is optional; the server defaults to the deployed PhraseToGuess NFT on Base. Redeploy after saving env vars.",
+      });
     }
 
     const { ethers } = await import("ethers");
