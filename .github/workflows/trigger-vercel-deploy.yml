@@ -1,0 +1,25 @@
+# Wymaga sekretu GitHub Actions: VERCEL_DEPLOY_HOOK
+# Utwórz w Vercel: Project → Settings → Git → Deploy Hooks → hook dla brancha main (Production).
+
+name: Trigger Vercel production deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  vercel-hook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Vercel deploy hook
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::Brak sekretu VERCEL_DEPLOY_HOOK. Vercel → Project → Settings → Git → Deploy Hooks → utwórz hook (Production / main), skopiuj URL do GitHub → Settings → Secrets → Actions."
+            exit 1
+          fi
+          curl -fsS -X POST "$HOOK"
+          echo "OK: Vercel deploy hook wywołany."
