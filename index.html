@@ -367,31 +367,84 @@
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
-        align-items: flex-start;
+        align-items: center;
         justify-content: space-between;
-        gap: 12px 16px;
+        gap: 8px 10px;
     }
     .meta__left {
-        flex: 1 1 160px;
+        flex: 1 1 auto;
         min-width: 0;
+        max-width: calc(100% - 210px);
+    }
+    .meta__category-chip {
+        width: max-content;
+        max-width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     .meta__right {
         display: flex;
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: flex-end;
         gap: 8px;
         flex-shrink: 0;
-        width: max-content;
-        max-width: 100%;
     }
     .meta__right .daily-info-pill {
-        justify-content: center;
+        flex-shrink: 0;
     }
     .meta__right .chip.meta__mistakes {
-        justify-content: center;
+        flex-shrink: 0;
     }
     .meta__mistakes {
         border-color: rgba(252, 64, 31, 0.35);
+    }
+    .player-chip-banner {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-top: 4px;
+        margin-bottom: 2px;
+        min-height: 0;
+    }
+    .player-chip-banner .player-chip-wrap {
+        width: auto;
+        max-width: 100%;
+        display: flex;
+        justify-content: flex-end;
+    }
+    @media (max-width: 400px) {
+        .meta__left {
+            max-width: calc(100% - 175px);
+        }
+        .meta__right {
+            gap: 6px;
+        }
+        .meta__right .daily-info-pill {
+            font-size: 11px;
+            padding: 5px 9px;
+        }
+        .meta__right .chip.meta__mistakes {
+            font-size: 12px;
+            padding: 6px 10px;
+        }
+    }
+    @media (max-width: 340px) {
+        .meta--game-bar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .meta__left {
+            max-width: 100%;
+        }
+        .meta__right {
+            width: 100%;
+            justify-content: flex-end;
+        }
     }
     .meta-tries { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--danger); }
     .chip { padding: 8px 14px; background: rgba(255,255,255,0.03); border-radius: 999px; font-weight: 600; border: var(--glass-border); display: flex; align-items: center; gap: 6px;}
@@ -868,11 +921,6 @@
             width: 100%;
             justify-content: flex-start;
         }
-        .player-chip-wrap {
-            order: 2;
-            flex: 1 1 100%;
-            justify-content: flex-start;
-        }
     }
     @media (max-width: 380px) {
         .cal-icon-btn {
@@ -1093,15 +1141,17 @@
                  </div>
                </div>
              </div>
-             <div class="player-chip-wrap">
-               <div id="playerDisplay" class="chip user-chip" style="display:none; font-size: 11px;"></div>
-             </div>
         </div>
+    </div>
+    <div class="player-chip-banner">
+      <div class="player-chip-wrap">
+        <div id="playerDisplay" class="chip user-chip" style="display:none; font-size: 11px;"></div>
+      </div>
     </div>
     
     <div class="meta meta--game-bar">
         <div class="meta__left">
-          <div class="chip" id="categoryDisplay" style="color: var(--cerulean); border-color: rgba(60, 138, 255, 0.35);">Category: Loading...</div>
+          <div class="chip meta__category-chip" id="categoryDisplay" style="color: var(--cerulean); border-color: rgba(60, 138, 255, 0.35);">Category: Loading...</div>
         </div>
         <div class="meta__right">
           <div class="daily-info-pill" id="dailyInfo">Games: 0/3</div>
