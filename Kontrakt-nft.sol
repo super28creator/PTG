@@ -6,7 +6,9 @@ pragma solidity ^0.8.19;
   - owner: mintTo(to, tokenURI), setPrice, withdraw(to)
   - każdy: publicMint(tokenURI) payable (msg.value >= priceWei; nadpłata wraca)
   - ReentrancyGuard na publicMint / withdraw
+  - Brak setTokenURI: URI zapisane przy mincie jest ostateczne (nie da się podmienić z poziomu kontraktu).
   Cena w wei: ~1¢ przy ~$3.3k/ETH → 3_000_000_000_000 (0.000003 ETH), NIE 3_000_000_000_000_000 (0.003 ETH).
+  Pełna niezmienność metadanych: użyj tokenURI wskazującego na ipfs://<CID>/… (treść pod CID jest adresowana hashem).
 */
 
 interface IERC165 {
@@ -308,11 +310,5 @@ contract PhraseToGuessNFT is ERC165, IERC721Metadata, Ownable, ReentrancyGuard {
 
     function setPrice(uint256 _priceWei) external onlyOwner {
         priceWei = _priceWei;
-    }
-
-    /** Naprawa zepsutego tokenURI (np. martwy IPFS) — tylko owner. */
-    function setTokenURI(uint256 tokenId, string memory newUri) external onlyOwner {
-        require(_exists(tokenId), "nonexistent token");
-        _setTokenURI(tokenId, newUri);
     }
 }
