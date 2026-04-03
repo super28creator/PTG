@@ -6,6 +6,7 @@
   <title>Phrase To Guess</title>
   
   <meta name="base:app_id" content="69cff5ac94e92a0f3a847bf2" />
+  <meta name="base:builder_code" content="bc_4s5mvckp" />
   <meta name="application-name" content="Phrase To Guess" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -1398,6 +1399,27 @@
     "function mintPriceWei() view returns (uint256)",
     "function balanceOf(address owner) view returns (uint256)",
   ];
+  /**
+   * Base Builder Code — atrybucja tx w Base (ERC-8021 schema 0).
+   * @see https://docs.base.org/base-chain/builder-codes/app-developers
+   * Równoważne: ox/erc8021 Attribution.toDataSuffix({ codes: [PTG_BASE_BUILDER_CODE] })
+   */
+  const PTG_BASE_BUILDER_CODE = "bc_4s5mvckp";
+  const ERC8021_MAGIC_SUFFIX = "80218021802180218021802180218021";
+
+  function appendErc8021BuilderSuffix(calldata0x) {
+      if (!calldata0x || typeof calldata0x !== "string" || !calldata0x.startsWith("0x")) {
+          return calldata0x;
+      }
+      const codes = PTG_BASE_BUILDER_CODE;
+      let codesHex = "";
+      for (let i = 0; i < codes.length; i++) {
+          codesHex += codes.charCodeAt(i).toString(16).padStart(2, "0");
+      }
+      const lenByte = codes.length.toString(16).padStart(2, "0");
+      return calldata0x + codesHex + lenByte + "00" + ERC8021_MAGIC_SUFFIX;
+  }
+
   /** Base mainnet chainId 8453 (0x2105); RPC + explorer per docs.base.org */
   const BASE_CHAIN_ID_HEX = "0x2105";
   /** Base App Mini App host FID (see docs.base.org mini-apps). */
@@ -3055,7 +3077,9 @@
 
       statusDiv.textContent = "Building mint transaction…";
       const mintIface = new ethers.utils.Interface(PTG_NFT_ABI);
-      const dataHex = mintIface.encodeFunctionData("publicMint", [METADATA_URL]);
+      const dataHex = appendErc8021BuilderSuffix(
+          mintIface.encodeFunctionData("publicMint", [METADATA_URL])
+      );
       const valueHex = await readMintPriceWeiHex(PTG_NFT_ADDRESS, ethProvider);
       const balBefore = await readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider);
 
