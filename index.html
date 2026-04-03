@@ -676,6 +676,9 @@
         <button id="victoryMintBtn" class="big-mint-btn" onclick="mintNFT()">
             <span>✨ MINT TROPHY</span>
         </button>
+        <button type="button" id="victorySyncMintBtn" class="ghost" onclick="syncMintBonusIfHeldOnChain()" style="display:none; width:100%; margin-top:14px; font-size:13px; padding:12px; border-radius:12px;">
+            Already minted? Sync +2 points
+        </button>
         
         <div id="victoryStatus" style="margin-top:24px; font-weight:600; font-size:15px; min-height:24px; color:#94a3b8;"></div>
         <div id="victoryTxLink" class="small txlink" style="margin-top:8px;"></div>
@@ -890,6 +893,9 @@
     "function mintPriceWei() view returns (uint256)",
     "function balanceOf(address owner) view returns (uint256)",
   ];
+  /** Wpis do RTDB gdy +2 nadane po synchronizacji z łańcuchem (mint już był, aplikacja nie zaliczyła). */
+  const MINT_BONUS_SYNC_FILLER_TX_HASH =
+      "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe";
   /** Base mainnet chainId 8453 (0x2105); RPC + explorer per docs.base.org */
   const BASE_CHAIN_ID_HEX = "0x2105";
   /** Base App Mini App host FID (see docs.base.org mini-apps). */
@@ -1525,6 +1531,8 @@
     const vBtn = document.getElementById('victoryMintBtn');
     vBtn.innerHTML = "<span>✨ MINT TROPHY</span>";
     vBtn.disabled = false;
+    const vSync = document.getElementById("victorySyncMintBtn");
+    if (vSync) vSync.disabled = false;
     document.getElementById('victoryStatus').textContent = "";
     document.getElementById('victoryTxLink').innerHTML = "";
     const mph = document.getElementById('victoryMintPriceHint');
@@ -1552,6 +1560,11 @@
               keyboardEl.style.opacity = '0.35';
           }
           return;
+      }
+
+      const victorySyncMintBtn = document.getElementById("victorySyncMintBtn");
+      if (victorySyncMintBtn) {
+          victorySyncMintBtn.style.display = pendingMint ? "block" : "none";
       }
 
       if(pendingMint) {
@@ -2566,6 +2579,135 @@
         statusDiv.style.color = "#fc401f"; btn.innerHTML = "Try Again"; btn.disabled = false;
     }
   }
+
+  /**
+   * Gdy mint na Base się udał, ale aplikacja nie widziała wzrostu balanceOf (opóźnienie RPC „latest”),
+   * a pendingMint dalej true — ten flow sprawdza NFT na kontrakcie i nalicza +2 bez drugiej transakcji.
+   */
+  window.syncMintBonusIfHeldOnChain = async function syncMintBonusIfHeldOnChain() {
+      const btn = document.getElementById("victorySyncMintBtn");
+      const statusDiv = document.getElementById("victoryStatus");
+      if (btn) btn.disabled = true;
+      if (statusDiv) {
+          statusDiv.style.color = "#94a3b8";
+          statusDiv.textContent = "Checking NFT balance on Base…";
+      }
+      try {
+          if (!pendingMint) {
+              throw new Error("No pending mint bonus — open a new game after your next win.");
+          }
+          const zero = "0x0000000000000000000000000000000000000000";
+          if (!PTG_NFT_ADDRESS || PTG_NFT_ADDRESS.toLowerCase() === zero) {
+              throw new Error("PTG_NFT_ADDRESS not set");
+          }
+          let accounts;
+          let ethProvider = null;
+          try {
+              const fe = getEmbeddedEthProvider();
+              if (fe) {
+                  await ensureBaseMainnet(fe);
+                  accounts = await fe.request({ method: "eth_requestAccounts" });
+                  ethProvider = fe;
+              }
+          } catch (e) {
+              console.warn("Sync mint: embedded skipped", e);
+          }
+          if (!accounts || !accounts[0]) {
+              if (ptgHost === "base" || ptgHost === "farcaster") {
+                  throw new Error("Connect the wallet inside Base or Farcaster.");
+              }
+              const injected = getInjectedProvider();
+              if (injected) {
+                  await ensureBaseMainnet(injected);
+                  accounts = await injected.request({ method: "eth_requestAccounts" });
+                  ethProvider = injected;
+              }
+          }
+          if (!accounts || !accounts[0] || !ethProvider) {
+              throw new Error("No wallet found");
+          }
+          const minter = accounts[0];
+          const minterLc = minter.toLowerCase();
+          const userLc = String(myUserId || "").toLowerCase();
+          if (db && myUserId && myUserId !== "guest" && userLc !== minterLc) {
+              if (statusDiv) statusDiv.textContent = "Linking wallet…";
+              await update(playerDocRef(myUserId), { mintWalletForMint: minterLc });
+          }
+          const bal = await readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider, "latest");
+          if (bal.isZero()) {
+              throw new Error(
+                  "This wallet has no PhraseToGuess NFT on the contract yet. Mint first, then sync if the app still errors."
+              );
+          }
+          if (!db || !myUserId || myUserId === "guest") {
+              pendingMint = false;
+              mintCalendarDays = { ...mintCalendarDays, [localDateKey()]: true };
+              renderCalendarMonth();
+              checkGameStateAndRender();
+              if (statusDiv) {
+                  statusDiv.textContent = "NFT found — (guest mode) calendar updated locally.";
+                  statusDiv.style.color = "#66c800";
+              }
+              if (btn) btn.disabled = false;
+              return;
+          }
+          const hadPendingMint = pendingMint;
+          const mintDay = localDateKey();
+          const userRef = playerDocRef(myUserId);
+          await runTransaction(userRef, (userData) => {
+              if (!userData) return userData;
+              if (userData.lastMintBonusTxHash === MINT_BONUS_SYNC_FILLER_TX_HASH) {
+                  return userData;
+              }
+              if (!userData.pendingMint) {
+                  return userData;
+              }
+              userData.score = (userData.score || 0) + 2;
+              userData.mintCount = (userData.mintCount || 0) + 1;
+              userData.pendingMint = false;
+              userData.lastMintBonusTxHash = MINT_BONUS_SYNC_FILLER_TX_HASH;
+              if (!userData.mintCalendar || typeof userData.mintCalendar !== "object") {
+                  userData.mintCalendar = {};
+              }
+              userData.mintCalendar[mintDay] = true;
+              return userData;
+          });
+          const postSnap = await get(userRef);
+          if (postSnap.exists()) {
+              const d = postSnap.val();
+              currentScore = d.score || 0;
+              pendingMint = !!d.pendingMint;
+              if (d.mintCalendar && typeof d.mintCalendar === "object") {
+                  mintCalendarDays = d.mintCalendar;
+              }
+              if (
+                  hadPendingMint &&
+                  d.lastMintBonusTxHash !== MINT_BONUS_SYNC_FILLER_TX_HASH
+              ) {
+                  throw new Error(
+                      "NFT found, but +2 was not saved (profile out of sync). Refresh and try Sync again."
+                  );
+              }
+          }
+          updateScoreUI();
+          renderCalendarMonth();
+          checkGameStateAndRender();
+          if (statusDiv) {
+              statusDiv.textContent = "+2 points applied. Thanks for minting on-chain.";
+              statusDiv.style.color = "#66c800";
+          }
+          confetti({ particleCount: 120, spread: 90, origin: { y: 0.55 } });
+      } catch (e) {
+          console.error(e);
+          const msg = e && e.message ? String(e.message) : "Sync failed";
+          if (statusDiv) {
+              statusDiv.textContent = "Error: " + msg;
+              statusDiv.style.color = "#fc401f";
+          }
+      } finally {
+          if (btn) btn.disabled = false;
+      }
+  };
 
   function updateScoreUI() { 
       document.getElementById('scoreDisplay').textContent = currentScore; 
