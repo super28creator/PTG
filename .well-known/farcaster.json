@@ -1,20 +1,15 @@
 {
-  "accountAssociation": {
-    "header": "eyJmaWQiOjEwNzYyNjQsInR5cGUiOiJhdXRoIiwia2V5IjoiMHhmYWM3NjkzOUMzMWU2Y0I4MEUwNGM0NkFFNWY4MTMyRWE1MzRDODU1In0",
-    "payload": "eyJkb21haW4iOiJwdGctb25lLnZlcmNlbC5hcHAifQ",
-    "signature": "OcvxnLJLLNIZa8/5LhBeOtl07lTJOtMZLreGg4mzBMA8AgysJxN6rGsGdixgPaFBVvzb2CLwrtJ7YAECQbebRRs="
-  },
-  "miniapp": {
-    "version": "1",
+  "frame": {
     "name": "Phrase To Guess",
+    "version": "1",
     "iconUrl": "https://phrasetoguess.xyz/api/nft-image",
-    "homeUrl": "https://phrasetoguess.xyz/",
+    "homeUrl": "https://phrasetoguess.xyz",
     "imageUrl": "https://phrasetoguess.xyz/api/nft-image",
     "buttonTitle": "Play Phrase To Guess",
     "splashImageUrl": "https://phrasetoguess.xyz/api/nft-image",
     "splashBackgroundColor": "#0a0b0d",
     "webhookUrl": "https://phrasetoguess.xyz/api/webhook",
-    "subtitle": "Guess phrase, watch the chart",
+    "subtitle": "Guess the phrase. Watch the chart.",
     "description": "Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain.",
     "primaryCategory": "games",
     "screenshotUrls": [
@@ -30,11 +25,13 @@
     ],
     "tagline": "Guess. Win. Mint on Base.",
     "ogTitle": "Phrase To Guess",
-    "ogDescription": "Daily phrase game on Base. Guess letters, chart, mint trophy onchain.",
+    "ogDescription": "Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain.",
     "ogImageUrl": "https://phrasetoguess.xyz/api/nft-image",
-    "canonicalDomain": "phrasetoguess.xyz",
-    "requiredChains": ["eip155:8453"],
-    "noindex": false,
     "castShareUrl": "https://warpcast.com/~/compose?text=Play+Phrase+To+Guess+on+Base+%E2%80%94+https%3A%2F%2Fphrasetoguess.xyz"
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEwNzYyNjQsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg0NUE2MDU2YzlBMUI4ZTlhQjJlQzhlNjVCMDg3Njc2YTIxZGI3NkY2In0",
+    "payload": "eyJkb21haW4iOiJwaHJhc2V0b2d1ZXNzLnh5eiJ9",
+    "signature": "GYeGi7xmoHiagBnizDII2BSH7FCY1Up+hSxK0NL2JvFxEf7awJo5MuTYzwaH4R6oZ/czKf/lNzN1nClyzoC5URw="
   }
 }
