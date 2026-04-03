@@ -5,8 +5,8 @@
     "signature": "GYeGi7xmoHiagBnizDII2BSH7FCY1Up+hSxK0NL2JvFxEf7awJo5MuTYzwaH4R6oZ/czKf/lNzN1nClyzoC5URw="
   },
   "miniapp": {
-    "version": "1",
     "name": "Phrase To Guess",
+    "version": "1",
     "iconUrl": "https://phrasetoguess.xyz/api/farcaster-asset?type=icon",
     "homeUrl": "https://phrasetoguess.xyz",
     "imageUrl": "https://phrasetoguess.xyz/api/farcaster-asset?type=feed",
@@ -32,6 +32,7 @@
     "ogTitle": "Phrase To Guess",
     "ogDescription": "Phrase game on Base: guess letters, chart, mint trophy onchain.",
     "ogImageUrl": "https://phrasetoguess.xyz/api/farcaster-asset?type=og",
+    "castShareUrl": "https://warpcast.com/~/compose?text=Play+Phrase+To+Guess+on+Base+%E2%80%94+https%3A%2F%2Fphrasetoguess.xyz",
     "canonicalDomain": "phrasetoguess.xyz",
     "requiredChains": ["eip155:8453"],
     "noindex": false
