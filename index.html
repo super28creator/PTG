@@ -129,6 +129,24 @@
         z-index: 1;
     }
 
+    .site-footer {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 4px 20px 28px;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+    .site-footer__legal {
+        margin: 0;
+        font-size: 11px;
+        line-height: 1.45;
+        color: var(--gray-50);
+        font-weight: 400;
+        letter-spacing: 0.02em;
+    }
+
     .card { 
         background: var(--glass-bg); 
         backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -824,6 +842,10 @@
 
   </div>
 </div>
+
+<footer class="site-footer">
+  <p class="site-footer__legal">©2026 Super Creator.Powered by Base.</p>
+</footer>
 
 <div class="modal-overlay" id="leaderboardOverlay">
   <div class="mint-card" style="max-height: 80vh; display: flex; flex-direction: column;">
