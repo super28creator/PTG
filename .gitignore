@@ -7,3 +7,4 @@ Kontrakt-nft_sol_*.bin
 
 # Lokalne snapshoty / rankingi NFT — nie commitujemy
 private/
+.vercel
