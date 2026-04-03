@@ -2009,7 +2009,10 @@
                   continue;
               }
               const ok = st === "0x1" || st === 1 || st === true;
-              return { status: ok ? 1 : 0 };
+              return {
+                  status: ok ? 1 : 0,
+                  blockNumber: result.blockNumber,
+              };
           }
           await new Promise((res) => setTimeout(res, delay));
           delay = Math.min(delay + 350, 3200);
@@ -2045,17 +2048,34 @@
       return false;
   }
 
-  async function readNftBalanceBn(contractAddr, owner, ethProvider) {
+  /** Tag do eth_call: numer bloku z receiptu (hex) albo "latest". */
+  function ethCallBlockTagFromReceipt(receipt) {
+      if (!receipt || receipt.blockNumber === undefined || receipt.blockNumber === null) {
+          return "latest";
+      }
+      const bn = receipt.blockNumber;
+      if (typeof bn === "string" && /^0x[0-9a-fA-F]+$/.test(bn)) return bn;
+      try {
+          return ethers.BigNumber.from(bn).toHexString();
+      } catch (_) {
+          return "latest";
+      }
+  }
+
+  async function readNftBalanceBn(contractAddr, owner, ethProvider, blockTag) {
+      const tag = blockTag == null || blockTag === "" ? "latest" : blockTag;
+      const to = ethers.utils.getAddress(contractAddr);
+      const fromAddr = ethers.utils.getAddress(owner);
       const iface = new ethers.utils.Interface([
           "function balanceOf(address owner) view returns (uint256)",
       ]);
-      const data = iface.encodeFunctionData("balanceOf", [owner]);
+      const data = iface.encodeFunctionData("balanceOf", [fromAddr]);
       try {
           const hex = await baseJsonRpc({
               jsonrpc: "2.0",
               id: 1,
               method: "eth_call",
-              params: [{ to: contractAddr, data }, "latest"],
+              params: [{ to, data }, tag],
           });
           const [bn] = iface.decodeFunctionResult("balanceOf", hex);
           return ethers.BigNumber.from(bn);
@@ -2066,7 +2086,7 @@
           try {
               const hex = await ethProvider.request({
                   method: "eth_call",
-                  params: [{ to: contractAddr, data }, "latest"],
+                  params: [{ to, data }, tag],
               });
               const [bn] = iface.decodeFunctionResult("balanceOf", hex);
               return ethers.BigNumber.from(bn);
@@ -2450,8 +2470,36 @@
       }
 
       statusDiv.textContent = "Verifying mint on-chain…";
-      const balAfter = await readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider);
-      if (!balAfter.gt(balBefore)) {
+      const pinnedTag = ethCallBlockTagFromReceipt(receipt);
+      async function readBal(tag) {
+          return readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider, tag);
+      }
+      let balAfter = null;
+      if (pinnedTag !== "latest") {
+          try {
+              balAfter = await readBal(pinnedTag);
+          } catch (pinErr) {
+              console.warn("readNftBalanceBn at mint block", pinErr);
+          }
+      }
+      if (balAfter == null || !balAfter.gt(balBefore)) {
+          try {
+              const bLatest = await readBal("latest");
+              if (balAfter == null || bLatest.gt(balAfter)) balAfter = bLatest;
+          } catch (latestErr) {
+              if (balAfter == null) throw latestErr;
+          }
+      }
+      for (let i = 0; i < 18 && balAfter != null && !balAfter.gt(balBefore); i++) {
+          await new Promise((r) => setTimeout(r, 500));
+          try {
+              const b = await readBal("latest");
+              if (b.gt(balAfter)) balAfter = b;
+          } catch (pollBalErr) {
+              console.warn("readNftBalanceBn retry", pollBalErr);
+          }
+      }
+      if (balAfter == null || !balAfter.gt(balBefore)) {
           throw new Error(
               "NFT balance did not increase after the transaction — mint bonus was not applied. Check the tx on BaseScan."
           );
