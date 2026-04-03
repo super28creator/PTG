@@ -2109,10 +2109,16 @@
           const hex = await readMintPriceWeiHex(PTG_NFT_ADDRESS, null);
           const wei = ethers.BigNumber.from(hex);
           const ethStr = ethers.utils.formatEther(wei);
-          el.textContent =
+          const hi = ethers.utils.parseEther("0.00005");
+          let msg =
               "On-chain mint fee: " +
               ethStr +
               " ETH (sent to the contract). Network gas on Base is usually well under a dollar — that fee is set by your wallet, not the game.";
+          if (wei.gt(hi)) {
+              msg +=
+                  " — To fix ~$0.01 mint: mintPriceWei on-chain is fixed forever. Redeploy the NFT and set mintPriceWei_ to 3000000000000 (0.000003 ETH ≈ 1¢ when ETH ≈ $3.3k). Do not use 3000000000000000 — that is 0.003 ETH (~$8).";
+          }
+          el.textContent = msg;
       } catch (e) {
           el.textContent = "";
           console.warn("loadVictoryMintPriceHint", e);

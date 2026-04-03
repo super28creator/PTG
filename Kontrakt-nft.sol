@@ -353,6 +353,10 @@ contract PhraseToGuessNFT is ERC721, Ownable, ReentrancyGuard {
     error WithdrawFailed();
     error RefundFailed();
 
+    /**
+     * @param mintPriceWei_ Price in wei. For ~USD 0.01 at ~$3300/ETH use 3_000_000_000_000 (0.000003 ETH).
+     *        Common mistake: 3_000_000_000_000_000 = 0.003 ETH (~$8), not one cent.
+     */
     constructor(
         string memory name_,
         string memory symbol_,
