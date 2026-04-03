@@ -1,8 +1,8 @@
-````````<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Phrase To Guess</title>
   
   <!-- Base App: base:app_id + Base.dev project metadata. After 2026-04-09 prefer wallet (EIP-1193) + optional wagmi/SIWE per docs.base.org migration guides. -->
@@ -105,10 +105,22 @@
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
 
-    html { height: 100%; background: var(--bg-main); }
+    html {
+        height: 100%;
+        background: var(--bg-main);
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+    }
 
     body { 
-        min-height: 100vh; margin: 0; padding: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0;
+        padding: 0;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         background: radial-gradient(circle at 85% 0%, rgba(0, 0, 255, 0.18) 0%, var(--bg-gradient-end) 55%);
         background-attachment: fixed;
         font-family: var(--font-main); 
@@ -119,21 +131,29 @@
     /* --- LAYOUT WRAPPERS --- */
     .wrap { 
         width: 100%;
-        max-width: 600px; 
+        max-width: 600px;
+        min-width: 0;
         margin: 0 auto; 
-        padding: 20px; 
+        padding: clamp(12px, 3.5vw, 24px);
+        padding-left: max(clamp(12px, 3.5vw, 24px), env(safe-area-inset-left, 0px));
+        padding-right: max(clamp(12px, 3.5vw, 24px), env(safe-area-inset-right, 0px));
         display: flex;
         flex-direction: column;
-        gap: 24px;
+        gap: clamp(16px, 4vw, 24px);
         position: relative;
         z-index: 1;
+        flex: 1 0 auto;
     }
 
     .site-footer {
         width: 100%;
         max-width: 600px;
+        min-width: 0;
         margin: 0 auto;
-        padding: 4px 20px 28px;
+        padding-top: 4px;
+        padding-bottom: max(28px, env(safe-area-inset-bottom, 0px));
+        padding-left: max(20px, env(safe-area-inset-left, 0px));
+        padding-right: max(20px, env(safe-area-inset-right, 0px));
         text-align: center;
         position: relative;
         z-index: 1;
@@ -150,9 +170,12 @@
     .card { 
         background: var(--glass-bg); 
         backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-        border-radius: 24px; padding: 24px; 
+        border-radius: clamp(18px, 4vw, 24px);
+        padding: clamp(16px, 4vw, 24px); 
         box-shadow: var(--card-glow); border: var(--glass-border);
         width: 100%;
+        max-width: 100%;
+        min-width: 0;
         transition: transform 0.2s var(--ease-base);
     }
 
@@ -450,7 +473,8 @@
         position: fixed; left: 0; top: 0; right: 0; bottom: 0; 
         background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
         display: none; align-items: center; justify-content: center; 
-        z-index: 9999; padding: 20px; 
+        z-index: 9999;
+        padding: max(20px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
         animation: fadeIn 0.3s ease;
     }
     .modal-overlay.show { display: flex; }
@@ -591,6 +615,7 @@
         align-items: flex-start;
         gap: 14px 20px;
         margin-bottom: 18px;
+        min-width: 0;
     }
     .card-header-main {
         flex: 1 1 240px;
@@ -616,6 +641,71 @@
         font-size: 12px;
         white-space: nowrap;
     }
+    .header-side-stack {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
+        width: 100%;
+        max-width: 100%;
+    }
+    .header-side-row--top {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: nowrap;
+    }
+    .header-side-row--top .daily-info-pill {
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+    .cal-icon-btn {
+        flex-shrink: 0;
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        margin: 0;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(180deg, rgba(42, 48, 62, 0.92) 0%, rgba(18, 20, 28, 0.94) 100%);
+        color: rgba(140, 175, 235, 0.95);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: border-color 0.2s var(--ease-base), background 0.2s var(--ease-base),
+            color 0.2s var(--ease-base), box-shadow 0.2s var(--ease-base), transform 0.15s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    }
+    .cal-icon-btn:hover {
+        border-color: rgba(60, 138, 255, 0.5);
+        color: #fff;
+        box-shadow: 0 0 0 1px rgba(60, 138, 255, 0.15), 0 4px 16px rgba(0, 0, 255, 0.12);
+    }
+    .cal-icon-btn:active {
+        transform: scale(0.96);
+    }
+    .cal-icon-btn:focus-visible {
+        outline: 2px solid var(--cerulean);
+        outline-offset: 2px;
+    }
+    .cal-icon-btn[aria-expanded="true"] {
+        border-color: rgba(60, 138, 255, 0.55);
+        color: #fff;
+        background: rgba(0, 0, 255, 0.12);
+    }
+    .cal-icon-svg {
+        width: 22px;
+        height: 22px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
     .header-toolbar {
         display: flex;
         flex-wrap: wrap;
@@ -624,8 +714,7 @@
         align-items: center;
         max-width: 100%;
     }
-    .header-toolbar .ghost,
-    .header-toolbar .cal-toggle {
+    .header-toolbar .ghost {
         flex-shrink: 0;
     }
     .header-icon-btn {
@@ -640,7 +729,9 @@
     .header-stats-cluster {
         display: inline-flex;
         align-items: stretch;
-        flex-shrink: 0;
+        flex-shrink: 1;
+        min-width: 0;
+        max-width: 100%;
         border-radius: 10px;
         border: 1px solid rgba(245, 158, 11, 0.35);
         background: rgba(0, 0, 0, 0.28);
@@ -722,18 +813,42 @@
             flex: 1 1 100%;
             flex-direction: row;
             flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
+            align-items: flex-start;
+            justify-content: flex-end;
         }
-        .daily-info-pill { order: 0; }
-        .header-toolbar {
-            order: 1;
+        .header-side-stack {
             flex: 1 1 100%;
+            order: 1;
+        }
+        .header-side-row--top {
+            flex-wrap: wrap;
+        }
+        .header-toolbar {
+            width: 100%;
             justify-content: flex-start;
         }
         .player-chip-wrap {
             order: 2;
+            flex: 1 1 100%;
             justify-content: flex-start;
+        }
+    }
+    @media (max-width: 380px) {
+        .cal-icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+        }
+        .cal-icon-svg { width: 20px; height: 20px; }
+        .daily-info-pill { font-size: 11px; padding: 5px 10px; }
+        .header-cluster-score,
+        .header-cluster-streak {
+            font-size: 13px;
+            padding: 6px 10px;
+        }
+        .header-cluster-trophy {
+            padding: 6px 6px 6px 8px;
+            font-size: 16px;
         }
     }
     .rewards-strip {
@@ -799,8 +914,6 @@
 
     /* --- MINI CALENDAR --- */
     .calendar-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
-    .cal-toggle { padding: 8px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; width: auto; text-transform: uppercase; letter-spacing: 0.5px;
-      border-color: rgba(60, 138, 255, 0.35); color: var(--cerulean); }
     .calendar-panel {
       margin-top: 12px; padding: 14px; border-radius: 16px;
       background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08);
@@ -916,9 +1029,19 @@
             </div>
         </div>
         <div class="card-header-side">
-             <div class="daily-info-pill" id="dailyInfo">Games: 0/3</div>
-             <div class="header-toolbar">
-                 <button type="button" id="calendarToggle" class="ghost cal-toggle" aria-expanded="false" aria-controls="calendarPanel">Calendar</button>
+             <div class="header-side-stack">
+               <div class="header-side-row--top">
+                 <div class="daily-info-pill" id="dailyInfo">Games: 0/3</div>
+                 <button type="button" id="calendarToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="calendarPanel" title="Mint calendar" aria-label="Open mint calendar">
+                   <svg class="cal-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                     <line x1="3" y1="10" x2="21" y2="10"/>
+                     <line x1="8" y1="2" x2="8" y2="6"/>
+                     <line x1="16" y1="2" x2="16" y2="6"/>
+                   </svg>
+                 </button>
+               </div>
+               <div class="header-toolbar">
                  <div class="header-stats-cluster" role="group" aria-label="Leaderboard, score, streak">
                    <div class="header-cluster-merge">
                      <button type="button" id="leaderboardBtn" class="header-cluster-trophy" title="Leaderboard" aria-label="Open leaderboard">🏆</button>
@@ -930,6 +1053,7 @@
                      <span id="streakDisplay">0</span>
                    </span>
                  </div>
+               </div>
              </div>
              <div class="player-chip-wrap">
                <div id="playerDisplay" class="chip user-chip" style="display:none; font-size: 11px;"></div>
