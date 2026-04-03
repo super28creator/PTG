@@ -17,12 +17,12 @@
 
   <link rel="canonical" href="https://phrasetoguess.xyz/" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="icon" type="image/png" href="/PTG-main.png" />
-  <link rel="apple-touch-icon" href="/PTG-main.png" />
+  <link rel="icon" type="image/png" href="/api/nft-image" />
+  <link rel="apple-touch-icon" href="/api/nft-image" />
 
   <meta property="og:title" content="Phrase To Guess" />
   <meta property="og:description" content="Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain." />
-  <meta property="og:image" content="https://phrasetoguess.xyz/PTG-main.png" />
+  <meta property="og:image" content="https://phrasetoguess.xyz/api/nft-image" />
   <meta property="og:image:alt" content="Phrase To Guess" />
   <meta property="og:image:type" content="image/png" />
   <meta property="og:url" content="https://phrasetoguess.xyz/" />
@@ -39,21 +39,21 @@
   
   <meta name="fc:miniapp" content='{
     "version": "next",
-    "imageUrl": "https://phrasetoguess.xyz/PTG-main.png",
+    "imageUrl": "https://phrasetoguess.xyz/api/nft-image",
     "button": {
       "title": "Play Phrase To Guess",
       "action": {
         "type": "launch_frame",
         "name": "Phrase To Guess",
         "url": "https://phrasetoguess.xyz",
-        "splashImageUrl": "https://phrasetoguess.xyz/PTG-main.png",
+        "splashImageUrl": "https://phrasetoguess.xyz/api/nft-image",
         "splashBackgroundColor": "#0a0b0d"
       }
     }
   }' />
 
   <meta property="fc:frame" content="vNext" />
-  <meta property="fc:frame:image" content="https://phrasetoguess.xyz/PTG-main.png" />
+  <meta property="fc:frame:image" content="https://phrasetoguess.xyz/api/nft-image" />
   <meta property="fc:frame:image:aspect_ratio" content="1:1" />
   <meta property="fc:frame:post_url" content="https://phrasetoguess.xyz" />
   <meta property="fc:frame:button:1" content="Play Phrase To Guess" />
@@ -899,7 +899,7 @@
   /** Legacy trophy — referencja. */
   const LEGACY_TROPHY_CONTRACT = "0x34e1838d8C150f38ABD0b2E5d91aa76A653ed03D";
   /** URI metadanych przekazywany do `publicMint(string)` na kontrakcie PhraseToGuessNFT. */
-  /** Musi być stabilny HTTPS (IPFS często 404 / timeout w portfelach). Obraz: PTG-main.png na tej samej domenie. */
+  /** Stabilny HTTPS; obraz przez /api/nft-image (PNG z bundla — omija błędy statycznego /PTG-main.png na CDN). */
   const METADATA_URL = "https://phrasetoguess.xyz/nft.json";
 
   /**

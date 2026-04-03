@@ -1,7 +1,7 @@
 {
   "name": "Phrase To Guess",
   "description": "Phrase To Guess OG trophy minted on Base. Play at https://phrasetoguess.xyz",
-  "image": "https://phrasetoguess.xyz/PTG-main.png",
+  "image": "https://phrasetoguess.xyz/api/nft-image",
   "external_url": "https://phrasetoguess.xyz/",
   "attributes": [
     { "trait_type": "Collection", "value": "Phrase To Guess" },

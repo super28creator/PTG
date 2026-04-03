@@ -4,10 +4,10 @@
     "name": "Phrase To Guess",
     "homeUrl": "https://phrasetoguess.xyz",
     "canonicalDomain": "phrasetoguess.xyz",
-    "iconUrl": "https://phrasetoguess.xyz/PTG-main.png",
-    "imageUrl": "https://phrasetoguess.xyz/PTG-main.png",
-    "heroImageUrl": "https://phrasetoguess.xyz/PTG-main.png",
-    "splashImageUrl": "https://phrasetoguess.xyz/PTG-main.png",
+    "iconUrl": "https://phrasetoguess.xyz/api/nft-image",
+    "imageUrl": "https://phrasetoguess.xyz/api/nft-image",
+    "heroImageUrl": "https://phrasetoguess.xyz/api/nft-image",
+    "splashImageUrl": "https://phrasetoguess.xyz/api/nft-image",
     "splashBackgroundColor": "#0a0b0d",
     "webhookUrl": "https://phrasetoguess.xyz/api/webhook",
     "description": "Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain.",
@@ -17,11 +17,11 @@
     "tags": ["game", "daily", "onchain", "puzzle", "base"],
     "requiredChains": ["eip155:8453"],
     "screenshotUrls": [
-      "https://phrasetoguess.xyz/PTG-main.png"
+      "https://phrasetoguess.xyz/api/nft-image"
     ],
     "ogTitle": "Phrase To Guess",
     "ogDescription": "Daily phrase game on Base. Guess letters, watch the chart, mint a trophy onchain.",
-    "ogImageUrl": "https://phrasetoguess.xyz/PTG-main.png",
+    "ogImageUrl": "https://phrasetoguess.xyz/api/nft-image",
     "noindex": false
   }
 }
