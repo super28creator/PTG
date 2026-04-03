@@ -6,7 +6,7 @@
 const TARGET = process.env.BASE_RPC_URL || "https://mainnet.base.org";
 
 const DEFAULT_PTG_NFT_ADDRESS =
-  "0x1Aaa6d167F30B8ae767aF22c244E450735F34320";
+  "0x9f9343A6833190EE0c816f71D72CE450b1ee8530";
 
 /** Dozwolone wywołania mint na kontrakcie PTG. */
 const MINT_METHODS = ["mint()", "publicMint(string)"];
