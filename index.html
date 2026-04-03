@@ -2301,6 +2301,80 @@
       } catch (_) {}
   }
 
+  /** Pełny ekran po udanym mincie — kilka fal z boków + wybuch centralny. */
+  function runMintSuccessFullScreenConfetti() {
+      try {
+          if (typeof confetti !== "function") return;
+          if (typeof confetti.reset === "function") confetti.reset();
+          if (__ptgConfettiClearT) clearTimeout(__ptgConfettiClearT);
+
+          function sideCannons() {
+              confetti({
+                  particleCount: 95,
+                  angle: 60,
+                  spread: 52,
+                  startVelocity: 52,
+                  origin: { x: 0, y: 0.65 },
+                  ticks: 220,
+              });
+              confetti({
+                  particleCount: 95,
+                  angle: 120,
+                  spread: 52,
+                  startVelocity: 52,
+                  origin: { x: 1, y: 0.65 },
+                  ticks: 220,
+              });
+          }
+
+          function centerBurst() {
+              confetti({
+                  particleCount: 130,
+                  spread: 360,
+                  startVelocity: 28,
+                  origin: { x: 0.5, y: 0.5 },
+                  ticks: 240,
+              });
+          }
+
+          function topRain() {
+              confetti({
+                  particleCount: 70,
+                  spread: 100,
+                  startVelocity: 22,
+                  origin: { x: 0.5, y: 0.15 },
+                  ticks: 200,
+              });
+          }
+
+          sideCannons();
+          centerBurst();
+          topRain();
+          setTimeout(function () {
+              sideCannons();
+              confetti({
+                  particleCount: 90,
+                  angle: 90,
+                  spread: 180,
+                  origin: { x: 0.5, y: 0.95 },
+                  startVelocity: 65,
+                  ticks: 200,
+              });
+          }, 160);
+          setTimeout(function () {
+              centerBurst();
+              topRain();
+          }, 320);
+
+          __ptgConfettiClearT = setTimeout(function () {
+              __ptgConfettiClearT = null;
+              try {
+                  if (typeof confetti.reset === "function") confetti.reset();
+              } catch (_) {}
+          }, 5800);
+      } catch (_) {}
+  }
+
   function checkEnd() {
     if(!revealed.includes("_")) {
       // --- WIN ---
@@ -3116,7 +3190,7 @@
       btn.innerHTML = "MINTED! 🏆";
       document.getElementById("victoryTxLink").innerHTML =
           `<a href="https://basescan.org/tx/${txHash}" target="_blank" rel="noopener noreferrer">View on BaseScan</a>`;
-      runConfettiBurst({ particleCount: 100, spread: 85, origin: { y: 0.6 }, ticks: 120 });
+      runMintSuccessFullScreenConfetti();
       document.getElementById("victoryModal").classList.remove("show");
       if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY) {
           initGame(true);
