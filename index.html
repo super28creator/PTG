@@ -875,17 +875,18 @@
     databaseURL: "https://phrase-to-guess-default-rtdb.europe-west1.firebasedatabase.app"
   };
 
-  /** Legacy trophy (publicMint) — tylko referencja; aktywny mint używa PhraseToGuess NFT + podpis serwera. */
+  /** Legacy trophy — referencja. */
   const LEGACY_TROPHY_CONTRACT = "0x34e1838d8C150f38ABD0b2E5d91aa76A653ed03D";
+  /** URI metadanych przekazywany do `publicMint(string)` na kontrakcie PhraseToGuessNFT. */
   const METADATA_URL = "https://ipfs.io/ipfs/bafybeidy2s24mgguq6d5kjrkhaoplxe2ueu7yhutqzb5uedjiydc7l75z4/metadata.json";
 
   /**
-   * PhraseToGuessNFT (Base) — `mint()` bez podpisu; po deployu nowego Kontrakt-nft.sol wklej adres tutaj.
-   * Stary kontrakt z mintWithSignature nie zadziała z tym frontem.
+   * PhraseToGuessNFT (Base) — `publicMint(METADATA_URL)` + `priceWei`; wklej adres po deployu Kontrakt-nft.sol.
    */
   const PTG_NFT_ADDRESS = "0x1Aaa6d167F30B8ae767aF22c244E450735F34320";
   const PTG_NFT_ABI = [
-    "function mint() payable",
+    "function publicMint(string memory tokenURI_) payable returns (uint256)",
+    "function priceWei() view returns (uint256)",
     "function mintPriceWei() view returns (uint256)",
     "function balanceOf(address owner) view returns (uint256)",
   ];
@@ -2065,32 +2066,36 @@
   }
 
   async function readMintPriceWeiHex(contractAddr, ethProvider) {
-      const priceIface = new ethers.utils.Interface([
-          "function mintPriceWei() view returns (uint256)",
-      ]);
-      const data = priceIface.encodeFunctionData("mintPriceWei", []);
-      try {
-          const hex = await baseJsonRpc({
-              jsonrpc: "2.0",
-              id: 1,
-              method: "eth_call",
-              params: [{ to: contractAddr, data }, "latest"],
-          });
-          const [wei] = priceIface.decodeFunctionResult("mintPriceWei", hex);
-          return ethers.BigNumber.from(wei).toHexString();
-      } catch (e) {
-          console.warn("readMintPriceWeiHex: proxy failed, trying wallet", e);
-      }
-      if (ethProvider && typeof ethProvider.request === "function") {
+      const attempts = [
+          { sig: "function priceWei() view returns (uint256)", fn: "priceWei" },
+          { sig: "function mintPriceWei() view returns (uint256)", fn: "mintPriceWei" },
+      ];
+      for (let a = 0; a < attempts.length; a++) {
+          const priceIface = new ethers.utils.Interface([attempts[a].sig]);
+          const data = priceIface.encodeFunctionData(attempts[a].fn, []);
           try {
-              const hex = await ethProvider.request({
+              const hex = await baseJsonRpc({
+                  jsonrpc: "2.0",
+                  id: 1,
                   method: "eth_call",
                   params: [{ to: contractAddr, data }, "latest"],
               });
-              const [wei] = priceIface.decodeFunctionResult("mintPriceWei", hex);
+              const [wei] = priceIface.decodeFunctionResult(attempts[a].fn, hex);
               return ethers.BigNumber.from(wei).toHexString();
-          } catch (e2) {
-              console.warn("readMintPriceWeiHex: wallet failed", e2);
+          } catch (e) {
+              console.warn("readMintPriceWeiHex: proxy " + attempts[a].fn, e);
+          }
+          if (ethProvider && typeof ethProvider.request === "function") {
+              try {
+                  const hex = await ethProvider.request({
+                      method: "eth_call",
+                      params: [{ to: contractAddr, data }, "latest"],
+                  });
+                  const [wei] = priceIface.decodeFunctionResult(attempts[a].fn, hex);
+                  return ethers.BigNumber.from(wei).toHexString();
+              } catch (e2) {
+                  console.warn("readMintPriceWeiHex: wallet " + attempts[a].fn, e2);
+              }
           }
       }
       throw new Error(
@@ -2116,7 +2121,7 @@
               " ETH (sent to the contract). Network gas on Base is usually well under a dollar — that fee is set by your wallet, not the game.";
           if (wei.gt(hi)) {
               msg +=
-                  " — To fix ~$0.01 mint: mintPriceWei on-chain is fixed forever. Redeploy the NFT and set mintPriceWei_ to 3000000000000 (0.000003 ETH ≈ 1¢ when ETH ≈ $3.3k). Do not use 3000000000000000 — that is 0.003 ETH (~$8).";
+                  " — Too high for ~$0.01? If this contract has setPrice (owner): call setPrice(3000000000000) for 0.000003 ETH. Else redeploy with constructor priceWei = 3000000000000 (not 3000000000000000 — that is 0.003 ETH).";
           }
           el.textContent = msg;
       } catch (e) {
@@ -2329,7 +2334,7 @@
 
       statusDiv.textContent = "Building mint transaction…";
       const mintIface = new ethers.utils.Interface(PTG_NFT_ABI);
-      const dataHex = mintIface.encodeFunctionData("mint", []);
+      const dataHex = mintIface.encodeFunctionData("publicMint", [METADATA_URL]);
       const valueHex = await readMintPriceWeiHex(PTG_NFT_ADDRESS, ethProvider);
       const balBefore = await readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider);
 

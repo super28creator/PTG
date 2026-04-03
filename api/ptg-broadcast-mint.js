@@ -1,5 +1,5 @@
 /**
- * Wysyła podpisany raw tx na Base — tylko mint PhraseToGuessNFT (omija zepsuty RPC portfela przy eth_sendTransaction).
+ * Wysyła podpisany raw tx na Base — mint PhraseToGuessNFT: mint() lub publicMint(string).
  * POST JSON: { "rawTransaction": "0x..." }
  */
 
@@ -8,8 +8,8 @@ const TARGET = process.env.BASE_RPC_URL || "https://mainnet.base.org";
 const DEFAULT_PTG_NFT_ADDRESS =
   "0x1Aaa6d167F30B8ae767aF22c244E450735F34320";
 
-/** Tylko `mint()` — bez mintWithSignature. */
-const MINT_SIG = "mint()";
+/** Dozwolone wywołania mint na kontrakcie PTG. */
+const MINT_METHODS = ["mint()", "publicMint(string)"];
 const MAX_GAS_LIMIT = 900000n;
 
 function setCors(req, res) {
@@ -64,7 +64,7 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: "server_bad_nft_address" });
     }
 
-    const selector = ethers.id(MINT_SIG).slice(0, 10).toLowerCase();
+    const selectors = MINT_METHODS.map((m) => ethers.id(m).slice(0, 10).toLowerCase());
 
     let tx;
     try {
@@ -93,7 +93,8 @@ module.exports = async (req, res) => {
     }
 
     const dataHex = String(tx.data || "0x").toLowerCase();
-    if (!dataHex.startsWith(selector)) {
+    const okSel = selectors.some((s) => dataHex.startsWith(s));
+    if (!okSel) {
       return res.status(400).json({ error: "not_mint_calldata" });
     }
 
