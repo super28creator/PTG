@@ -18,13 +18,14 @@
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=300" }
       ]
-    }
-  ],
-  "redirects": [
+    },
     {
       "source": "/.well-known/farcaster.json",
-      "destination": "https://api.farcaster.xyz/miniapps/hosted-manifest/019bb823-972c-a411-2159-1f26c93aa3d4",
-      "permanent": false
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=120, s-maxage=300" }
+      ]
     }
   ],
   "rewrites": [
