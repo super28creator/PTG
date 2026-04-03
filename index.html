@@ -2758,7 +2758,8 @@
               lastErr = e;
           }
       }
-      throw lastErr || new Error("broadcast_mint_all_urls_failed");
+      console.error("postBroadcastMintRaw: all URLs failed", lastErr);
+      throw new Error("broadcast_failed");
   }
 
   async function getTxNonceHexFromProxy(address) {
@@ -2822,12 +2823,8 @@
               params: [signPayload],
           });
       } catch (e) {
-          const m = e && e.message ? String(e.message) : String(e);
-          throw new Error(
-              "eth_signTransaction failed: " +
-                  m +
-                  " Try MetaMask, or a wallet that supports signing without sending."
-          );
+          console.warn("eth_signTransaction failed (details in object)", e);
+          throw new Error("eth_sign_failed");
       }
       if (rawSigned && typeof rawSigned === "object" && rawSigned.raw) {
           rawSigned = rawSigned.raw;
@@ -2839,13 +2836,29 @@
   }
 
   // --- MINT LOGIC: PhraseToGuess NFT + serwerowy voucher EIP-712 (brak mintu z samego Basescan) ---
+  function showVictoryMintFailed() {
+      const statusDiv = document.getElementById("victoryStatus");
+      const btn = document.getElementById("victoryMintBtn");
+      const txL = document.getElementById("victoryTxLink");
+      if (statusDiv) {
+          statusDiv.textContent = "Failed";
+          statusDiv.style.color = "#fc401f";
+      }
+      if (btn) {
+          btn.innerHTML = "<span>Try Again</span>";
+          btn.disabled = false;
+      }
+      if (txL) txL.innerHTML = "";
+  }
+
   async function mintNFT() {
+    try {
     const btn = document.getElementById('victoryMintBtn');
     const statusDiv = document.getElementById('victoryStatus');
+    if (!btn || !statusDiv) return;
     btn.innerHTML = "Processing..."; btn.disabled = true;
     statusDiv.textContent = "Check your wallet! (Click 'I'm Safe' if warned)"; statusDiv.style.color = "#94a3b8";
 
-    try {
       const zero = "0x0000000000000000000000000000000000000000";
       if (!PTG_NFT_ADDRESS || PTG_NFT_ADDRESS.toLowerCase() === zero) {
           throw new Error("PTG_NFT_ADDRESS not set — deploy contract and paste address in index.html");
@@ -2986,11 +2999,8 @@
       }
 
       if (!txHash) {
-          const m =
-              lastSendErr && lastSendErr.message
-                  ? String(lastSendErr.message)
-                  : "Transaction cancelled or failed";
-          throw new Error(m);
+          if (lastSendErr) console.warn("mint: user cancelled or send failed", lastSendErr);
+          throw new Error("mint_send_failed");
       }
 
       txHash = normalizeMintTxHash(txHash);
@@ -3115,8 +3125,7 @@
       }
     } catch(e) { 
         console.error(e);
-        statusDiv.textContent = "Failed";
-        statusDiv.style.color = "#fc401f"; btn.innerHTML = "Try Again"; btn.disabled = false;
+        showVictoryMintFailed();
     }
   }
 
@@ -3185,6 +3194,24 @@
   }
 
   window.mintNFT = mintNFT;
+  window.addEventListener("unhandledrejection", function (ev) {
+      var modal = document.getElementById("victoryModal");
+      if (!modal || !modal.classList.contains("show")) return;
+      var r = ev.reason;
+      var code = r && r.code;
+      var msg = r && r.message ? String(r.message) : String(r || "");
+      var userAbort =
+          code === 4001 ||
+          code === "ACTION_REJECTED" ||
+          /user rejected|rejected the request|denied transaction|user denied|cancelled|canceled/i.test(
+              msg
+          );
+      if (!userAbort) return;
+      try {
+          ev.preventDefault();
+      } catch (_) {}
+      showVictoryMintFailed();
+  });
   window.initGame = initGame;
   window.addEventListener("resize", scheduleWordFit);
   if (window.visualViewport) window.visualViewport.addEventListener("resize", scheduleWordFit);
