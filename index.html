@@ -1388,6 +1388,30 @@
   let gamesPlayedTodayCount = 0;
   let pendingMint = false; 
   let mintCalendarDays = {};
+  let userProfileUnsubscribe = null;
+
+  function mintCalendarStorageKey() {
+      return "ptg_mintCal_s" + LEADERBOARD_SEASON + "_" + myUserId;
+  }
+  function loadMintCalendarFromStorage() {
+      try {
+          const raw = localStorage.getItem(mintCalendarStorageKey());
+          const o = raw ? JSON.parse(raw) : null;
+          return o && typeof o === "object" && !Array.isArray(o) ? o : {};
+      } catch (_) {
+          return {};
+      }
+  }
+  function persistMintCalendarToStorage(cal) {
+      try {
+          localStorage.setItem(mintCalendarStorageKey(), JSON.stringify(cal));
+      } catch (_) {}
+  }
+  function mergeMintCalendars(fromLs, fromServer) {
+      const l = fromLs && typeof fromLs === "object" && !Array.isArray(fromLs) ? fromLs : {};
+      const s = fromServer && typeof fromServer === "object" && !Array.isArray(fromServer) ? fromServer : {};
+      return { ...l, ...s };
+  }
 
   let currentCategory = "", secret = "", revealed = [], mistakes = 0, moves = 0, gameOver = false;
   let chartData = []; 
@@ -1443,14 +1467,33 @@
 
   // --- DB SYNC & STREAK LOGIC ---
   async function syncUserProfile() {
-      if (!db) return;
+      if (!db) {
+          mintCalendarDays = loadMintCalendarFromStorage();
+          updateScoreUI();
+          updateDailyUI();
+          renderCalendarMonth();
+          return;
+      }
       if (!isLoggedIn()) {
+          if (typeof userProfileUnsubscribe === "function") {
+              try {
+                  userProfileUnsubscribe();
+              } catch (_) {}
+              userProfileUnsubscribe = null;
+          }
+          mintCalendarDays = loadMintCalendarFromStorage();
           updateScoreUI();
           updateDailyUI();
           renderCalendarMonth();
           return;
       }
       const userRef = playerDocRef(myUserId);
+      if (typeof userProfileUnsubscribe === "function") {
+          try {
+              userProfileUnsubscribe();
+          } catch (_) {}
+          userProfileUnsubscribe = null;
+      }
       try {
           const snapshot = await get(userRef);
           if(snapshot.exists()) {
@@ -1460,7 +1503,12 @@
               const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
               const yesterday = yesterdayDate.toISOString().split('T')[0];
 
-              mintCalendarDays = (data.mintCalendar && typeof data.mintCalendar === "object") ? data.mintCalendar : {};
+              const fromServer =
+                  data.mintCalendar && typeof data.mintCalendar === "object"
+                      ? data.mintCalendar
+                      : {};
+              mintCalendarDays = mergeMintCalendars(loadMintCalendarFromStorage(), fromServer);
+              persistMintCalendarToStorage(mintCalendarDays);
 
               if(data.lastPlayed === today) {
                   let g = Number(data.gamesPlayedToday) || 0;
@@ -1481,9 +1529,20 @@
                   if (data.streak > 0) update(userRef, { streak: 0, gamesPlayedToday: 0, pendingMint: false });
               }
           } else {
-              mintCalendarDays = {};
+              mintCalendarDays = loadMintCalendarFromStorage();
           }
       } catch(e) { console.error("Sync Error", e); }
+      userProfileUnsubscribe = onValue(userRef, (snap) => {
+          if (!snap.exists()) return;
+          const data = snap.val();
+          const fromServer =
+              data.mintCalendar && typeof data.mintCalendar === "object"
+                  ? data.mintCalendar
+                  : {};
+          mintCalendarDays = mergeMintCalendars(loadMintCalendarFromStorage(), fromServer);
+          persistMintCalendarToStorage(mintCalendarDays);
+          renderCalendarMonth();
+      });
       updateScoreUI();
       updateDailyUI();
       renderCalendarMonth();
@@ -2495,13 +2554,22 @@
               userData.mintCalendar[mintDay] = true;
               return userData;
           });
+          try {
+              await update(userRef, { ["mintCalendar/" + mintDay]: true });
+          } catch (mcErr) {
+              console.warn("mintCalendar explicit update", mcErr);
+          }
           const postSnap = await get(userRef);
           if (postSnap.exists()) {
               const d = postSnap.val();
               currentScore = d.score || 0;
               pendingMint = !!d.pendingMint;
               if (d.mintCalendar && typeof d.mintCalendar === "object") {
-                  mintCalendarDays = d.mintCalendar;
+                  mintCalendarDays = mergeMintCalendars(
+                      loadMintCalendarFromStorage(),
+                      d.mintCalendar
+                  );
+                  persistMintCalendarToStorage(mintCalendarDays);
               }
               if (hadPendingMint && d.lastMintBonusTxHash !== txHash) {
                   throw new Error(
@@ -2509,12 +2577,15 @@
                   );
               }
           }
+          mintCalendarDays = mergeMintCalendars(mintCalendarDays, { [mintDay]: true });
+          persistMintCalendarToStorage(mintCalendarDays);
           updateScoreUI();
           renderCalendarMonth();
           checkGameStateAndRender();
       } else {
           pendingMint = false;
           mintCalendarDays = { ...mintCalendarDays, [mintDay]: true };
+          persistMintCalendarToStorage(mintCalendarDays);
           renderCalendarMonth();
       }
       statusDiv.textContent = "Success! Trophy Minted. 🏆";
