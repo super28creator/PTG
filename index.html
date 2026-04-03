@@ -1924,29 +1924,46 @@
       throw lastErr || new Error("Base RPC proxy: all URLs failed");
   }
 
+  /** EIP-1559 z baseFee bloku Base — ciasny max fee (mniejszy „worst case” w portfelu). */
+  function eip1559HexFromBaseFeePerGas(bfHex) {
+      if (bfHex == null) return null;
+      const baseFee = ethers.BigNumber.from(bfHex);
+      const tip = ethers.BigNumber.from("3000000");
+      let maxFee = baseFee.mul(13).div(10).add(tip);
+      const maxFeeCeil = ethers.BigNumber.from("5000000000");
+      if (maxFee.gt(maxFeeCeil)) maxFee = maxFeeCeil;
+      const minMax = baseFee.add(tip);
+      if (maxFee.lt(minMax)) maxFee = minMax;
+      return {
+          maxPriorityFeePerGas: ethers.utils.hexValue(tip),
+          maxFeePerGas: ethers.utils.hexValue(maxFee),
+      };
+  }
+
   /**
-   * Gas + EIP-1559 z proxy (ten sam co odczyty) — wiele portfeli wtedy nie robi eth_estimateGas przez zepsuty RPC Rainbow.
-   * Brak block.baseFeePerGas → zwracamy tylko gas albo {}.
+   * Gas + EIP-1559 z /api/base-jsonrpc — niskie maxFee (Base), umiarkowany gas cap,
+   * żeby Rabby/MetaMask nie pokazywały zawyżonego „max fee” i ostrzeżeń o niestabilnym estimate.
    */
   async function prepareMintTxGasFields(from, to, data, valueHex) {
       const out = {};
-      let estHex;
+      let est = ethers.BigNumber.from(280000);
       try {
-          estHex = await baseJsonRpc({
+          const estHex = await baseJsonRpc({
               jsonrpc: "2.0",
               id: 1,
               method: "eth_estimateGas",
               params: [{ from, to, data, value: valueHex }, "latest"],
           });
+          est = ethers.BigNumber.from(estHex);
       } catch (e) {
-          console.warn("prepareMintTxGasFields: eth_estimateGas failed", e);
-          return out;
+          console.warn("prepareMintTxGasFields: eth_estimateGas fallback 280k", e);
       }
-      let est = ethers.BigNumber.from(estHex);
-      if (est.lt(120000)) est = ethers.BigNumber.from(120000);
-      const gasBn = est.mul(135).div(100);
-      const capped = gasBn.gt(900000) ? ethers.BigNumber.from(900000) : gasBn;
-      out.gas = ethers.utils.hexValue(capped);
+      const floor = ethers.BigNumber.from(150000);
+      if (est.lt(floor)) est = floor;
+      const gasBn = est.mul(122).div(100);
+      const gasCap = ethers.BigNumber.from(550000);
+      const gasFinal = gasBn.gt(gasCap) ? gasCap : gasBn;
+      out.gas = ethers.utils.hexValue(gasFinal);
 
       let block;
       try {
@@ -1960,13 +1977,8 @@
           console.warn("prepareMintTxGasFields: eth_getBlockByNumber failed", e);
           return out;
       }
-      const bf = block && block.baseFeePerGas;
-      if (bf == null) return out;
-      const baseFee = ethers.BigNumber.from(bf);
-      const tip = ethers.BigNumber.from("100000000");
-      const maxFee = baseFee.mul(2).add(tip);
-      out.maxPriorityFeePerGas = ethers.utils.hexValue(tip);
-      out.maxFeePerGas = ethers.utils.hexValue(maxFee);
+      const fees = eip1559HexFromBaseFeePerGas(block && block.baseFeePerGas);
+      if (fees) Object.assign(out, fees);
       return out;
   }
 
@@ -2201,31 +2213,26 @@
   }
 
   async function ensureMintGasHexForSign(from, toAddr, dataHex, valueHex) {
-      let g = await prepareMintTxGasFields(from, toAddr, dataHex, valueHex);
+      const g = await prepareMintTxGasFields(from, toAddr, dataHex, valueHex);
       if (!g.gas) {
-          const est = await baseJsonRpc({
-              jsonrpc: "2.0",
-              id: 1,
-              method: "eth_estimateGas",
-              params: [{ from, to: toAddr, data: dataHex, value: valueHex }, "latest"],
-          });
-          const cap = ethers.BigNumber.from(est).mul(140).div(100);
-          const hi = ethers.BigNumber.from(900000);
-          g.gas = ethers.utils.hexValue(cap.gt(hi) ? hi : cap);
+          throw new Error("Could not build gas limit (Base RPC via site)");
+      }
+      if (!g.maxFeePerGas) {
+          try {
+              const block = await baseJsonRpc({
+                  jsonrpc: "2.0",
+                  id: 1,
+                  method: "eth_getBlockByNumber",
+                  params: ["latest", false],
+              });
+              const fees = eip1559HexFromBaseFeePerGas(block && block.baseFeePerGas);
+              if (fees) Object.assign(g, fees);
+          } catch (e) {
+              console.warn("ensureMintGasHexForSign: fee retry failed", e);
+          }
       }
       if (!g.maxFeePerGas || !g.maxPriorityFeePerGas) {
-          const block = await baseJsonRpc({
-              jsonrpc: "2.0",
-              id: 1,
-              method: "eth_getBlockByNumber",
-              params: ["latest", false],
-          });
-          const bf = block && block.baseFeePerGas;
-          if (bf == null) throw new Error("Could not read Base block for gas fees");
-          const baseFee = ethers.BigNumber.from(bf);
-          const tip = ethers.BigNumber.from("100000000");
-          g.maxPriorityFeePerGas = ethers.utils.hexValue(tip);
-          g.maxFeePerGas = ethers.utils.hexValue(baseFee.mul(2).add(tip));
+          throw new Error("Could not build EIP-1559 fees (Base RPC via site)");
       }
       return g;
   }
@@ -2368,20 +2375,25 @@
           statusDiv.textContent = embeddedUi
               ? "Confirm in Wallet (Click 'I'm safe')..."
               : "Confirm in your wallet...";
-          try {
-              return await trySendTransaction(provider, txPayloadMinimal);
-          } catch (err) {
-              lastSendErr = err;
-              console.warn("mint eth_sendTransaction minimal", err);
-              if (Object.keys(gasFields).length > 0) {
-                  try {
-                      statusDiv.textContent = "Retry with preset gas (site RPC)…";
-                      return await trySendTransaction(provider, txPayloadFull);
-                  } catch (err2) {
-                      lastSendErr = err2;
-                      console.warn("mint eth_sendTransaction full", err2);
-                  }
+          if (Object.keys(gasFields).length > 0) {
+              try {
+                  statusDiv.textContent = embeddedUi
+                      ? "Confirm in wallet (gas preset from Base RPC)…"
+                      : "Confirm in your wallet (gas preset from Base RPC)…";
+                  return await trySendTransaction(provider, txPayloadFull);
+              } catch (err) {
+                  lastSendErr = err;
+                  console.warn("mint eth_sendTransaction with preset gas", err);
               }
+          }
+          try {
+              statusDiv.textContent = embeddedUi
+                  ? "Confirm in Wallet — wallet estimates gas…"
+                  : "Confirm in your wallet — wallet estimates gas…";
+              return await trySendTransaction(provider, txPayloadMinimal);
+          } catch (err2) {
+              lastSendErr = err2;
+              console.warn("mint eth_sendTransaction minimal", err2);
           }
           return null;
       }
