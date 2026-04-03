@@ -6,6 +6,7 @@
   <title>Phrase To Guess</title>
   
   <meta name="base:app_id" content="69cff5ac94e92a0f3a847bf2" />
+  <!-- Base Builder Code: jedno źródło — odczyt w JS przy mincie (ERC-8021 suffix). Docs: base-chain/builder-codes -->
   <meta name="base:builder_code" content="bc_4s5mvckp" />
   <meta name="application-name" content="Phrase To Guess" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1400,18 +1401,23 @@
     "function balanceOf(address owner) view returns (uint256)",
   ];
   /**
-   * Base Builder Code — atrybucja tx w Base (ERC-8021 schema 0).
+   * Base Builder Code — suffix ERC-8021 (schema 0) na końcu calldata mintu.
+   * Kod bierzemy z <meta name="base:builder_code"> (jedno miejsce w <head>).
    * @see https://docs.base.org/base-chain/builder-codes/app-developers
-   * Równoważne: ox/erc8021 Attribution.toDataSuffix({ codes: [PTG_BASE_BUILDER_CODE] })
    */
-  const PTG_BASE_BUILDER_CODE = "bc_4s5mvckp";
   const ERC8021_MAGIC_SUFFIX = "80218021802180218021802180218021";
+
+  function getBaseBuilderCodeFromMeta() {
+      var m = document.querySelector('meta[name="base:builder_code"]');
+      var c = m && m.content ? String(m.content).trim() : "";
+      return c || "bc_4s5mvckp";
+  }
 
   function appendErc8021BuilderSuffix(calldata0x) {
       if (!calldata0x || typeof calldata0x !== "string" || !calldata0x.startsWith("0x")) {
           return calldata0x;
       }
-      const codes = PTG_BASE_BUILDER_CODE;
+      const codes = getBaseBuilderCodeFromMeta();
       let codesHex = "";
       for (let i = 0; i < codes.length; i++) {
           codesHex += codes.charCodeAt(i).toString(16).padStart(2, "0");
