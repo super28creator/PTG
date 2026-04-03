@@ -178,6 +178,28 @@
         min-width: 0;
         transition: transform 0.2s var(--ease-base);
     }
+    .card--main-game {
+        position: relative;
+    }
+    .card--main-game .cal-icon-btn--floating {
+        position: absolute;
+        top: clamp(12px, 3.6vw, 22px);
+        right: clamp(12px, 3.6vw, 22px);
+        z-index: 5;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+    }
+    /* Miejsce na ikonę kalendarza w rogu — bez nakładania na wynik/streak */
+    .card--main-game .card-header-side {
+        padding-right: 52px;
+    }
+    @media (max-width: 540px) {
+        .card--main-game .card-header-main {
+            padding-right: 52px;
+        }
+        .card--main-game .card-header-side {
+            padding-right: 0;
+        }
+    }
 
     /* --- TYPOGRAPHY --- */
     h1 { 
@@ -336,7 +358,41 @@
     .dead { color: var(--danger); text-shadow: 0 0 20px rgba(252, 64, 31, 0.45); animation: shake 0.5s var(--ease-base); } 
     .won { color: var(--success); text-shadow: 0 0 20px rgba(102, 200, 0, 0.45); animation: bounce 0.6s var(--ease-base); }
 
-    .meta { display: flex; gap: 10px 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 4px; margin-bottom: 4px; font-size: 13px;}
+    .meta {
+        margin-top: 4px;
+        margin-bottom: 4px;
+        font-size: 13px;
+    }
+    .meta--game-bar {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px 16px;
+    }
+    .meta__left {
+        flex: 1 1 160px;
+        min-width: 0;
+    }
+    .meta__right {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        flex-shrink: 0;
+        width: max-content;
+        max-width: 100%;
+    }
+    .meta__right .daily-info-pill {
+        justify-content: center;
+    }
+    .meta__right .chip.meta__mistakes {
+        justify-content: center;
+    }
+    .meta__mistakes {
+        border-color: rgba(252, 64, 31, 0.35);
+    }
     .meta-tries { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--danger); }
     .chip { padding: 8px 14px; background: rgba(255,255,255,0.03); border-radius: 999px; font-weight: 600; border: var(--glass-border); display: flex; align-items: center; gap: 6px;}
     .user-chip { border-color: var(--cerulean); background: rgba(0, 0, 255, 0.12); color: #fff; text-shadow: 0 0 10px rgba(60, 138, 255, 0.35); }
@@ -649,18 +705,6 @@
         width: 100%;
         max-width: 100%;
     }
-    .header-side-row--top {
-        display: flex;
-        width: 100%;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        flex-wrap: nowrap;
-    }
-    .header-side-row--top .daily-info-pill {
-        flex: 0 1 auto;
-        min-width: 0;
-    }
     .cal-icon-btn {
         flex-shrink: 0;
         width: 42px;
@@ -819,9 +863,6 @@
         .header-side-stack {
             flex: 1 1 100%;
             order: 1;
-        }
-        .header-side-row--top {
-            flex-wrap: wrap;
         }
         .header-toolbar {
             width: 100%;
@@ -1015,7 +1056,15 @@
 </div>
 
 <div class="wrap">
-  <div class="card">
+  <div class="card card--main-game">
+    <button type="button" id="calendarToggle" class="cal-icon-btn cal-icon-btn--floating" aria-expanded="false" aria-controls="calendarPanel" title="Mint calendar" aria-label="Open mint calendar">
+      <svg class="cal-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+      </svg>
+    </button>
     <div class="card-header">
         <div class="card-header-main">
             <div class="hero-title-row">
@@ -1030,17 +1079,6 @@
         </div>
         <div class="card-header-side">
              <div class="header-side-stack">
-               <div class="header-side-row--top">
-                 <div class="daily-info-pill" id="dailyInfo">Games: 0/3</div>
-                 <button type="button" id="calendarToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="calendarPanel" title="Mint calendar" aria-label="Open mint calendar">
-                   <svg class="cal-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
-                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                     <line x1="3" y1="10" x2="21" y2="10"/>
-                     <line x1="8" y1="2" x2="8" y2="6"/>
-                     <line x1="16" y1="2" x2="16" y2="6"/>
-                   </svg>
-                 </button>
-               </div>
                <div class="header-toolbar">
                  <div class="header-stats-cluster" role="group" aria-label="Leaderboard, score, streak">
                    <div class="header-cluster-merge">
@@ -1061,9 +1099,14 @@
         </div>
     </div>
     
-    <div class="meta">
-        <div class="chip" id="categoryDisplay" style="color: var(--cerulean); border-color: rgba(60, 138, 255, 0.35);">Category: Loading...</div>
-        <div class="chip" style="border-color: rgba(252, 64, 31, 0.35);">Mistakes: <span id="tries" class="meta-tries">0</span><span style="font-weight:700; opacity:.9">/5</span></div>
+    <div class="meta meta--game-bar">
+        <div class="meta__left">
+          <div class="chip" id="categoryDisplay" style="color: var(--cerulean); border-color: rgba(60, 138, 255, 0.35);">Category: Loading...</div>
+        </div>
+        <div class="meta__right">
+          <div class="daily-info-pill" id="dailyInfo">Games: 0/3</div>
+          <div class="chip meta__mistakes">Mistakes: <span id="tries" class="meta-tries">0</span><span style="font-weight:700; opacity:.9">/5</span></div>
+        </div>
     </div>
 
     <div id="calendarPanel" class="calendar-panel" hidden>
