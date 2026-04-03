@@ -43,5 +43,12 @@
       "source": "/api/mint-voucher",
       "destination": "/api/ptg-voucher"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/cast-share",
+      "destination": "https://warpcast.com/~/compose?text=Play+Phrase+To+Guess+on+Base+%E2%80%94+https%3A%2F%2Fphrasetoguess.xyz",
+      "permanent": false
+    }
   ]
 }

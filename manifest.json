@@ -53,7 +53,7 @@
     "ogTitle": "Phrase To Guess",
     "ogDescription": "Phrase game on Base: guess letters, chart, mint trophy onchain.",
     "ogImageUrl": "https://phrasetoguess.xyz/api/farcaster-asset?type=og",
-    "castShareUrl": "https://warpcast.com/~/compose?text=Play+Phrase+To+Guess+on+Base+%E2%80%94+https%3A%2F%2Fphrasetoguess.xyz",
+    "castShareUrl": "https://phrasetoguess.xyz/cast-share",
     "canonicalDomain": "phrasetoguess.xyz",
     "requiredChains": ["eip155:8453"],
     "noindex": false
