@@ -309,4 +309,10 @@ contract PhraseToGuessNFT is ERC165, IERC721Metadata, Ownable, ReentrancyGuard {
     function setPrice(uint256 _priceWei) external onlyOwner {
         priceWei = _priceWei;
     }
+
+    /** Naprawa zepsutego tokenURI (np. martwy IPFS) — tylko owner. */
+    function setTokenURI(uint256 tokenId, string memory newUri) external onlyOwner {
+        require(_exists(tokenId), "nonexistent token");
+        _setTokenURI(tokenId, newUri);
+    }
 }

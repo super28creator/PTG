@@ -877,7 +877,8 @@
   /** Legacy trophy — referencja. */
   const LEGACY_TROPHY_CONTRACT = "0x34e1838d8C150f38ABD0b2E5d91aa76A653ed03D";
   /** URI metadanych przekazywany do `publicMint(string)` na kontrakcie PhraseToGuessNFT. */
-  const METADATA_URL = "https://ipfs.io/ipfs/bafybeidy2s24mgguq6d5kjrkhaoplxe2ueu7yhutqzb5uedjiydc7l75z4/metadata.json";
+  /** Musi być stabilny HTTPS (IPFS często 404 / timeout w portfelach). Obraz: PTG-main.png na tej samej domenie. */
+  const METADATA_URL = "https://phrasetoguess.xyz/nft.json";
 
   /**
    * PhraseToGuessNFT (Base) — `publicMint(METADATA_URL)` + `priceWei`; wklej adres po deployu Kontrakt-nft.sol.
