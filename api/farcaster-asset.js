@@ -37,7 +37,12 @@ module.exports = async (req, res) => {
   try {
     const pngPath = path.join(process.cwd(), "PTG-main.png");
     const input = fs.readFileSync(pngPath);
-    let img = sharp(input).resize(dim.w, dim.h, { fit: "cover", position: "centre" });
+    // Baner PTG ma tytuł po lewej — "cover" + centre ucinało „P” w podglądzie Base (imageUrl type=feed).
+    const resizeOpts =
+      t === "feed" || t === "og"
+        ? { fit: "cover", position: "west" }
+        : { fit: "cover", position: "centre" };
+    let img = sharp(input).resize(dim.w, dim.h, resizeOpts);
     if (t === "icon") {
       img = img.flatten({ background: { r: 10, g: 11, b: 13 } });
     }
