@@ -191,7 +191,8 @@
         flex-direction: column;
         align-items: flex-end;
         gap: 10px;
-        max-width: calc(100% - 24px);
+        /* % względem karty — w Farcaster/Base 100vw potrafi rozszerzać layout */
+        max-width: min(220px, calc(100% - 16px));
     }
     .cal-floating-tools__icons {
         display: flex;
@@ -203,11 +204,12 @@
         box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
     }
     .card--main-game .cal-floating-tools .header-stats-cluster {
-        max-width: min(220px, calc(100vw - 40px));
+        max-width: 100%;
+        width: max-content;
     }
-    /* Miejsce na kolumnę ikon + wynik/streak — treść nie wchodzi pod toolbar */
+    /* Miejsce na kolumnę ikon + wynik/streak — bez nadmiernego % szerokości w miniappach */
     .card--main-game .card-header-main {
-        padding-right: clamp(104px, 42vw, 192px);
+        padding-right: clamp(108px, 30vw, 172px);
     }
 
     /* --- TYPOGRAPHY --- */
@@ -922,6 +924,17 @@
     .header-rewards-streak-row {
         margin-top: 16px;
         width: 100%;
+        min-width: 0;
+        display: flex;
+        justify-content: flex-start;
+    }
+    .rewards-compact {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        max-width: 100%;
+        min-width: 0;
     }
     .header-rewards-streak-row .rewards-strip {
         margin-top: 0;
@@ -940,6 +953,88 @@
         gap: 14px 22px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        width: fit-content;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    /* Odznaki punktów — ten sam rozmiar co OG (clamp 32–40px) */
+    .score-milestones {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        max-width: 100%;
+    }
+    .score-milestone {
+        --ms-size: clamp(32px, 6vw, 40px);
+        width: var(--ms-size);
+        height: var(--ms-size);
+        min-width: var(--ms-size);
+        min-height: var(--ms-size);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        flex-shrink: 0;
+        border: 2px solid rgba(255, 255, 255, 0.22);
+        transition: opacity 0.28s ease, filter 0.28s ease, box-shadow 0.28s ease, transform 0.2s ease;
+        font-family: var(--font-main), system-ui, sans-serif;
+    }
+    .score-milestone__n {
+        display: block;
+        text-align: center;
+        letter-spacing: -0.02em;
+    }
+    .score-milestone--10 {
+        background: linear-gradient(160deg, #991b1b 0%, #7f1d1d 100%);
+        color: #fecaca;
+        border-color: rgba(248, 113, 113, 0.65);
+    }
+    .score-milestone--10 .score-milestone__n {
+        font-size: clamp(12px, 3.4vw, 14px);
+    }
+    .score-milestone--100 {
+        background: linear-gradient(160deg, #f1f5f9 0%, #94a3b8 55%, #64748b 100%);
+        color: #1e293b;
+        border-color: rgba(226, 232, 240, 0.85);
+    }
+    .score-milestone--100 .score-milestone__n {
+        font-size: clamp(10px, 2.9vw, 12px);
+    }
+    .score-milestone--1000 {
+        background: linear-gradient(160deg, #fde047 0%, #eab308 45%, #a16207 100%);
+        color: #422006;
+        border-color: rgba(250, 204, 21, 0.75);
+    }
+    .score-milestone--1000 .score-milestone__n {
+        font-size: clamp(7px, 1.85vw, 9px);
+        letter-spacing: -0.07em;
+        transform: scale(0.96);
+        transform-origin: center;
+    }
+    .score-milestone--locked {
+        opacity: 0.32;
+        filter: grayscale(0.35) brightness(0.55);
+        box-shadow: none;
+    }
+    .score-milestone--unlocked {
+        opacity: 1;
+        filter: none;
+        box-shadow: 0 0 14px rgba(0, 0, 0, 0.35);
+    }
+    .score-milestone--10.score-milestone--unlocked {
+        box-shadow: 0 0 16px rgba(239, 68, 68, 0.45);
+    }
+    .score-milestone--100.score-milestone--unlocked {
+        box-shadow: 0 0 14px rgba(226, 232, 240, 0.35);
+    }
+    .score-milestone--1000.score-milestone--unlocked {
+        box-shadow: 0 0 18px rgba(234, 179, 8, 0.5);
     }
     .rewards-strip > div {
         display: flex;
@@ -1257,9 +1352,22 @@
               <p class="lead">Guess the phrase. Watch the market.</p>
             </div>
             <div class="header-rewards-streak-row">
-              <div class="rewards-strip" aria-label="Point rewards">
-                <div><span>🏆 Win:</span> <span style="color: var(--green-base);">+1</span></div>
-                <div><span>✨ Mint:</span> <span style="color: var(--cerulean);">+2</span></div>
+              <div class="rewards-compact">
+                <div class="rewards-strip" aria-label="Point rewards">
+                  <div><span>🏆 Win:</span> <span style="color: var(--green-base);">+1</span></div>
+                  <div><span>✨ Mint:</span> <span style="color: var(--cerulean);">+2</span></div>
+                </div>
+                <div class="score-milestones" id="scoreMilestones" aria-label="Score milestone badges">
+                  <div class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" title="Unlock at 10 points">
+                    <span class="score-milestone__n">10</span>
+                  </div>
+                  <div class="score-milestone score-milestone--100 score-milestone--locked" id="scoreMilestone100" title="Unlock at 100 points">
+                    <span class="score-milestone__n">100</span>
+                  </div>
+                  <div class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" title="Unlock at 1000 points">
+                    <span class="score-milestone__n">1000</span>
+                  </div>
+                </div>
               </div>
             </div>
         </div>
@@ -3451,9 +3559,26 @@
     }
   }
 
-  function updateScoreUI() { 
-      document.getElementById('scoreDisplay').textContent = currentScore; 
-      document.getElementById('streakDisplay').textContent = currentStreak; 
+  function updateScoreMilestones() {
+      const s = Number(currentScore) || 0;
+      const pairs = [
+          { el: document.getElementById("scoreMilestone10"), need: 10 },
+          { el: document.getElementById("scoreMilestone100"), need: 100 },
+          { el: document.getElementById("scoreMilestone1000"), need: 1000 },
+      ];
+      pairs.forEach(({ el, need }) => {
+          if (!el) return;
+          const on = s >= need;
+          el.classList.toggle("score-milestone--unlocked", on);
+          el.classList.toggle("score-milestone--locked", !on);
+          el.title = on ? need + " points — unlocked!" : "Unlock at " + need + " points";
+      });
+  }
+
+  function updateScoreUI() {
+      document.getElementById("scoreDisplay").textContent = currentScore;
+      document.getElementById("streakDisplay").textContent = currentStreak;
+      updateScoreMilestones();
   }
   function updateDailyUI() { 
       document.getElementById('dailyInfo').textContent = `Games: ${Math.min(gamesPlayedTodayCount, MAX_GAMES_PER_DAY)}/${MAX_GAMES_PER_DAY}`; 
