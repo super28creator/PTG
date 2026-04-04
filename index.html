@@ -967,11 +967,10 @@
         max-width: 100%;
     }
     .score-milestone {
-        --ms-size: clamp(32px, 6vw, 40px);
-        width: var(--ms-size);
-        height: var(--ms-size);
-        min-width: var(--ms-size);
-        min-height: var(--ms-size);
+        width: var(--hero-badge-diameter, 40px);
+        height: var(--hero-badge-diameter, 40px);
+        min-width: var(--hero-badge-diameter, 40px);
+        min-height: var(--hero-badge-diameter, 40px);
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -1017,8 +1016,7 @@
         background: radial-gradient(circle at 30% 25%, rgba(255, 200, 200, 0.35) 0%, transparent 45%),
             linear-gradient(155deg, #9f1239 0%, #6b0f1a 42%, #3f0d12 100%);
         border-color: rgba(251, 113, 133, 0.55);
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 4px 18px rgba(190, 18, 60, 0.42),
-            inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 6px rgba(190, 18, 60, 0.35);
     }
     .score-milestone--10.score-milestone--unlocked .score-milestone__n {
         color: #ffe4e6;
@@ -1028,8 +1026,7 @@
         background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.55) 0%, transparent 42%),
             linear-gradient(160deg, #f8fafc 0%, #cbd5e1 38%, #94a3b8 72%, #64748b 100%);
         border-color: rgba(241, 245, 249, 0.9);
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25), 0 4px 16px rgba(148, 163, 184, 0.35),
-            inset 0 1px 0 rgba(255, 255, 255, 0.65);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 1px 6px rgba(100, 116, 139, 0.35);
     }
     .score-milestone--100.score-milestone--unlocked .score-milestone__n {
         color: #0f172a;
@@ -1039,8 +1036,7 @@
         background: radial-gradient(circle at 30% 22%, rgba(255, 248, 220, 0.5) 0%, transparent 40%),
             linear-gradient(158deg, #f5deb3 0%, #d4a574 32%, #b8860b 58%, #6b4c0a 100%);
         border-color: rgba(234, 211, 150, 0.85);
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 4px 20px rgba(180, 130, 40, 0.45),
-            inset 0 1px 0 rgba(255, 255, 255, 0.28);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 6px rgba(140, 100, 30, 0.4);
     }
     .score-milestone--1000.score-milestone--unlocked .score-milestone__n {
         color: #1a1208;
@@ -1065,6 +1061,7 @@
         line-height: 1.08;
     }
     .hero-badge-row {
+        --hero-badge-diameter: clamp(36px, 7.25vw, 42px);
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
@@ -1073,11 +1070,28 @@
         max-width: 100%;
         min-width: 0;
     }
-    .hero-stack .og-badge {
-        height: clamp(32px, 6vw, 40px);
-        width: clamp(32px, 6vw, 40px);
-        object-fit: contain;
+    /* Slot OG: ta sama średnica zewnętrzna co .score-milestone (border-box + border 2px) */
+    .hero-og-slot {
+        width: var(--hero-badge-diameter);
+        height: var(--hero-badge-diameter);
+        min-width: var(--hero-badge-diameter);
+        min-height: var(--hero-badge-diameter);
         flex-shrink: 0;
+        border-radius: 50%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        border: 2px solid rgba(60, 138, 255, 0.4);
+        background: rgba(20, 28, 48, 0.65);
+    }
+    .hero-og-slot .og-badge {
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        object-fit: contain;
+        display: block;
     }
     .hero-stack .lead {
         margin-top: 0;
@@ -1369,7 +1383,9 @@
             <div class="hero-stack">
               <h1>Phrase To Guess</h1>
               <div class="hero-badge-row">
-                <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="40" height="40" alt="OG badge" title="Season 1 players see this badge in full color" decoding="async" />
+                <span class="hero-og-slot">
+                  <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="40" height="40" alt="OG badge" title="Season 1 players see this badge in full color" decoding="async" />
+                </span>
                 <div class="score-milestones" id="scoreMilestones" aria-label="Score milestone badges">
                   <div class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" title="Unlock at 10 points">
                     <span class="score-milestone__n">10</span>
