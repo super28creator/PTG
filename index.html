@@ -61,7 +61,7 @@
   <meta property="fc:frame:button:1:action" content="link" />
   <meta property="fc:frame:button:1:target" content="https://phrasetoguess.xyz" />
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -957,7 +957,7 @@
         max-width: 100%;
         box-sizing: border-box;
     }
-    /* Odznaki punktów — ten sam rozmiar co OG (clamp 32–40px) */
+    /* Odznaki punktów — obok OG, ten sam rozmiar kółka */
     .score-milestones {
         display: flex;
         flex-direction: row;
@@ -977,71 +977,81 @@
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
-        font-weight: 800;
         font-variant-numeric: tabular-nums;
         line-height: 1;
         flex-shrink: 0;
-        border: 2px solid rgba(255, 255, 255, 0.22);
-        transition: opacity 0.28s ease, filter 0.28s ease, box-shadow 0.28s ease, transform 0.2s ease;
-        font-family: var(--font-main), system-ui, sans-serif;
+        border: 2px solid rgba(255, 255, 255, 0.14);
+        transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
     }
     .score-milestone__n {
         display: block;
         text-align: center;
-        letter-spacing: -0.02em;
+        font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+        font-weight: 700;
+        letter-spacing: 0.01em;
     }
-    .score-milestone--10 {
-        background: linear-gradient(160deg, #991b1b 0%, #7f1d1d 100%);
-        color: #fecaca;
-        border-color: rgba(248, 113, 113, 0.65);
-    }
-    .score-milestone--10 .score-milestone__n {
-        font-size: clamp(12px, 3.4vw, 14px);
-    }
-    .score-milestone--100 {
-        background: linear-gradient(160deg, #f1f5f9 0%, #94a3b8 55%, #64748b 100%);
-        color: #1e293b;
-        border-color: rgba(226, 232, 240, 0.85);
-    }
-    .score-milestone--100 .score-milestone__n {
-        font-size: clamp(10px, 2.9vw, 12px);
-    }
-    .score-milestone--1000 {
-        background: linear-gradient(160deg, #fde047 0%, #eab308 45%, #a16207 100%);
-        color: #422006;
-        border-color: rgba(250, 204, 21, 0.75);
-    }
-    .score-milestone--1000 .score-milestone__n {
-        font-size: clamp(7px, 1.85vw, 9px);
-        letter-spacing: -0.07em;
-        transform: scale(0.96);
-        transform-origin: center;
-    }
-    .score-milestone--locked {
-        opacity: 0.32;
-        filter: grayscale(0.35) brightness(0.55);
-        box-shadow: none;
-    }
-    .score-milestone--unlocked {
+    /* Zablokowane: wyłącznie szarość, bez koloru „apteczki” */
+    .score-milestone.score-milestone--locked {
+        background: linear-gradient(165deg, #3d4049 0%, #2e3038 48%, #25262d 100%);
+        border-color: rgba(255, 255, 255, 0.09);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
         opacity: 1;
         filter: none;
-        box-shadow: 0 0 14px rgba(0, 0, 0, 0.35);
     }
+    .score-milestone.score-milestone--locked .score-milestone__n {
+        color: #7c818f;
+        text-shadow: none;
+    }
+    .score-milestone--10 .score-milestone__n {
+        font-size: clamp(13px, 3.5vw, 15px);
+    }
+    .score-milestone--100 .score-milestone__n {
+        font-size: clamp(11px, 3vw, 13px);
+    }
+    .score-milestone--1000 .score-milestone__n {
+        font-size: clamp(8px, 2.1vw, 10px);
+        letter-spacing: -0.04em;
+    }
+    /* Odblokowane — barwy prestiżowe */
     .score-milestone--10.score-milestone--unlocked {
-        box-shadow: 0 0 16px rgba(239, 68, 68, 0.45);
+        background: radial-gradient(circle at 30% 25%, rgba(255, 200, 200, 0.35) 0%, transparent 45%),
+            linear-gradient(155deg, #9f1239 0%, #6b0f1a 42%, #3f0d12 100%);
+        border-color: rgba(251, 113, 133, 0.55);
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 4px 18px rgba(190, 18, 60, 0.42),
+            inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+    .score-milestone--10.score-milestone--unlocked .score-milestone__n {
+        color: #ffe4e6;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
     }
     .score-milestone--100.score-milestone--unlocked {
-        box-shadow: 0 0 14px rgba(226, 232, 240, 0.35);
+        background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.55) 0%, transparent 42%),
+            linear-gradient(160deg, #f8fafc 0%, #cbd5e1 38%, #94a3b8 72%, #64748b 100%);
+        border-color: rgba(241, 245, 249, 0.9);
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25), 0 4px 16px rgba(148, 163, 184, 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    }
+    .score-milestone--100.score-milestone--unlocked .score-milestone__n {
+        color: #0f172a;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
     }
     .score-milestone--1000.score-milestone--unlocked {
-        box-shadow: 0 0 18px rgba(234, 179, 8, 0.5);
+        background: radial-gradient(circle at 30% 22%, rgba(255, 248, 220, 0.5) 0%, transparent 40%),
+            linear-gradient(158deg, #f5deb3 0%, #d4a574 32%, #b8860b 58%, #6b4c0a 100%);
+        border-color: rgba(234, 211, 150, 0.85);
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 4px 20px rgba(180, 130, 40, 0.45),
+            inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    }
+    .score-milestone--1000.score-milestone--unlocked .score-milestone__n {
+        color: #1a1208;
+        text-shadow: 0 1px 1px rgba(255, 255, 255, 0.25);
     }
     .rewards-strip > div {
         display: flex;
         align-items: center;
         gap: 6px;
     }
-    /* Tytuł → OG (pod spodem) → tagline */
+    /* Tytuł → rząd OG + odznaki punktów → tagline */
     .hero-stack {
         display: flex;
         flex-direction: column;
@@ -1054,10 +1064,20 @@
         margin: 0;
         line-height: 1.08;
     }
+    .hero-badge-row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 12px;
+        max-width: 100%;
+        min-width: 0;
+    }
     .hero-stack .og-badge {
         height: clamp(32px, 6vw, 40px);
         width: clamp(32px, 6vw, 40px);
         object-fit: contain;
+        flex-shrink: 0;
     }
     .hero-stack .lead {
         margin-top: 0;
@@ -1348,15 +1368,8 @@
         <div class="card-header-main">
             <div class="hero-stack">
               <h1>Phrase To Guess</h1>
-              <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="40" height="40" alt="OG badge" title="Season 1 players see this badge in full color" decoding="async" />
-              <p class="lead">Guess the phrase. Watch the market.</p>
-            </div>
-            <div class="header-rewards-streak-row">
-              <div class="rewards-compact">
-                <div class="rewards-strip" aria-label="Point rewards">
-                  <div><span>🏆 Win:</span> <span style="color: var(--green-base);">+1</span></div>
-                  <div><span>✨ Mint:</span> <span style="color: var(--cerulean);">+2</span></div>
-                </div>
+              <div class="hero-badge-row">
+                <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="40" height="40" alt="OG badge" title="Season 1 players see this badge in full color" decoding="async" />
                 <div class="score-milestones" id="scoreMilestones" aria-label="Score milestone badges">
                   <div class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" title="Unlock at 10 points">
                     <span class="score-milestone__n">10</span>
@@ -1367,6 +1380,15 @@
                   <div class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" title="Unlock at 1000 points">
                     <span class="score-milestone__n">1000</span>
                   </div>
+                </div>
+              </div>
+              <p class="lead">Guess the phrase. Watch the market.</p>
+            </div>
+            <div class="header-rewards-streak-row">
+              <div class="rewards-compact">
+                <div class="rewards-strip" aria-label="Point rewards">
+                  <div><span>🏆 Win:</span> <span style="color: var(--green-base);">+1</span></div>
+                  <div><span>✨ Mint:</span> <span style="color: var(--cerulean);">+2</span></div>
                 </div>
               </div>
             </div>
