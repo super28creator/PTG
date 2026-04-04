@@ -195,22 +195,14 @@
     .card--main-game .cal-floating-tools .cal-icon-btn {
         box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
     }
-    /* Miejsce na ikony (kategorie + kalendarz) w rogu — bez nakładania na wynik/streak */
-    .card--main-game .card-header-side {
+    /* Miejsce na ikony w rogu — tytuł/tagline nie wchodzą pod przyciski */
+    .card--main-game .card-header-main {
         padding-right: 100px;
-    }
-    @media (max-width: 540px) {
-        .card--main-game .card-header-main {
-            padding-right: 100px;
-        }
-        .card--main-game .card-header-side {
-            padding-right: 0;
-        }
     }
 
     /* --- TYPOGRAPHY --- */
     h1 { 
-        margin: 0 0 8px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; 
+        margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; 
         background: linear-gradient(135deg, #fff 0%, var(--cerulean) 100%); 
         -webkit-background-clip: text; background-clip: text; 
         -webkit-text-fill-color: transparent; 
@@ -383,88 +375,84 @@
         margin-bottom: 4px;
         font-size: 13px;
     }
-    .meta--game-bar {
+    /* Dwie rzędy piguł: (user + kategoria), (gry + błędy) — wg mockupu */
+    .game-status-grid {
+        margin-top: 14px;
+        margin-bottom: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+    .game-status-row {
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
         align-items: center;
-        justify-content: space-between;
-        gap: 8px 10px;
+        gap: 10px 12px;
     }
-    .meta__left {
-        flex: 1 1 auto;
-        min-width: 0;
-        max-width: calc(100% - 210px);
-    }
-    .meta__category-chip {
-        width: max-content;
+    .game-status-pill {
         max-width: 100%;
+        min-width: 0;
+        border-radius: 14px;
+        padding: 8px 14px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .game-status-pill--user {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        border-color: rgba(192, 132, 252, 0.55) !important;
+        background: rgba(76, 29, 149, 0.2) !important;
+        color: #fff;
+    }
+    .game-status-grid .user-chip--base {
+        border-color: rgba(0, 82, 255, 0.55) !important;
+        background: rgba(0, 40, 120, 0.22) !important;
+    }
+    .game-status-grid .user-chip--farcaster {
+        border-color: rgba(168, 85, 247, 0.6) !important;
+        background: rgba(70, 40, 120, 0.22) !important;
+    }
+    .game-status-grid .user-chip--browser {
+        border-color: rgba(96, 165, 250, 0.5) !important;
+        background: rgba(30, 58, 95, 0.2) !important;
+    }
+    .game-status-pill--category {
+        flex: 1 1 160px;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        color: var(--cerulean);
+        border-color: rgba(60, 138, 255, 0.45);
+        background: rgba(0, 40, 120, 0.15);
     }
-    .meta__right {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 8px;
-        flex-shrink: 0;
+    .game-status-row--bottom .daily-info-pill {
+        border-radius: 14px;
+        padding: 8px 14px;
+        font-size: 12px;
     }
-    .meta__right .daily-info-pill {
-        flex-shrink: 0;
+    .game-status-pill--mistakes {
+        border-color: rgba(255, 255, 255, 0.1);
+        background: rgba(24, 26, 34, 0.92);
+        color: rgba(226, 232, 240, 0.95);
     }
-    .meta__right .chip.meta__mistakes {
-        flex-shrink: 0;
+    .game-status-pill--mistakes .meta-tries {
+        color: #f8fafc;
+        font-weight: 800;
     }
-    .meta__mistakes {
-        border-color: rgba(252, 64, 31, 0.35);
+    .game-status-pill--mistakes.is-hot .meta-tries {
+        color: var(--danger);
     }
-    .player-chip-banner {
-        width: 100%;
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        margin-top: 4px;
-        margin-bottom: 2px;
-        min-height: 0;
+    .meta-mistakes-max {
+        font-weight: 600;
+        color: rgba(148, 163, 184, 0.88);
     }
-    .player-chip-banner .player-chip-wrap {
-        width: auto;
+    .meta__category-chip {
+        width: max-content;
         max-width: 100%;
-        display: flex;
-        justify-content: flex-end;
-    }
-    @media (max-width: 400px) {
-        .meta__left {
-            max-width: calc(100% - 175px);
-        }
-        .meta__right {
-            gap: 6px;
-        }
-        .meta__right .daily-info-pill {
-            font-size: 11px;
-            padding: 5px 9px;
-        }
-        .meta__right .chip.meta__mistakes {
-            font-size: 12px;
-            padding: 6px 10px;
-        }
-    }
-    @media (max-width: 340px) {
-        .meta--game-bar {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        .meta__left {
-            max-width: 100%;
-        }
-        .meta__right {
-            width: 100%;
-            justify-content: flex-end;
-        }
     }
     .meta-tries { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--danger); }
     .chip { padding: 8px 14px; background: rgba(255,255,255,0.03); border-radius: 999px; font-weight: 600; border: var(--glass-border); display: flex; align-items: center; gap: 6px;}
@@ -748,26 +736,15 @@
     .rank-3 { background: #b45309; color: #fff; }
     .rank-other { color: var(--text-muted); font-weight: 600; }
 
-    /* Nagłówek karty: główna treść ma min-width:0 + elastyczny pasek akcji — bez nakładania Calendar na tagline */
+    /* Nagłówek: kolumna tytuł → OG → tagline; pod spodem rząd nagrody | wynik+streak */
     .card-header {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: flex-start;
-        gap: 14px 20px;
-        margin-bottom: 18px;
+        margin-bottom: 6px;
         min-width: 0;
     }
     .card-header-main {
-        flex: 1 1 240px;
+        flex: 1 1 100%;
         min-width: 0;
-    }
-    .card-header-side {
-        flex: 0 1 auto;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 10px;
-        min-width: 0;
+        box-sizing: border-box;
     }
     .daily-info-pill {
         display: inline-flex;
@@ -780,14 +757,6 @@
         border-radius: 10px;
         font-size: 12px;
         white-space: nowrap;
-    }
-    .header-side-stack {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 10px;
-        width: 100%;
-        max-width: 100%;
     }
     .cal-icon-btn {
         flex-shrink: 0;
@@ -838,17 +807,6 @@
         fill: currentColor;
         stroke: none;
     }
-    .header-toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: flex-end;
-        align-items: center;
-        max-width: 100%;
-    }
-    .header-toolbar .ghost {
-        flex-shrink: 0;
-    }
     .header-icon-btn {
         padding: 8px 10px;
         border-radius: 10px;
@@ -861,14 +819,15 @@
     .header-stats-cluster {
         display: inline-flex;
         align-items: stretch;
-        flex-shrink: 1;
+        flex-shrink: 0;
         min-width: 0;
         max-width: 100%;
-        border-radius: 10px;
-        border: 1px solid rgba(245, 158, 11, 0.35);
-        background: rgba(0, 0, 0, 0.28);
+        border-radius: 14px;
+        border: 1px solid rgba(245, 158, 11, 0.45);
+        background: rgba(0, 0, 0, 0.32);
         overflow: hidden;
         font-variant-numeric: tabular-nums;
+        box-shadow: 0 2px 14px rgba(0, 0, 0, 0.25);
     }
     .header-cluster-merge {
         display: inline-flex;
@@ -929,34 +888,6 @@
         font-size: 14px;
         white-space: nowrap;
     }
-    .player-chip-wrap {
-        width: 100%;
-        display: flex;
-        justify-content: flex-end;
-    }
-    .player-chip-wrap .user-chip {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    @media (max-width: 540px) {
-        .card-header-side {
-            flex: 1 1 100%;
-            flex-direction: row;
-            flex-wrap: wrap;
-            align-items: flex-start;
-            justify-content: flex-end;
-        }
-        .header-side-stack {
-            flex: 1 1 100%;
-            order: 1;
-        }
-        .header-toolbar {
-            width: 100%;
-            justify-content: flex-start;
-        }
-    }
     @media (max-width: 380px) {
         .cal-icon-btn {
             width: 40px;
@@ -975,41 +906,65 @@
             font-size: 16px;
         }
     }
+    .header-rewards-streak-row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: stretch;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 16px;
+        width: 100%;
+    }
+    .header-rewards-streak-row .rewards-strip {
+        margin-top: 0;
+        flex: 1 1 200px;
+        min-width: 0;
+    }
+    .header-rewards-streak-row .header-stats-cluster {
+        flex: 0 0 auto;
+        align-self: center;
+    }
     .rewards-strip {
-        margin-top: 12px;
-        font-size: 14px;
+        margin-top: 0;
+        font-size: 13px;
         font-weight: 600;
         color: var(--gray-30);
-        background: rgba(0, 0, 0, 0.22);
-        padding: 10px 14px;
-        border-radius: 12px;
+        background: rgba(15, 18, 28, 0.72);
+        padding: 12px 16px;
+        border-radius: 16px;
         display: inline-flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 16px 20px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        gap: 14px 22px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
     .rewards-strip > div {
         display: flex;
         align-items: center;
         gap: 6px;
     }
-    /* Season 1 OG badge — bezpośrednio na prawo od tytułu */
-    .hero-title-row {
+    /* Tytuł → OG (pod spodem) → tagline */
+    .hero-stack {
         display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-        gap: 8px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
         margin: 0;
-        row-gap: 6px;
         max-width: 100%;
     }
-    .hero-title-row h1 {
+    .hero-stack h1 {
         margin: 0;
-        line-height: 1.1;
-        flex: 0 0 auto;
+        line-height: 1.08;
+    }
+    .hero-stack .og-badge {
+        height: clamp(32px, 6vw, 40px);
+        width: clamp(32px, 6vw, 40px);
+        object-fit: contain;
+    }
+    .hero-stack .lead {
+        margin-top: 0;
     }
     .og-badge {
         height: clamp(28px, 5vw, 40px);
@@ -1282,48 +1237,40 @@
     </div>
     <div class="card-header">
         <div class="card-header-main">
-            <div class="hero-title-row">
+            <div class="hero-stack">
               <h1>Phrase To Guess</h1>
               <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="40" height="40" alt="OG badge" title="Season 1 players see this badge in full color" decoding="async" />
+              <p class="lead">Guess the phrase. Watch the market.</p>
             </div>
-            <p class="lead">Guess the phrase. Watch the market.</p>
-            <div class="rewards-strip" aria-label="Point rewards">
-              <div><span>🏆 Win:</span> <span style="color: var(--green-base);">+1</span></div>
-              <div><span>✨ Mint:</span> <span style="color: var(--cerulean);">+2</span></div>
+            <div class="header-rewards-streak-row" aria-label="Rewards and score">
+              <div class="rewards-strip" aria-label="Point rewards">
+                <div><span>🏆 Win:</span> <span style="color: var(--green-base);">+1</span></div>
+                <div><span>✨ Mint:</span> <span style="color: var(--cerulean);">+2</span></div>
+              </div>
+              <div class="header-stats-cluster" role="group" aria-label="Leaderboard, score, streak">
+                <div class="header-cluster-merge">
+                  <button type="button" id="leaderboardBtn" class="header-cluster-trophy" title="Leaderboard" aria-label="Open leaderboard">🏆</button>
+                  <span class="header-cluster-score" id="scoreDisplay">0</span>
+                </div>
+                <span class="header-cluster-sep" aria-hidden="true"></span>
+                <span class="header-cluster-streak" title="Streak">
+                  <span aria-hidden="true">🔥</span>
+                  <span id="streakDisplay">0</span>
+                </span>
+              </div>
             </div>
-        </div>
-        <div class="card-header-side">
-             <div class="header-side-stack">
-               <div class="header-toolbar">
-                 <div class="header-stats-cluster" role="group" aria-label="Leaderboard, score, streak">
-                   <div class="header-cluster-merge">
-                     <button type="button" id="leaderboardBtn" class="header-cluster-trophy" title="Leaderboard" aria-label="Open leaderboard">🏆</button>
-                     <span class="header-cluster-score" id="scoreDisplay">0</span>
-                   </div>
-                   <span class="header-cluster-sep" aria-hidden="true"></span>
-                   <span class="header-cluster-streak" title="Streak">
-                     <span aria-hidden="true">🔥</span>
-                     <span id="streakDisplay">0</span>
-                   </span>
-                 </div>
-               </div>
-             </div>
         </div>
     </div>
-    <div class="player-chip-banner">
-      <div class="player-chip-wrap">
-        <div id="playerDisplay" class="chip user-chip" style="display:none; font-size: 11px;"></div>
+
+    <div class="game-status-grid" aria-label="Game status">
+      <div class="game-status-row game-status-row--top">
+        <div id="playerDisplay" class="chip user-chip game-status-pill game-status-pill--user" style="display:none; font-size: 11px;"></div>
+        <div class="chip meta__category-chip game-status-pill game-status-pill--category" id="categoryDisplay">Category: Loading...</div>
       </div>
-    </div>
-    
-    <div class="meta meta--game-bar">
-        <div class="meta__left">
-          <div class="chip meta__category-chip" id="categoryDisplay" style="color: var(--cerulean); border-color: rgba(60, 138, 255, 0.35);">Category: Loading...</div>
-        </div>
-        <div class="meta__right">
-          <div class="daily-info-pill" id="dailyInfo">Games: 0/3</div>
-          <div class="chip meta__mistakes">Mistakes: <span id="tries" class="meta-tries">0</span><span style="font-weight:700; opacity:.9">/5</span></div>
-        </div>
+      <div class="game-status-row game-status-row--bottom">
+        <div class="daily-info-pill" id="dailyInfo">Games: 0/3</div>
+        <div class="chip meta__mistakes game-status-pill game-status-pill--mistakes" id="mistakesPill">Mistakes: <span id="tries" class="meta-tries">0</span><span class="meta-mistakes-max">/5</span></div>
+      </div>
     </div>
 
     <div id="calendarPanel" class="calendar-panel" hidden>
@@ -2285,6 +2232,13 @@
   }
 
   // --- CORE GAME INIT ---
+  function syncMistakesPillState(mistakesCount) {
+      const pill = document.getElementById("mistakesPill");
+      if (!pill) return;
+      const n = typeof mistakesCount === "number" ? mistakesCount : 0;
+      pill.classList.toggle("is-hot", n > 0);
+  }
+
   function initGame(newCat = true) {
     if (!isLoggedIn()) {
         checkGameStateAndRender();
@@ -2320,6 +2274,7 @@
     document.getElementById('victoryModal').classList.remove('show'); 
     document.getElementById('lossModal').classList.remove('show'); 
     document.getElementById('tries').textContent = "0";
+    syncMistakesPillState(0);
     
     const vBtn = document.getElementById('victoryMintBtn');
     vBtn.innerHTML = "<span>✨ MINT TROPHY</span>";
@@ -2564,6 +2519,7 @@
     }
     
     document.getElementById('tries').textContent = mistakes;
+    syncMistakesPillState(mistakes);
     simulateMarketMove(hit ? 'bullish' : 'bearish');
     renderWord(); drawCandleChart(); checkEnd();
   }
