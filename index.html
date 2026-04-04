@@ -182,20 +182,26 @@
     .card--main-game {
         position: relative;
     }
-    .card--main-game .cal-icon-btn--floating {
+    .card--main-game .cal-floating-tools {
         position: absolute;
         top: clamp(12px, 3.6vw, 22px);
         right: clamp(12px, 3.6vw, 22px);
         z-index: 5;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+    }
+    .card--main-game .cal-floating-tools .cal-icon-btn {
         box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
     }
-    /* Miejsce na ikonę kalendarza w rogu — bez nakładania na wynik/streak */
+    /* Miejsce na ikony (kategorie + kalendarz) w rogu — bez nakładania na wynik/streak */
     .card--main-game .card-header-side {
-        padding-right: 52px;
+        padding-right: 100px;
     }
     @media (max-width: 540px) {
         .card--main-game .card-header-main {
-            padding-right: 52px;
+            padding-right: 100px;
         }
         .card--main-game .card-header-side {
             padding-right: 0;
@@ -828,6 +834,10 @@
         stroke-linecap: round;
         stroke-linejoin: round;
     }
+    .cal-icon-svg--star {
+        fill: currentColor;
+        stroke: none;
+    }
     .header-toolbar {
         display: flex;
         flex-wrap: wrap;
@@ -1113,6 +1123,75 @@
     .cal-badge-fallback {
       font-size: 9px; font-weight: 900; letter-spacing: -0.5px; color: var(--cerulean); line-height: 1;
     }
+
+    /* --- CATEGORY FILTER (star) --- */
+    .category-filter-panel {
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      animation: fadeIn 0.2s var(--ease-base);
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .category-filter-panel[hidden] { display: none !important; }
+    .category-filter-heading {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--cerulean);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .category-filter-hint {
+      margin: 0 0 12px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--gray-50);
+    }
+    .category-filter-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 14px;
+      width: 100%;
+      max-width: 100%;
+    }
+    @media (min-width: 520px) {
+      .category-filter-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    .category-filter-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-30);
+      cursor: pointer;
+      user-select: none;
+    }
+    .category-filter-item input {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--cerulean);
+      cursor: pointer;
+    }
+    .category-filter-item span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .category-filter-msg {
+      margin-top: 12px;
+      min-height: 1.2em;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fbbf24;
+    }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
@@ -1186,14 +1265,21 @@
 
 <div class="wrap">
   <div class="card card--main-game">
-    <button type="button" id="calendarToggle" class="cal-icon-btn cal-icon-btn--floating" aria-expanded="false" aria-controls="calendarPanel" title="Mint calendar" aria-label="Open mint calendar">
-      <svg class="cal-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-        <line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="16" y1="2" x2="16" y2="6"/>
-      </svg>
-    </button>
+    <div class="cal-floating-tools" role="toolbar" aria-label="Game tools">
+      <button type="button" id="categoryFilterToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="categoryFilterPanel" title="Category pool" aria-label="Choose categories for new games">
+        <svg class="cal-icon-svg cal-icon-svg--star" viewBox="0 0 24 24" aria-hidden="true">
+          <polygon points="12 2 15 9 22 9 17 14 19 22 12 18 5 22 7 14 2 9 9 9"/>
+        </svg>
+      </button>
+      <button type="button" id="calendarToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="calendarPanel" title="Mint calendar" aria-label="Open mint calendar">
+        <svg class="cal-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+        </svg>
+      </button>
+    </div>
     <div class="card-header">
         <div class="card-header-main">
             <div class="hero-title-row">
@@ -1243,6 +1329,13 @@
     <div id="calendarPanel" class="calendar-panel" hidden>
       <div class="cal-month-label" id="calendarMonthLabel"></div>
       <div class="calendar-grid" id="calendarGrid" aria-label="Mint calendar"></div>
+    </div>
+
+    <div id="categoryFilterPanel" class="category-filter-panel" hidden>
+      <div class="category-filter-heading">Category pool</div>
+      <p class="category-filter-hint">New games only draw from checked categories. You must keep at least <strong id="categoryMinLabel">4</strong> selected.</p>
+      <div id="categoryFilterList" class="category-filter-list" role="group" aria-label="Categories in rotation"></div>
+      <div id="categoryFilterMsg" class="category-filter-msg" role="status" aria-live="polite"></div>
     </div>
 
     <div class="word-container" id="wordDisplay"></div>
@@ -1967,6 +2060,95 @@
       return { ...l, ...s };
   }
 
+  const MIN_CATEGORY_POOL = 4;
+  function categoryFilterStorageKey() {
+      return "ptg_catFilter_s" + LEADERBOARD_SEASON;
+  }
+  function allNonEmptyCategoryKeys() {
+      return Object.keys(CATEGORIES).filter((k) => CATEGORIES[k].length > 0);
+  }
+  function minCategoryPickRequired() {
+      const n = allNonEmptyCategoryKeys().length;
+      return Math.min(MIN_CATEGORY_POOL, Math.max(1, n));
+  }
+  function loadCategoryFilterFromStorage() {
+      try {
+          const raw = localStorage.getItem(categoryFilterStorageKey());
+          const arr = raw ? JSON.parse(raw) : null;
+          return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : null;
+      } catch (_) {
+          return null;
+      }
+  }
+  function persistCategoryFilter(names) {
+      try {
+          localStorage.setItem(categoryFilterStorageKey(), JSON.stringify(names));
+      } catch (_) {}
+  }
+  function getPlayableCategoryKeys() {
+      const valid = allNonEmptyCategoryKeys();
+      if (valid.length === 0) return [];
+      const need = minCategoryPickRequired();
+      let stored = loadCategoryFilterFromStorage();
+      let sel = stored && stored.length ? stored.filter((c) => valid.includes(c)) : valid.slice();
+      if (sel.length < need) sel = valid.slice();
+      return sel;
+  }
+  function initCategoryFilterPanel() {
+      const list = document.getElementById("categoryFilterList");
+      const minEl = document.getElementById("categoryMinLabel");
+      if (!list) return;
+      const valid = allNonEmptyCategoryKeys();
+      const need = minCategoryPickRequired();
+      if (minEl) minEl.textContent = String(need);
+      let stored = loadCategoryFilterFromStorage();
+      let selected = new Set(
+          stored && stored.length ? stored.filter((c) => valid.includes(c)) : valid
+      );
+      if (selected.size < need) selected = new Set(valid);
+      list.innerHTML = "";
+      valid.forEach((name) => {
+          const id = "ptg-cat-" + name.replace(/\s+/g, "-");
+          const row = document.createElement("label");
+          row.className = "category-filter-item";
+          row.setAttribute("for", id);
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.id = id;
+          cb.value = name;
+          cb.checked = selected.has(name);
+          const span = document.createElement("span");
+          span.textContent = name;
+          row.appendChild(cb);
+          row.appendChild(span);
+          list.appendChild(row);
+      });
+      list.addEventListener("change", onCategoryFilterCheckboxChange);
+  }
+  function onCategoryFilterCheckboxChange(ev) {
+      const cb = ev.target;
+      if (!cb || cb.type !== "checkbox") return;
+      const list = document.getElementById("categoryFilterList");
+      const msgEl = document.getElementById("categoryFilterMsg");
+      if (!list) return;
+      const need = minCategoryPickRequired();
+      const names = [...list.querySelectorAll("input[type=checkbox]")]
+          .filter((x) => x.checked)
+          .map((x) => x.value);
+      if (names.length < need) {
+          cb.checked = true;
+          if (msgEl) {
+              msgEl.textContent =
+                  need >= MIN_CATEGORY_POOL
+                      ? "Keep at least " + need + " categories on."
+                      : "All available categories must stay selected.";
+          }
+          return;
+      }
+      persistCategoryFilter(names);
+      if (msgEl) msgEl.textContent = "";
+  }
+
   let currentCategory = "", secret = "", revealed = [], mistakes = 0, moves = 0, gameOver = false;
   let chartData = []; 
   let currentPrice = 1000; 
@@ -2117,9 +2299,14 @@
         return;
     }
     
-    const catKeys = Object.keys(CATEGORIES).filter((k) => CATEGORIES[k].length > 0);
+    const catKeys = getPlayableCategoryKeys();
     if (catKeys.length === 0) return;
-    if (newCat || !currentCategory || !CATEGORIES[currentCategory]?.length) {
+    if (
+        newCat ||
+        !currentCategory ||
+        !CATEGORIES[currentCategory]?.length ||
+        !catKeys.includes(currentCategory)
+    ) {
         currentCategory = catKeys[Math.floor(Math.random() * catKeys.length)];
     }
     const catArray = CATEGORIES[currentCategory];
@@ -3353,18 +3540,44 @@
   document.getElementById('leaderboardBtn').onclick = showLeaderboard;
   document.getElementById('closeLeaderboard').onclick = () => document.getElementById('leaderboardOverlay').classList.remove('show');
 
+  initCategoryFilterPanel();
+
   const calendarToggle = document.getElementById("calendarToggle");
   const calendarPanel = document.getElementById("calendarPanel");
+  const categoryFilterToggle = document.getElementById("categoryFilterToggle");
+  const categoryFilterPanel = document.getElementById("categoryFilterPanel");
+  function closeCalendarPanelUI() {
+      if (calendarPanel) calendarPanel.setAttribute("hidden", "");
+      if (calendarToggle) calendarToggle.setAttribute("aria-expanded", "false");
+  }
+  function closeCategoryFilterPanelUI() {
+      if (categoryFilterPanel) categoryFilterPanel.setAttribute("hidden", "");
+      if (categoryFilterToggle) categoryFilterToggle.setAttribute("aria-expanded", "false");
+  }
   if (calendarToggle && calendarPanel) {
       calendarToggle.addEventListener("click", () => {
           const open = calendarPanel.hasAttribute("hidden");
           if (open) {
+              closeCategoryFilterPanelUI();
               calendarPanel.removeAttribute("hidden");
               calendarToggle.setAttribute("aria-expanded", "true");
               renderCalendarMonth();
           } else {
-              calendarPanel.setAttribute("hidden", "");
-              calendarToggle.setAttribute("aria-expanded", "false");
+              closeCalendarPanelUI();
+          }
+      });
+  }
+  if (categoryFilterToggle && categoryFilterPanel) {
+      categoryFilterToggle.addEventListener("click", () => {
+          const open = categoryFilterPanel.hasAttribute("hidden");
+          if (open) {
+              closeCalendarPanelUI();
+              categoryFilterPanel.removeAttribute("hidden");
+              categoryFilterToggle.setAttribute("aria-expanded", "true");
+              const minEl = document.getElementById("categoryMinLabel");
+              if (minEl) minEl.textContent = String(minCategoryPickRequired());
+          } else {
+              closeCategoryFilterPanelUI();
           }
       });
   }
