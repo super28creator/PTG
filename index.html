@@ -1161,37 +1161,15 @@
         filter: none;
         opacity: 1;
     }
-    @keyframes heroBadgeUnlockGlow {
-        0% {
-            filter: brightness(1);
-            box-shadow: 0 0 0 0 rgba(96, 165, 250, 0);
-        }
-        35% {
-            filter: brightness(1.14);
-            box-shadow:
-                0 0 18px rgba(59, 130, 246, 0.55),
-                0 0 36px rgba(96, 165, 250, 0.28);
-        }
-        60% {
-            filter: brightness(1.06);
-            box-shadow: 0 0 12px rgba(96, 165, 250, 0.4);
-        }
+    @keyframes badge-mintable-pulse {
+        0%,
         100% {
-            filter: brightness(1);
-            box-shadow: 0 0 0 0 transparent;
+            box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.34);
         }
-    }
-    button.score-milestone.hero-badge--unlock-celebrate,
-    button.hero-og-slot.hero-badge--unlock-celebrate {
-        position: relative;
-        animation: heroBadgeUnlockGlow 1s ease-in-out 2;
-        z-index: 1;
-    }
-    @media (prefers-reduced-motion: reduce) {
-        button.score-milestone.hero-badge--unlock-celebrate,
-        button.hero-og-slot.hero-badge--unlock-celebrate {
-            animation-iteration-count: 1;
-            animation-duration: 0.7s;
+        50% {
+            box-shadow:
+                0 0 0 1px rgba(147, 197, 253, 0.55),
+                0 0 14px rgba(59, 130, 246, 0.22);
         }
     }
     .rewards-strip > div {
@@ -1296,10 +1274,16 @@
         outline: 2px solid var(--cerulean);
         outline-offset: 2px;
     }
-    /* Mintable — cienka obwódka, bez rozmycia (wygląda spokojnie od razu po wejściu) */
+    /* Migotanie tylko gdy można mintować (portfel OK, brak NFT, nie w trakcie tx) */
     .badge-slot--mintable {
         cursor: pointer !important;
-        box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.38);
+        animation: badge-mintable-pulse 2.5s ease-in-out infinite;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .badge-slot--mintable {
+            animation: none;
+            box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.42);
+        }
     }
     .badge-onchain--held {
         position: relative;
@@ -2367,25 +2351,6 @@
       updateHeroBadgeMintUi();
   }
 
-  let __milestoneScoreUnlockPrev = null;
-  let __badgeHeldCelebratePrev = null;
-
-  function triggerHeroBadgeUnlockCelebrate(el) {
-      if (!el || Date.now() < heroBadgeFxSuppressUntil) return;
-      el.classList.remove("hero-badge--unlock-celebrate");
-      void el.offsetWidth;
-      el.classList.add("hero-badge--unlock-celebrate");
-      const done = () => {
-          el.classList.remove("hero-badge--unlock-celebrate");
-      };
-      el.addEventListener("animationend", done, { once: true });
-      const fallbackMs =
-          window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
-              ? 900
-              : 2600;
-      setTimeout(done, fallbackMs);
-  }
-
   function updateHeroBadgeMintUi() {
       const uid = String(myUserId || "guest").toLowerCase();
       const isOgPlayer = SEASON1_OG_USER_IDS.has(uid);
@@ -2446,24 +2411,6 @@
               el.title = "Tap to mint " + need + " win badge (price on contract)";
           }
       });
-      const heldNow = {
-          og: badgeHeld("og"),
-          m10: badgeHeld("m10"),
-          m100: badgeHeld("m100"),
-          m1000: badgeHeld("m1000"),
-      };
-      if (__badgeHeldCelebratePrev !== null) {
-          if (heldNow.og && !__badgeHeldCelebratePrev.og && ogBtn) {
-              triggerHeroBadgeUnlockCelebrate(ogBtn);
-          }
-          milestones.forEach(({ id, key }) => {
-              if (heldNow[key] && !__badgeHeldCelebratePrev[key]) {
-                  const el = document.getElementById(id);
-                  if (el) triggerHeroBadgeUnlockCelebrate(el);
-              }
-          });
-      }
-      __badgeHeldCelebratePrev = heldNow;
   }
 
   /** Mint-day badge in calendar (PTG-circle.png at site root). */
@@ -4451,18 +4398,13 @@
           { el: document.getElementById("scoreMilestone100"), need: 100 },
           { el: document.getElementById("scoreMilestone1000"), need: 1000 },
       ];
-      const nowUnlock = { 10: s >= 10, 100: s >= 100, 1000: s >= 1000 };
       pairs.forEach(({ el, need }) => {
           if (!el) return;
-          const on = nowUnlock[need];
-          if (__milestoneScoreUnlockPrev !== null && on && !__milestoneScoreUnlockPrev[need]) {
-              triggerHeroBadgeUnlockCelebrate(el);
-          }
+          const on = s >= need;
           el.classList.toggle("score-milestone--unlocked", on);
           el.classList.toggle("score-milestone--locked", !on);
           el.title = on ? need + " points — unlocked!" : "Unlock at " + need + " points";
       });
-      __milestoneScoreUnlockPrev = nowUnlock;
   }
 
   function updateScoreUI() {
