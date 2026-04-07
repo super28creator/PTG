@@ -2238,6 +2238,7 @@
   /** Zgodne z myUserId: Farcaster = @username bez znaków specjalnych; portfel = 0x… małymi literami. */
   const SEASON1_OG_USER_IDS = new Set([
     "kaszmirekbaseeth",
+    "supercreatoreth",
     "fiutek",
     "kosto133",
     "cryptostpneth",
@@ -2319,6 +2320,25 @@
       }
   }
 
+  function parseProfileMintWallet(raw) {
+      if (raw == null || raw === "") return null;
+      const s = String(raw).trim().toLowerCase();
+      if (!/^0x[a-f0-9]{40}$/.test(s)) return null;
+      try {
+          return ethers.utils.getAddress(s);
+      } catch (_) {
+          return null;
+      }
+  }
+
+  /** Kolejność: adres z myUserId → zapisany mintWalletForMint → (brak, caller użyje eth_accounts). */
+  function badgeBalanceOwnerFromProfile() {
+      const g = gameLinkedWalletAddress();
+      if (g) return g;
+      if (profileMintWalletAddr) return profileMintWalletAddr;
+      return null;
+  }
+
   function scheduleRefreshBadgeOnchainBalances() {
       if (badgeOnchainRefreshT) clearTimeout(badgeOnchainRefreshT);
       badgeOnchainRefreshT = setTimeout(function () {
@@ -2334,18 +2354,31 @@
 
   async function refreshBadgeOnchainBalances() {
       const w = await tryGetConnectedWalletSilent();
-      const gameAddr = gameLinkedWalletAddress();
-      let owner = null;
-      if (gameAddr) {
-          owner = gameAddr;
-      } else if (w && w.accounts && w.accounts[0]) {
+      let owner = badgeBalanceOwnerFromProfile();
+      if (!owner && db && isLoggedIn() && myUserId && myUserId !== "guest" && !gameLinkedWalletAddress()) {
+          try {
+              const snap = await get(playerDocRef(myUserId));
+              if (snap.exists()) {
+                  const mw = parseProfileMintWallet(snap.val().mintWalletForMint);
+                  if (mw) {
+                      profileMintWalletAddr = mw;
+                      owner = mw;
+                  }
+              }
+          } catch (e) {
+              console.warn("refreshBadgeOnchainBalances: mintWalletForMint fetch", e);
+          }
+      }
+      const uidLc = String(myUserId || "").trim().toLowerCase();
+      const profileIsHexWallet = /^0x[a-f0-9]{40}$/.test(uidLc);
+      if (!owner && profileIsHexWallet && w && w.accounts && w.accounts[0]) {
           try {
               owner = ethers.utils.getAddress(w.accounts[0]);
           } catch (_) {
               owner = w.accounts[0];
           }
       }
-      badgeWalletProbed = !!owner;
+      badgeWalletProbed = !!(owner || (w && w.accounts && w.accounts[0]));
       if (!owner) {
           badgeOnchainBn = { og: null, m10: null, m100: null, m1000: null };
           updateHeroBadgeMintUi();
@@ -2490,6 +2523,8 @@
   let badgeWalletProbed = false;
   let badgeOnchainRefreshT = 0;
   let badgeOnchainBn = { og: null, m10: null, m100: null, m1000: null };
+  /** Z RTDB mintWalletForMint — adres Base, którym user faktycznie mintuje (profil FC / basename bez 0x w myUserId). */
+  let profileMintWalletAddr = null;
   let activeRoundSaveT = 0;
   /** Until startApp (or post-login) sets a real deadline, hide mintable chrome (0 would mean “always on”). */
   let heroBadgeFxSuppressUntil = Number.POSITIVE_INFINITY;
@@ -2896,6 +2931,7 @@
               } catch (_) {}
               userProfileUnsubscribe = null;
           }
+          profileMintWalletAddr = null;
           mintCalendarDays = loadMintCalendarFromStorage();
           updateScoreUI();
           updateDailyUI();
@@ -2947,9 +2983,11 @@
                       ? data.activeRound
                       : null;
               applyCategoryPoolFromServer(data);
+              profileMintWalletAddr = parseProfileMintWallet(data.mintWalletForMint);
           } else {
               mintCalendarDays = loadMintCalendarFromStorage();
               profileActiveRound = null;
+              profileMintWalletAddr = null;
           }
       } catch(e) {
           console.error("Sync Error", e);
@@ -2965,6 +3003,12 @@
           mintCalendarDays = mergeMintCalendars(loadMintCalendarFromStorage(), fromServer);
           persistMintCalendarToStorage(mintCalendarDays);
           renderCalendarMonth();
+          const nextMw = parseProfileMintWallet(data.mintWalletForMint);
+          const prevMw = profileMintWalletAddr;
+          if ((nextMw || "") !== (prevMw || "")) {
+              profileMintWalletAddr = nextMw;
+              scheduleRefreshBadgeOnchainBalances();
+          }
       });
       updateScoreUI();
       updateDailyUI();
