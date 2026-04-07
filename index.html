@@ -951,14 +951,6 @@
         box-sizing: border-box;
         min-width: 0;
     }
-    .score-milestones {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 10px;
-        max-width: 100%;
-    }
     /* --- Pasek odznak: jeden styl Base blue (Farcaster + Base App) --- */
     .hero-badge-tray {
         width: 100%;
@@ -1018,77 +1010,69 @@
         color: #fff;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
     }
-    /* Slot: zaokrąglony kwadrat + warstwowa poświata (jak profil Base) */
-    .score-milestone {
-        width: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
-        height: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
-        min-width: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
-        min-height: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
-        border-radius: var(--badge-slot-radius);
+    /* 4 kółka w rzędzie + grafiki PNG (10 / 100 / 1000 + OG) */
+    .hero-badge-tray .hero-badge-row {
+        --hero-badge-side: clamp(52px, 13.5vw, 72px);
+        flex-wrap: nowrap;
+        justify-content: center;
+        gap: clamp(8px, 2.5vw, 14px);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        padding-bottom: 2px;
+    }
+    .score-milestone,
+    .hero-og-slot {
+        width: var(--hero-badge-side, clamp(52px, 13.5vw, 72px));
+        height: var(--hero-badge-side, clamp(52px, 13.5vw, 72px));
+        min-width: var(--hero-badge-side, clamp(52px, 13.5vw, 72px));
+        min-height: var(--hero-badge-side, clamp(52px, 13.5vw, 72px));
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
-        font-variant-numeric: tabular-nums;
-        line-height: 1;
         flex-shrink: 0;
         border: none;
         overflow: hidden;
-        padding: 0 2px;
-        font-family: var(--font-main);
-        transition: background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease, filter 0.3s ease;
+        padding: 0;
+        transition: box-shadow 0.28s ease, filter 0.28s ease;
+        background: #2a2d35;
         box-shadow:
-            0 0 0 1px rgba(59, 130, 246, 0.2),
-            0 0 0 3px rgba(30, 58, 138, 0.35),
-            0 0 18px rgba(37, 99, 235, 0.22),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            0 0 0 2px #3d424c,
+            0 0 0 3px rgba(0, 0, 0, 0.4),
+            inset 0 3px 10px rgba(0, 0, 0, 0.45);
     }
-    .score-milestone__n {
+    .milestone-badge-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
         display: block;
-        text-align: center;
-        max-width: 100%;
-        overflow: hidden;
-        font-family: var(--font-main);
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        line-height: 1;
+        border-radius: 50%;
+        user-select: none;
+        -webkit-user-drag: none;
+        pointer-events: none;
+    }
+    .score-milestone.score-milestone--locked .milestone-badge-img {
+        filter: grayscale(1) brightness(0.4);
+        opacity: 0.48;
+    }
+    .score-milestone.score-milestone--unlocked .milestone-badge-img {
+        filter: none;
+        opacity: 1;
+    }
+    .score-milestone.score-milestone--unlocked {
+        box-shadow:
+            0 0 0 2px #5c6575,
+            0 0 0 3px rgba(0, 0, 0, 0.28),
+            inset 0 2px 8px rgba(0, 0, 0, 0.35);
     }
     .score-milestone.score-milestone--locked {
-        background: linear-gradient(160deg, #0f172a 0%, #1e293b 45%, #172554 100%);
         box-shadow:
-            0 0 0 1px rgba(51, 65, 85, 0.7),
-            0 0 0 2px rgba(15, 23, 42, 0.9),
-            inset 0 2px 8px rgba(0, 0, 0, 0.45);
-        filter: saturate(0.65) brightness(0.92);
-    }
-    .score-milestone.score-milestone--locked .score-milestone__n {
-        color: #64748b;
-        text-shadow: none;
-    }
-    .score-milestone--10 .score-milestone__n {
-        font-size: clamp(13px, 3.4vw, 15px);
-    }
-    .score-milestone--100 .score-milestone__n {
-        font-size: clamp(10px, 2.8vw, 12px);
-    }
-    .score-milestone--1000 .score-milestone__n {
-        font-size: clamp(8px, 2.3vw, 10px);
-    }
-    /* Odblokowane — jeden „neon” Base blue dla wszystkich progów */
-    .score-milestone.score-milestone--unlocked {
-        background:
-            radial-gradient(ellipse 80% 70% at 35% 25%, rgba(147, 197, 253, 0.45) 0%, transparent 55%),
-            linear-gradient(155deg, #172554 0%, #1d4ed8 38%, #2563eb 72%, #1e40af 100%);
-        box-shadow:
-            0 0 0 1px rgba(147, 197, 253, 0.45),
-            0 0 0 3px rgba(37, 99, 235, 0.35),
-            0 0 22px rgba(59, 130, 246, 0.45),
-            inset 0 1px 0 rgba(255, 255, 255, 0.22);
-        filter: none;
-    }
-    .score-milestone.score-milestone--unlocked .score-milestone__n {
-        color: #f8fafc;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+            0 0 0 2px #2f3238,
+            0 0 0 3px rgba(0, 0, 0, 0.5),
+            inset 0 3px 12px rgba(0, 0, 0, 0.55);
     }
     .rewards-strip > div {
         display: flex;
@@ -1111,68 +1095,43 @@
     .hero-badge-row {
         display: flex;
         flex-direction: row;
-        flex-wrap: wrap;
         align-items: center;
-        gap: 10px 12px;
         max-width: 100%;
         min-width: 0;
     }
-    .hero-badge-tray .hero-badge-row {
-        --hero-badge-side: clamp(42px, 9.5vw, 52px);
-        gap: 10px 12px;
+    .hero-stack .lead {
+        margin-top: 0;
     }
-    /* OG: ten sam slot kwadratowy + niebieska poświata co milestone */
-    .hero-og-slot {
-        width: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
-        height: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
-        min-width: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
-        min-height: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
-        flex-shrink: 0;
-        border-radius: var(--badge-slot-radius);
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-sizing: border-box;
-        border: none;
-        background:
-            radial-gradient(ellipse 80% 70% at 35% 25%, rgba(147, 197, 253, 0.25) 0%, transparent 55%),
-            linear-gradient(155deg, #172554 0%, #1d4ed8 42%, #2563eb 100%);
+    /* OG w kole — niebieska obwódka gdy Season 1 (aktywny PNG) */
+    .hero-og-slot:not(:has(.og-badge--dim)) {
+        background: linear-gradient(180deg, #1e3a5f 0%, #2563eb 55%, #1d4ed8 100%);
         box-shadow:
-            0 0 0 1px rgba(147, 197, 253, 0.35),
-            0 0 0 3px rgba(37, 99, 235, 0.3),
-            0 0 20px rgba(59, 130, 246, 0.35),
-            inset 0 1px 0 rgba(255, 255, 255, 0.15);
-        transition: box-shadow 0.3s ease, filter 0.3s ease, opacity 0.3s ease;
+            0 0 0 2px rgba(186, 230, 253, 0.5),
+            0 0 0 4px rgba(37, 99, 235, 0.2),
+            inset 0 2px 10px rgba(0, 0, 0, 0.25);
     }
     .hero-og-slot:has(.og-badge--dim) {
-        background: linear-gradient(160deg, #0f172a 0%, #1e293b 45%, #172554 100%);
+        background: #23262d;
         box-shadow:
-            0 0 0 1px rgba(51, 65, 85, 0.7),
-            0 0 0 2px rgba(15, 23, 42, 0.9),
-            inset 0 2px 8px rgba(0, 0, 0, 0.45);
-        filter: saturate(0.55) brightness(0.88);
+            0 0 0 2px #2f3238,
+            0 0 0 3px rgba(0, 0, 0, 0.5),
+            inset 0 3px 12px rgba(0, 0, 0, 0.55);
     }
     .hero-og-slot .og-badge {
         width: 100%;
         height: 100%;
         max-width: none;
-        object-fit: contain;
+        object-fit: cover;
+        border-radius: 50%;
         display: block;
-        transform: scale(1.22);
+        transform: scale(1.05);
         transform-origin: center center;
-    }
-    .hero-stack .lead {
-        margin-top: 0;
-    }
-    .og-badge {
-        height: clamp(28px, 5vw, 40px);
-        width: auto;
-        object-fit: contain;
-        flex-shrink: 0;
         transition: filter 0.25s ease, opacity 0.25s ease;
         user-select: none;
         -webkit-user-drag: none;
+    }
+    .og-badge {
+        flex-shrink: 0;
     }
     .og-badge--dim {
         filter: grayscale(1) brightness(0.5);
@@ -1187,7 +1146,6 @@
         border: none;
         padding: 0;
         margin: 0;
-        background: transparent;
         cursor: default;
         font: inherit;
         -webkit-appearance: none;
@@ -1542,21 +1500,19 @@
                   </span>
                   <span class="hero-badge-tray__head-label">Badges</span>
                 </div>
-                <div class="hero-badge-row">
+                <div class="hero-badge-row" role="group" aria-label="NFT badges">
                   <button type="button" class="hero-og-slot" id="ogBadgeMintBtn" disabled aria-label="OG badge mint" title="OG badge">
-                    <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="40" height="40" alt="OG badge" decoding="async" />
+                    <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="72" height="72" alt="OG badge" decoding="async" />
                   </button>
-                  <div class="score-milestones" id="scoreMilestones" aria-label="Score milestone badges">
-                    <button type="button" class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" data-badge-kind="10" disabled title="Unlock at 10 points">
-                      <span class="score-milestone__n">10</span>
-                    </button>
-                    <button type="button" class="score-milestone score-milestone--100 score-milestone--locked" id="scoreMilestone100" data-badge-kind="100" disabled title="Unlock at 100 points">
-                      <span class="score-milestone__n">100</span>
-                    </button>
-                    <button type="button" class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" data-badge-kind="1000" disabled title="Unlock at 1000 points">
-                      <span class="score-milestone__n">1000</span>
-                    </button>
-                  </div>
+                  <button type="button" class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" data-badge-kind="10" disabled title="Unlock at 10 points">
+                    <img class="milestone-badge-img" src="/badge-10.png" width="72" height="72" alt="10 win badge" decoding="async" />
+                  </button>
+                  <button type="button" class="score-milestone score-milestone--100 score-milestone--locked" id="scoreMilestone100" data-badge-kind="100" disabled title="Unlock at 100 points">
+                    <img class="milestone-badge-img" src="/badge-100.png" width="72" height="72" alt="100 win badge" decoding="async" />
+                  </button>
+                  <button type="button" class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" data-badge-kind="1000" disabled title="Unlock at 1000 points">
+                    <img class="milestone-badge-img" src="/badge-1000.png" width="72" height="72" alt="1000 win badge" decoding="async" />
+                  </button>
                 </div>
               </div>
               <p id="badgeMintFeedback" class="badge-mint-feedback" role="status" aria-live="polite"></p>
