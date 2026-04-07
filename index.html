@@ -1248,6 +1248,11 @@
         filter: none;
         opacity: 1;
     }
+    /* Pulse używa box-shadow — overflow:hidden by to obcinał na milestone’ach i OG */
+    .score-milestone.badge-slot--mintable,
+    button.hero-og-slot.badge-slot--mintable {
+        overflow: visible;
+    }
     /* Mint odznak: slot jako przycisk */
     button.hero-og-slot {
         border: none;
@@ -2238,7 +2243,6 @@
   /** Zgodne z myUserId: Farcaster = @username bez znaków specjalnych; portfel = 0x… małymi literami. */
   const SEASON1_OG_USER_IDS = new Set([
     "kaszmirekbaseeth",
-    "supercreatoreth",
     "fiutek",
     "kosto133",
     "cryptostpneth",
@@ -3624,7 +3628,7 @@
       const baseFee = ethers.BigNumber.from(bfHex);
       const tip = ethers.BigNumber.from("3000000");
       let maxFee = baseFee.mul(13).div(10).add(tip);
-      const maxFeeCeil = ethers.BigNumber.from("5000000000");
+      const maxFeeCeil = ethers.BigNumber.from("1500000000");
       if (maxFee.gt(maxFeeCeil)) maxFee = maxFeeCeil;
       const minMax = baseFee.add(tip);
       if (maxFee.lt(minMax)) maxFee = minMax;
@@ -3652,10 +3656,10 @@
       } catch (e) {
           console.warn("prepareMintTxGasFields: eth_estimateGas fallback 280k", e);
       }
-      const floor = ethers.BigNumber.from(150000);
+      const floor = ethers.BigNumber.from(120000);
       if (est.lt(floor)) est = floor;
-      const gasBn = est.mul(122).div(100);
-      const gasCap = ethers.BigNumber.from(550000);
+      const gasBn = est.mul(110).div(100);
+      const gasCap = ethers.BigNumber.from(320000);
       const gasFinal = gasBn.gt(gasCap) ? gasCap : gasBn;
       out.gas = ethers.utils.hexValue(gasFinal);
 
