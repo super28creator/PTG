@@ -489,6 +489,18 @@
         width: max-content;
         max-width: 100%;
     }
+    .category-pool-summary {
+        grid-column: 1 / -1;
+        margin: 0 0 4px;
+        padding: 0 2px;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.35;
+        color: var(--gray-50);
+    }
+    .category-pool-summary[hidden] {
+        display: none !important;
+    }
     .meta-tries { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--danger); }
     .chip { padding: 8px 14px; background: rgba(255,255,255,0.03); border-radius: 999px; font-weight: 600; border: var(--glass-border); display: flex; align-items: center; gap: 6px;}
     .user-chip { border-color: var(--cerulean); background: rgba(0, 0, 255, 0.12); color: #fff; text-shadow: 0 0 10px rgba(60, 138, 255, 0.35); }
@@ -1601,7 +1613,7 @@
   <div class="card card--main-game">
     <div class="cal-floating-tools" role="toolbar" aria-label="Game tools">
       <div class="cal-floating-tools__icons">
-        <button type="button" id="categoryFilterToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="categoryFilterPanel" title="Category pool" aria-label="Choose categories for new games">
+        <button type="button" id="categoryFilterToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="categoryFilterPanel" title="Pula kategorii (min. 4)" aria-label="Wybierz kategorie do losowania fraz">
           <svg class="cal-icon-svg cal-icon-svg--star" viewBox="0 0 24 24" aria-hidden="true">
             <polygon points="12 2 15 9 22 9 17 14 19 22 12 18 5 22 7 14 2 9 9 9"/>
           </svg>
@@ -1665,6 +1677,7 @@
         <div class="daily-info-pill" id="dailyInfo">Games: 0/3</div>
         <div class="chip meta__mistakes game-status-pill game-status-pill--mistakes" id="mistakesPill">Mistakes: <span id="tries" class="meta-tries">0</span><span class="meta-mistakes-max">/5</span></div>
       </div>
+      <p id="categoryPoolSummary" class="category-pool-summary" hidden role="status" aria-live="polite"></p>
     </div>
 
     <div id="calendarPanel" class="calendar-panel" hidden>
@@ -1673,8 +1686,8 @@
     </div>
 
     <div id="categoryFilterPanel" class="category-filter-panel" hidden>
-      <div class="category-filter-heading">Category pool</div>
-      <p class="category-filter-hint">New games only draw from checked categories. You must keep at least <strong id="categoryMinLabel">4</strong> selected.</p>
+      <div class="category-filter-heading">Pula kategorii</div>
+      <p class="category-filter-hint">Zaznacz minimum <strong id="categoryMinLabel">4</strong> kategorie. Nowe frazy losują się <strong>tylko</strong> z zaznaczonych (nie z całej listy).</p>
       <div id="categoryFilterList" class="category-filter-list" role="group" aria-label="Categories in rotation"></div>
       <div id="categoryFilterMsg" class="category-filter-msg" role="status" aria-live="polite"></div>
     </div>
@@ -2613,7 +2626,53 @@
       if (sel.length < need) sel = valid.slice();
       return sel;
   }
-  function initCategoryFilterPanel() {
+
+  /** Zwraca null jeśli tablica z serwera jest niepełna / nieprawidłowa. */
+  function normalizeCategoryPoolFromServer(raw) {
+      const valid = allNonEmptyCategoryKeys();
+      if (valid.length === 0) return null;
+      const need = minCategoryPickRequired();
+      if (!Array.isArray(raw)) return null;
+      const sel = raw.filter((x) => typeof x === "string" && valid.includes(x));
+      if (sel.length < need) return null;
+      return sel;
+  }
+
+  /** Żeby nie zerwać aktywnej rundy: zachowaj jej kategorię w puli po merge z Firebase. */
+  function mergeActiveRoundCategoryIntoPool(keys) {
+      const ar = profileActiveRound;
+      if (!ar || ar.date !== localDateKey() || typeof ar.category !== "string") return keys;
+      const c = ar.category;
+      const valid = allNonEmptyCategoryKeys();
+      if (!valid.includes(c) || keys.includes(c)) return keys;
+      return keys.concat([c]);
+  }
+
+  function applyCategoryPoolFromServer(data) {
+      if (!data || typeof data !== "object") return;
+      const normalized = normalizeCategoryPoolFromServer(data.categoryPool);
+      if (!normalized) return;
+      const merged = mergeActiveRoundCategoryIntoPool(normalized);
+      persistCategoryFilter(merged);
+      renderCategoryFilterCheckboxes();
+      refreshCategoryPoolSummary();
+      if (merged.length !== normalized.length) {
+          void syncCategoryPoolToServer(merged);
+      }
+  }
+
+  async function syncCategoryPoolToServer(names) {
+      if (!db || !isLoggedIn() || !myUserId || myUserId === "guest") return;
+      try {
+          await update(playerDocRef(myUserId), { categoryPool: names });
+      } catch (e) {
+          console.warn("categoryPool sync", e);
+      }
+  }
+
+  let categoryFilterChangeBound = false;
+
+  function renderCategoryFilterCheckboxes() {
       const list = document.getElementById("categoryFilterList");
       const minEl = document.getElementById("categoryMinLabel");
       if (!list) return;
@@ -2642,8 +2701,18 @@
           row.appendChild(span);
           list.appendChild(row);
       });
-      list.addEventListener("change", onCategoryFilterCheckboxChange);
   }
+
+  function initCategoryFilterPanel() {
+      const list = document.getElementById("categoryFilterList");
+      if (!list) return;
+      if (!categoryFilterChangeBound) {
+          list.addEventListener("change", onCategoryFilterCheckboxChange);
+          categoryFilterChangeBound = true;
+      }
+      renderCategoryFilterCheckboxes();
+  }
+
   function onCategoryFilterCheckboxChange(ev) {
       const cb = ev.target;
       if (!cb || cb.type !== "checkbox") return;
@@ -2659,13 +2728,15 @@
           if (msgEl) {
               msgEl.textContent =
                   need >= MIN_CATEGORY_POOL
-                      ? "Keep at least " + need + " categories on."
-                      : "All available categories must stay selected.";
+                      ? "Zostaw co najmniej " + need + " kategorie zaznaczone."
+                      : "Wszystkie dostępne kategorie muszą być zaznaczone.";
           }
           return;
       }
       persistCategoryFilter(names);
       if (msgEl) msgEl.textContent = "";
+      void syncCategoryPoolToServer(names);
+      refreshCategoryPoolSummary();
   }
 
   /** Z Firebase po sync — jednorazowe odtworzenie rundy po odświeżeniu. */
@@ -2939,6 +3010,7 @@
                   data.activeRound && typeof data.activeRound === "object" && !Array.isArray(data.activeRound)
                       ? data.activeRound
                       : null;
+              applyCategoryPoolFromServer(data);
           } else {
               mintCalendarDays = loadMintCalendarFromStorage();
               profileActiveRound = null;
@@ -2998,21 +3070,48 @@
       if (!el) return;
       if (currentCategory) {
           el.textContent = "Category: " + currentCategory;
+          refreshCategoryPoolSummary();
           return;
       }
       if (!isLoggedIn()) {
           el.textContent = "Category: —";
+          refreshCategoryPoolSummary();
           return;
       }
       if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) {
           el.textContent = "Daily limit reached";
+          refreshCategoryPoolSummary();
           return;
       }
       if (pendingMint) {
           el.textContent = "Category: —";
+          refreshCategoryPoolSummary();
           return;
       }
       el.textContent = "Category: —";
+      refreshCategoryPoolSummary();
+  }
+
+  /** Wiersz pod statusem: gdy pula jest węższa niż wszystkie kategorie — pokaż które są w grze. */
+  function refreshCategoryPoolSummary() {
+      const el = document.getElementById("categoryPoolSummary");
+      if (!el) return;
+      if (!isLoggedIn()) {
+          el.setAttribute("hidden", "");
+          el.textContent = "";
+          return;
+      }
+      const keys = getPlayableCategoryKeys();
+      const valid = allNonEmptyCategoryKeys();
+      if (!keys.length || !valid.length || keys.length >= valid.length) {
+          el.setAttribute("hidden", "");
+          el.textContent = "";
+          return;
+      }
+      el.removeAttribute("hidden");
+      const show = keys.slice(0, 5).join(", ");
+      const more = keys.length > 5 ? " +" + (keys.length - 5) : "";
+      el.textContent = "Frazy tylko z: " + show + more;
   }
 
   function syncRoundLockUI() {
@@ -3029,8 +3128,8 @@
           toggle.style.opacity = poolLocked ? "0.45" : "";
           toggle.style.pointerEvents = poolLocked ? "none" : "";
           toggle.title = poolLocked
-              ? "Finish this round before changing the category pool"
-              : "Category pool";
+              ? "Dokończ rundę, potem zmienisz pulę kategorii"
+              : "Pula kategorii (min. 4)";
       }
       if (poolLocked) {
           const panel = document.getElementById("categoryFilterPanel");
