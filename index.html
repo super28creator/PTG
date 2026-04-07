@@ -2309,35 +2309,7 @@
       return null;
   }
 
-  /** Adres, dla którego sprawdzamy balanceOf odznak — zawsze ten sam co profil gry, jeśli to portfel 0x. */
-  function gameLinkedWalletAddress() {
-      const uid = String(myUserId || "").trim().toLowerCase();
-      if (!/^0x[a-f0-9]{40}$/.test(uid)) return null;
-      try {
-          return ethers.utils.getAddress(uid);
-      } catch (_) {
-          return null;
-      }
-  }
-
-  function parseProfileMintWallet(raw) {
-      if (raw == null || raw === "") return null;
-      const s = String(raw).trim().toLowerCase();
-      if (!/^0x[a-f0-9]{40}$/.test(s)) return null;
-      try {
-          return ethers.utils.getAddress(s);
-      } catch (_) {
-          return null;
-      }
-  }
-
-  /** Kolejność: adres z myUserId → zapisany mintWalletForMint → (brak, caller użyje eth_accounts). */
-  function badgeBalanceOwnerFromProfile() {
-      const g = gameLinkedWalletAddress();
-      if (g) return g;
-      if (profileMintWalletAddr) return profileMintWalletAddr;
-      return null;
-  }
+  let profileBadgesMinted = { og: false, m10: false, m100: false, m1000: false };
 
   function scheduleRefreshBadgeOnchainBalances() {
       if (badgeOnchainRefreshT) clearTimeout(badgeOnchainRefreshT);
@@ -2347,63 +2319,28 @@
       }, 550);
   }
 
+  /**
+   * Odznaki per konto gry (myUserId / wiersz rankingu), nie per adres portfela —
+   * dwie tożsamości (np. .eth vs .base.eth) mogą dzielić ten sam 0x na łańcuchu.
+   */
+  function applyProfileBadgesMintedFromServer(data) {
+      const bm =
+          data && data.badgesMinted && typeof data.badgesMinted === "object" ? data.badgesMinted : {};
+      profileBadgesMinted = {
+          og: !!bm.og,
+          m10: !!bm.m10,
+          m100: !!bm.m100,
+          m1000: !!bm.m1000,
+      };
+  }
+
   function badgeHeld(key) {
-      const b = badgeOnchainBn[key];
-      return b != null && ethers.BigNumber.from(b).gt(0);
+      return !!profileBadgesMinted[key];
   }
 
   async function refreshBadgeOnchainBalances() {
       const w = await tryGetConnectedWalletSilent();
-      let owner = badgeBalanceOwnerFromProfile();
-      if (!owner && db && isLoggedIn() && myUserId && myUserId !== "guest" && !gameLinkedWalletAddress()) {
-          try {
-              const snap = await get(playerDocRef(myUserId));
-              if (snap.exists()) {
-                  const mw = parseProfileMintWallet(snap.val().mintWalletForMint);
-                  if (mw) {
-                      profileMintWalletAddr = mw;
-                      owner = mw;
-                  }
-              }
-          } catch (e) {
-              console.warn("refreshBadgeOnchainBalances: mintWalletForMint fetch", e);
-          }
-      }
-      const uidLc = String(myUserId || "").trim().toLowerCase();
-      const profileIsHexWallet = /^0x[a-f0-9]{40}$/.test(uidLc);
-      if (!owner && profileIsHexWallet && w && w.accounts && w.accounts[0]) {
-          try {
-              owner = ethers.utils.getAddress(w.accounts[0]);
-          } catch (_) {
-              owner = w.accounts[0];
-          }
-      }
-      badgeWalletProbed = !!(owner || (w && w.accounts && w.accounts[0]));
-      if (!owner) {
-          badgeOnchainBn = { og: null, m10: null, m100: null, m1000: null };
-          updateHeroBadgeMintUi();
-          return;
-      }
-      const p =
-          w && w.ethProvider && w.accounts && w.accounts[0]
-              ? w.ethProvider
-              : getInjectedProvider() || getEmbeddedEthProvider();
-      const pairs = [
-          ["og", PTG_OG_BADGE_NFT],
-          ["m10", PTG_WIN10_BADGE_NFT],
-          ["m100", PTG_WIN100_BADGE_NFT],
-          ["m1000", PTG_WIN1000_BADGE_NFT],
-      ];
-      for (let i = 0; i < pairs.length; i++) {
-          const key = pairs[i][0];
-          const addr = pairs[i][1];
-          try {
-              badgeOnchainBn[key] = await readNftBalanceBn(addr, owner, p);
-          } catch (e) {
-              console.warn("badge balance " + key, e);
-              badgeOnchainBn[key] = null;
-          }
-      }
+      badgeWalletProbed = !!(w && w.accounts && w.accounts[0]);
       updateHeroBadgeMintUi();
   }
 
@@ -2522,9 +2459,6 @@
   let badgeMintInFlight = false;
   let badgeWalletProbed = false;
   let badgeOnchainRefreshT = 0;
-  let badgeOnchainBn = { og: null, m10: null, m100: null, m1000: null };
-  /** Z RTDB mintWalletForMint — adres Base, którym user faktycznie mintuje (profil FC / basename bez 0x w myUserId). */
-  let profileMintWalletAddr = null;
   let activeRoundSaveT = 0;
   /** Until startApp (or post-login) sets a real deadline, hide mintable chrome (0 would mean “always on”). */
   let heroBadgeFxSuppressUntil = Number.POSITIVE_INFINITY;
@@ -2931,7 +2865,7 @@
               } catch (_) {}
               userProfileUnsubscribe = null;
           }
-          profileMintWalletAddr = null;
+          profileBadgesMinted = { og: false, m10: false, m100: false, m1000: false };
           mintCalendarDays = loadMintCalendarFromStorage();
           updateScoreUI();
           updateDailyUI();
@@ -2983,11 +2917,11 @@
                       ? data.activeRound
                       : null;
               applyCategoryPoolFromServer(data);
-              profileMintWalletAddr = parseProfileMintWallet(data.mintWalletForMint);
+              applyProfileBadgesMintedFromServer(data);
           } else {
               mintCalendarDays = loadMintCalendarFromStorage();
               profileActiveRound = null;
-              profileMintWalletAddr = null;
+              applyProfileBadgesMintedFromServer(null);
           }
       } catch(e) {
           console.error("Sync Error", e);
@@ -3003,12 +2937,8 @@
           mintCalendarDays = mergeMintCalendars(loadMintCalendarFromStorage(), fromServer);
           persistMintCalendarToStorage(mintCalendarDays);
           renderCalendarMonth();
-          const nextMw = parseProfileMintWallet(data.mintWalletForMint);
-          const prevMw = profileMintWalletAddr;
-          if ((nextMw || "") !== (prevMw || "")) {
-              profileMintWalletAddr = nextMw;
-              scheduleRefreshBadgeOnchainBalances();
-          }
+          applyProfileBadgesMintedFromServer(data);
+          updateHeroBadgeMintUi();
       });
       updateScoreUI();
       updateDailyUI();
@@ -4307,6 +4237,14 @@
       try {
           const { txHash } = await runPublicMintStringNftTx(contractAddr, metadataUri, null);
           const h = normalizeMintTxHash(txHash);
+          if (db && myUserId && myUserId !== "guest" && key) {
+              try {
+                  await update(playerDocRef(myUserId), { ["badgesMinted/" + key]: true });
+              } catch (be) {
+                  console.warn("badgesMinted RTDB", be);
+              }
+          }
+          profileBadgesMinted[key] = true;
           setBadgeMintFeedback(
               'Minted. <a href="https://basescan.org/tx/' +
                   h +
@@ -4339,6 +4277,14 @@
       try {
           const { txHash } = await runPublicMintStringNftTx(PTG_OG_BADGE_NFT, NFT_BADGE_META_OG, null);
           const h = normalizeMintTxHash(txHash);
+          if (db && myUserId && myUserId !== "guest") {
+              try {
+                  await update(playerDocRef(myUserId), { "badgesMinted/og": true });
+              } catch (be) {
+                  console.warn("badgesMinted OG RTDB", be);
+              }
+          }
+          profileBadgesMinted.og = true;
           setBadgeMintFeedback(
               'OG badge minted. <a href="https://basescan.org/tx/' +
                   h +
