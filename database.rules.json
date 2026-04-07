@@ -1,0 +1,39 @@
+{
+  "rules": {
+    "players_s1": {
+      ".read": true,
+      "$playerId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "players_s2": {
+      ".read": true,
+      "$playerId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "players_s3": {
+      ".read": true,
+      "$playerId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "players_s4": {
+      ".read": true,
+      "$playerId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "players_s5": {
+      ".read": true,
+      "$playerId": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}
