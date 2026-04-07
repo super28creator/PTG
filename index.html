@@ -1618,7 +1618,6 @@
                   </button>
                 </div>
               </div>
-              <p class="lead">Guess the phrase. Watch the market.</p>
               <p id="badgeMintFeedback" class="badge-mint-feedback" role="status" aria-live="polite"></p>
             </div>
             <div class="header-rewards-row">
@@ -4025,6 +4024,15 @@
           if (color) statusHost.style.color = color;
       }
 
+      function mintWalletErrorDetail(err) {
+          if (err == null) return "";
+          if (typeof err.message === "string" && err.message.trim()) return err.message.trim();
+          if (typeof err.reason === "string" && err.reason.trim()) return err.reason.trim();
+          if (typeof err.data === "string" && err.data.trim()) return err.data.trim();
+          if (err.data && typeof err.data.message === "string") return String(err.data.message).trim();
+          return "";
+      }
+
       if (db && myUserId && myUserId !== "guest" && userLc !== minterLc) {
           setStatus("Linking wallet for mint…", "#94a3b8");
           try {
@@ -4046,20 +4054,34 @@
       const balBefore = await readNftBalanceBn(toNft, minter, ethProvider);
 
       setStatus("Preparing transaction…", "#94a3b8");
-      const gasFields = await prepareMintTxGasFields(accounts[0], toNft, dataHex, valueHex);
-      const txPayloadFull = {
-          from: accounts[0],
-          to: toNft,
-          data: dataHex,
-          value: valueHex,
-          ...gasFields,
-      };
-      const txPayloadMinimal = {
-          from: accounts[0],
+      const fromChk = ethers.utils.getAddress(accounts[0]);
+      const gasFields = await prepareMintTxGasFields(fromChk, toNft, dataHex, valueHex);
+      const txBase = {
+          from: fromChk,
           to: toNft,
           data: dataHex,
           value: valueHex,
       };
+      const txPayloadMinimal = { ...txBase };
+      let txPayloadFull = null;
+      let txPayloadGasOnly = null;
+      if (Object.keys(gasFields).length > 0) {
+          txPayloadFull = { ...txBase, ...gasFields };
+          if (gasFields.maxFeePerGas && gasFields.maxPriorityFeePerGas) {
+              txPayloadFull.type = "0x2";
+              txPayloadFull.chainId = BASE_CHAIN_ID_HEX;
+          }
+          if (gasFields.gas) {
+              txPayloadFull.gasLimit = gasFields.gas;
+          }
+          if (gasFields.gas) {
+              txPayloadGasOnly = {
+                  ...txBase,
+                  gas: gasFields.gas,
+                  gasLimit: gasFields.gas,
+              };
+          }
+      }
 
       let txHash;
       let lastSendErr = null;
@@ -4071,38 +4093,22 @@
           });
       }
 
-      async function runMintSendAttempts(provider, embeddedUi) {
-          setStatus(
-              embeddedUi
-                  ? "Confirm in Wallet (Click 'I'm safe')..."
-                  : "Confirm in your wallet...",
-              "#94a3b8"
-          );
-          if (Object.keys(gasFields).length > 0) {
+      async function runMintSendAttempts(provider) {
+          const tryList = [];
+          tryList.push({ label: "minimal_wallet_estimate", payload: txPayloadMinimal });
+          if (txPayloadGasOnly) {
+              tryList.push({ label: "gas_limit_only", payload: txPayloadGasOnly });
+          }
+          if (txPayloadFull) {
+              tryList.push({ label: "full_eip1559_preset", payload: txPayloadFull });
+          }
+          for (let t = 0; t < tryList.length; t++) {
               try {
-                  setStatus(
-                      embeddedUi
-                          ? "Confirm in wallet (gas preset from Base RPC)…"
-                          : "Confirm in your wallet (gas preset from Base RPC)…",
-                      "#94a3b8"
-                  );
-                  return await trySendTransaction(provider, txPayloadFull);
+                  return await trySendTransaction(provider, tryList[t].payload);
               } catch (err) {
                   lastSendErr = err;
-                  console.warn("mint eth_sendTransaction with preset gas", err);
+                  console.warn("mint eth_sendTransaction " + tryList[t].label, err);
               }
-          }
-          try {
-              setStatus(
-                  embeddedUi
-                      ? "Confirm in Wallet — wallet estimates gas…"
-                      : "Confirm in your wallet — wallet estimates gas…",
-                  "#94a3b8"
-              );
-              return await trySendTransaction(provider, txPayloadMinimal);
-          } catch (err2) {
-              lastSendErr = err2;
-              console.warn("mint eth_sendTransaction minimal", err2);
           }
           return null;
       }
@@ -4114,9 +4120,9 @@
           typeof feMint.request === "function" &&
           accounts[0]
       ) {
-          txHash = await runMintSendAttempts(feMint, true);
+          txHash = await runMintSendAttempts(feMint);
       } else if (ethProvider && typeof ethProvider.request === "function") {
-          txHash = await runMintSendAttempts(ethProvider, false);
+          txHash = await runMintSendAttempts(ethProvider);
       }
 
       if (!txHash && ethProvider && typeof ethProvider.request === "function") {
@@ -4140,7 +4146,16 @@
 
       if (!txHash) {
           if (lastSendErr) console.warn("mint: user cancelled or send failed", lastSendErr);
-          throw new Error("mint_send_failed");
+          const detail = mintWalletErrorDetail(lastSendErr);
+          const lower = detail.toLowerCase();
+          if (/user rejected|user denied|rejected the request|denied transaction|4001|action_?cancel/i.test(lower)) {
+              throw new Error("Transaction was cancelled in the wallet.");
+          }
+          throw new Error(
+              detail.length > 0
+                  ? "Mint could not be sent: " + detail.slice(0, 320)
+                  : "Mint could not be sent. Use Base network, keep a little ETH for gas, and approve the transaction in your wallet."
+          );
       }
 
       txHash = normalizeMintTxHash(txHash);
@@ -4213,12 +4228,11 @@
       const key =
           need === 10 ? "m10" : need === 100 ? "m100" : need === 1000 ? "m1000" : "";
       if (key && badgeHeld(key)) return;
-      const fb = document.getElementById("badgeMintFeedback");
       badgeMintInFlight = true;
       updateHeroBadgeMintUi();
-      setBadgeMintFeedback("Preparing mint…", "#94a3b8");
+      setBadgeMintFeedback("", "#94a3b8");
       try {
-          const { txHash } = await runPublicMintStringNftTx(contractAddr, metadataUri, fb);
+          const { txHash } = await runPublicMintStringNftTx(contractAddr, metadataUri, null);
           const h = normalizeMintTxHash(txHash);
           setBadgeMintFeedback(
               'Minted. <a href="https://basescan.org/tx/' +
@@ -4246,12 +4260,11 @@
       if (!SEASON1_OG_USER_IDS.has(uid)) return;
       if (badgeMintInFlight) return;
       if (badgeHeld("og")) return;
-      const fb = document.getElementById("badgeMintFeedback");
       badgeMintInFlight = true;
       updateHeroBadgeMintUi();
-      setBadgeMintFeedback("Preparing OG badge mint…", "#94a3b8");
+      setBadgeMintFeedback("", "#94a3b8");
       try {
-          const { txHash } = await runPublicMintStringNftTx(PTG_OG_BADGE_NFT, NFT_BADGE_META_OG, fb);
+          const { txHash } = await runPublicMintStringNftTx(PTG_OG_BADGE_NFT, NFT_BADGE_META_OG, null);
           const h = normalizeMintTxHash(txHash);
           setBadgeMintFeedback(
               'OG badge minted. <a href="https://basescan.org/tx/' +
@@ -4309,7 +4322,7 @@
           throw new Error("PTG_NFT_ADDRESS not set — deploy contract and paste address in index.html");
       }
 
-      const { txHash } = await runPublicMintStringNftTx(PTG_NFT_ADDRESS, METADATA_URL, statusDiv);
+      const { txHash } = await runPublicMintStringNftTx(PTG_NFT_ADDRESS, METADATA_URL, null);
 
       // SUCCESS — dopiero po receipt + balance; Firebase: tylko przy pendingMint + unikalny tx (brak farmy +2)
       const hadPendingMint = pendingMint;
