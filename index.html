@@ -1056,9 +1056,9 @@
         box-sizing: border-box;
         min-width: 0;
     }
-    /* Hero: 4 kółka pod tytułem — podwójny pierścień (jak mock), bez karty „Badges” / scrolla */
+    /* Hero: 4 kółka — same PNG w kółku, bez ramek/inset (inset = „łuk” na badge) */
     .hero-stack .hero-badge-row {
-        --hero-badge-side: clamp(46px, 11.2vw, 64px);
+        --hero-badge-side: clamp(52px, 13vw, 76px);
         flex-wrap: nowrap;
         justify-content: flex-start;
         align-items: center;
@@ -1072,10 +1072,10 @@
     }
     .score-milestone,
     .hero-og-slot {
-        width: var(--hero-badge-side, clamp(46px, 11.2vw, 64px));
-        height: var(--hero-badge-side, clamp(46px, 11.2vw, 64px));
-        min-width: var(--hero-badge-side, clamp(46px, 11.2vw, 64px));
-        min-height: var(--hero-badge-side, clamp(46px, 11.2vw, 64px));
+        width: var(--hero-badge-side, clamp(52px, 13vw, 76px));
+        height: var(--hero-badge-side, clamp(52px, 13vw, 76px));
+        min-width: var(--hero-badge-side, clamp(52px, 13vw, 76px));
+        min-height: var(--hero-badge-side, clamp(52px, 13vw, 76px));
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -1083,19 +1083,15 @@
         box-sizing: border-box;
         flex-shrink: 0;
         border: none;
-        overflow: hidden;
+        overflow: visible;
         padding: 0;
-        transition: box-shadow 0.28s ease, filter 0.28s ease, background 0.28s ease;
-        background: #14151c;
-        box-shadow:
-            0 0 0 2px #2c313b,
-            0 0 0 3px #0a0b0f,
-            inset 0 0 0 1px rgba(148, 163, 190, 0.32),
-            inset 0 5px 14px rgba(0, 0, 0, 0.55);
+        transition: filter 0.28s ease, opacity 0.28s ease;
+        background: transparent;
+        box-shadow: none;
     }
     .milestone-badge-img {
-        width: 90%;
-        height: 90%;
+        width: 100%;
+        height: 100%;
         object-fit: cover;
         object-position: center;
         display: block;
@@ -1109,24 +1105,16 @@
         opacity: 0.4;
     }
     .score-milestone.score-milestone--unlocked .milestone-badge-img {
-        filter: none;
+        filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.4));
         opacity: 1;
     }
     .score-milestone.score-milestone--unlocked {
-        background: #1a1216;
-        box-shadow:
-            0 0 0 2px #4a5568,
-            0 0 0 3px #0c0d12,
-            inset 0 0 0 1px rgba(180, 190, 210, 0.38),
-            inset 0 4px 12px rgba(0, 0, 0, 0.45);
+        background: transparent;
+        box-shadow: none;
     }
     .score-milestone.score-milestone--locked {
-        background: #101116;
-        box-shadow:
-            0 0 0 2px #23262e,
-            0 0 0 3px #08090c,
-            inset 0 0 0 1px rgba(90, 98, 112, 0.18),
-            inset 0 6px 16px rgba(0, 0, 0, 0.62);
+        background: transparent;
+        box-shadow: none;
     }
     .rewards-strip > div {
         display: flex;
@@ -1157,33 +1145,26 @@
     .hero-stack .lead {
         margin-top: 0;
     }
-    /* OG aktywny: jasny niebieski gradient + poświata (jak drugi mock) */
+    /* OG: bez tła slotu — tylko poświata na grafice gdy aktywny */
     .hero-og-slot:not(:has(.og-badge--dim)) {
-        background: linear-gradient(180deg, #0f2847 0%, #2563eb 52%, #38bdf8 100%);
-        box-shadow:
-            0 0 0 2px rgba(147, 197, 253, 0.75),
-            0 0 0 3px rgba(15, 23, 42, 0.9),
-            0 0 0 4px rgba(59, 130, 246, 0.25),
-            inset 0 0 0 1px rgba(224, 242, 254, 0.45),
-            inset 0 4px 14px rgba(0, 0, 0, 0.32),
-            0 0 22px rgba(37, 99, 235, 0.45);
+        background: transparent;
+        box-shadow: none;
+    }
+    .hero-og-slot:not(:has(.og-badge--dim)) .og-badge {
+        filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.55)) drop-shadow(0 0 22px rgba(56, 189, 248, 0.28));
     }
     .hero-og-slot:has(.og-badge--dim) {
-        background: #101116;
-        box-shadow:
-            0 0 0 2px #23262e,
-            0 0 0 3px #08090c,
-            inset 0 0 0 1px rgba(90, 98, 112, 0.18),
-            inset 0 6px 16px rgba(0, 0, 0, 0.62);
+        background: transparent;
+        box-shadow: none;
     }
     .hero-og-slot .og-badge {
-        width: 90%;
-        height: 90%;
+        width: 100%;
+        height: 100%;
         max-width: none;
         object-fit: cover;
         border-radius: 50%;
         display: block;
-        transform: scale(1.02);
+        transform: none;
         transform-origin: center center;
         transition: filter 0.25s ease, opacity 0.25s ease;
         user-select: none;
@@ -1232,20 +1213,26 @@
     }
     @keyframes badge-mintable-glow {
         0%, 100% {
-            box-shadow:
-                0 0 0 1px rgba(147, 197, 253, 0.55),
-                0 0 0 4px rgba(37, 99, 235, 0.3),
-                0 0 26px rgba(59, 130, 246, 0.55),
-                0 0 42px rgba(37, 99, 235, 0.25),
-                inset 0 1px 0 rgba(255, 255, 255, 0.22);
+            box-shadow: 0 0 18px rgba(59, 130, 246, 0.45), 0 0 32px rgba(37, 99, 235, 0.2);
         }
         50% {
-            box-shadow:
-                0 0 0 2px rgba(186, 230, 253, 0.75),
-                0 0 0 6px rgba(59, 130, 246, 0.35),
-                0 0 36px rgba(96, 165, 250, 0.65),
-                0 0 56px rgba(37, 99, 235, 0.35),
-                inset 0 1px 0 rgba(255, 255, 255, 0.28);
+            box-shadow: 0 0 26px rgba(96, 165, 250, 0.6), 0 0 44px rgba(59, 130, 246, 0.3);
+        }
+    }
+    .hero-badge-row .badge-slot--mintable.score-milestone .milestone-badge-img,
+    .hero-badge-row .badge-slot--mintable.hero-og-slot .og-badge {
+        animation: badge-mintable-img-glow 2.2s ease-in-out infinite;
+    }
+    .hero-badge-row .badge-slot--mintable {
+        animation: none;
+        box-shadow: none;
+    }
+    @keyframes badge-mintable-img-glow {
+        0%, 100% {
+            filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.55)) drop-shadow(0 0 20px rgba(37, 99, 235, 0.3));
+        }
+        50% {
+            filter: drop-shadow(0 0 14px rgba(147, 197, 253, 0.75)) drop-shadow(0 0 28px rgba(59, 130, 246, 0.45));
         }
     }
     .badge-onchain--held {
@@ -1268,6 +1255,16 @@
         background-size: 9px 9px;
         pointer-events: none;
         z-index: 2;
+    }
+    .hero-badge-row .badge-onchain--held::after {
+        width: 11px;
+        height: 11px;
+        right: 0;
+        bottom: 0;
+        border-width: 1.5px;
+        border-color: rgba(248, 250, 252, 0.92);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+        background-size: 7px 7px;
     }
     .badge-mint-feedback {
         margin: 6px 0 0;
