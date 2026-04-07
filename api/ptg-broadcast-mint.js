@@ -8,9 +8,48 @@ const TARGET = process.env.BASE_RPC_URL || "https://mainnet.base.org";
 const DEFAULT_PTG_NFT_ADDRESS =
   "0x9f9343A6833190EE0c816f71D72CE450b1ee8530";
 
-/** Dozwolone wywołania mint na kontrakcie PTG. */
-const MINT_METHODS = ["mint()", "publicMint(string)"];
+/** Trophy + odznaki (publicMint(string) / mint() jak w Kontrakt-nft.sol). */
+const DEFAULT_ALLOWED_MINT_TARGETS = [
+  DEFAULT_PTG_NFT_ADDRESS,
+  "0x901969555E3495D79a04c6F44B97968cd0a4B466",
+  "0x6fc798704Ff94F925Cc7b01B45E5333d2629C42D",
+  "0xa93EEE6d23dB560c22BDCC63e37EebbC0d60B4b6",
+  "0x546b1Fa45dbBBCB646D5e19518Ca6427100e7194",
+];
+
+/** Dozwolone wywołania mint na allowlistowanych kontraktach. */
+const MINT_METHODS = ["mint()", "publicMint()", "publicMint(string)"];
 const MAX_GAS_LIMIT = 900000n;
+
+function buildAllowedMintAddressSet(ethersMod) {
+  const raw =
+    typeof process.env.PTG_ALLOWED_MINT_CONTRACTS === "string"
+      ? process.env.PTG_ALLOWED_MINT_CONTRACTS
+      : "";
+  const parts = raw
+    .split(/[\s,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const list =
+    parts.length > 0 ? parts : DEFAULT_ALLOWED_MINT_TARGETS;
+  const set = new Set();
+  for (const a of list) {
+    try {
+      set.add(ethersMod.getAddress(String(a).trim()));
+    } catch {
+      /* skip bad entry */
+    }
+  }
+  const envMain = process.env.PTG_NFT_ADDRESS || process.env.PTG_CIRCLE_NFT_ADDRESS;
+  if (envMain) {
+    try {
+      set.add(ethersMod.getAddress(String(envMain).trim()));
+    } catch {
+      /* ignore */
+    }
+  }
+  return set;
+}
 
 function setCors(req, res) {
   const o = req.headers.origin;
@@ -51,16 +90,9 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "bad_raw_transaction" });
     }
 
-    const rawAddr =
-      process.env.PTG_NFT_ADDRESS ||
-      process.env.PTG_CIRCLE_NFT_ADDRESS ||
-      DEFAULT_PTG_NFT_ADDRESS;
-
     const { ethers } = await import("ethers");
-    let expectedTo;
-    try {
-      expectedTo = ethers.getAddress(String(rawAddr).trim());
-    } catch {
+    const allowedTo = buildAllowedMintAddressSet(ethers);
+    if (allowedTo.size === 0) {
       return res.status(500).json({ error: "server_bad_nft_address" });
     }
 
@@ -88,7 +120,7 @@ module.exports = async (req, res) => {
     } catch {
       return res.status(400).json({ error: "invalid_to" });
     }
-    if (toAddr !== expectedTo) {
+    if (!allowedTo.has(toAddr)) {
       return res.status(400).json({ error: "wrong_contract" });
     }
 

@@ -1,0 +1,11 @@
+{
+  "name": "Phrase To Guess — 10 Win Badge",
+  "description": "10 wins on Phrase To Guess. Minted on Base. https://phrasetoguess.xyz",
+  "image": "https://phrasetoguess.xyz/badge-10.png",
+  "external_url": "https://phrasetoguess.xyz/",
+  "attributes": [
+    { "trait_type": "Collection", "value": "Phrase To Guess" },
+    { "trait_type": "Milestone", "value": "10 Wins" },
+    { "trait_type": "Network", "value": "Base" }
+  ]
+}

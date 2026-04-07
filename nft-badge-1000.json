@@ -1,0 +1,11 @@
+{
+  "name": "Phrase To Guess — 1000 Win Badge",
+  "description": "1000 wins on Phrase To Guess. Minted on Base. https://phrasetoguess.xyz",
+  "image": "https://phrasetoguess.xyz/badge-1000.png",
+  "external_url": "https://phrasetoguess.xyz/",
+  "attributes": [
+    { "trait_type": "Collection", "value": "Phrase To Guess" },
+    { "trait_type": "Milestone", "value": "1000 Wins" },
+    { "trait_type": "Network", "value": "Base" }
+  ]
+}

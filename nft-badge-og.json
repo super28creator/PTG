@@ -1,0 +1,11 @@
+{
+  "name": "Phrase To Guess — OG Badge",
+  "description": "Season 1 OG badge on Base. Play at https://phrasetoguess.xyz",
+  "image": "https://phrasetoguess.xyz/OG-Badge.png",
+  "external_url": "https://phrasetoguess.xyz/",
+  "attributes": [
+    { "trait_type": "Collection", "value": "Phrase To Guess" },
+    { "trait_type": "Type", "value": "OG Badge" },
+    { "trait_type": "Network", "value": "Base" }
+  ]
+}

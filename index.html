@@ -1110,6 +1110,79 @@
         filter: none;
         opacity: 1;
     }
+    /* Mint odznak: slot jako przycisk */
+    button.hero-og-slot {
+        border: none;
+        padding: 0;
+        margin: 0;
+        background: transparent;
+        cursor: default;
+        font: inherit;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    button.hero-og-slot:focus-visible {
+        outline: 2px solid var(--cerulean);
+        outline-offset: 3px;
+    }
+    button.score-milestone {
+        font: inherit;
+        -webkit-appearance: none;
+        appearance: none;
+        margin: 0;
+        cursor: default;
+    }
+    button.score-milestone:focus-visible {
+        outline: 2px solid var(--cerulean);
+        outline-offset: 2px;
+    }
+    /* Można zamintować — podświetlenie (portfel + próg / OG) */
+    .badge-slot--mintable {
+        cursor: pointer !important;
+        animation: badge-mintable-glow 2.2s ease-in-out infinite;
+        box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.45), 0 0 22px rgba(59, 130, 246, 0.35);
+    }
+    @keyframes badge-mintable-glow {
+        0%, 100% { box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.45), 0 0 18px rgba(59, 130, 246, 0.3); }
+        50% { box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.65), 0 0 28px rgba(59, 130, 246, 0.5); }
+    }
+    .badge-onchain--held {
+        position: relative;
+    }
+    .badge-onchain--held::after {
+        content: "";
+        position: absolute;
+        right: -2px;
+        bottom: -2px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: linear-gradient(145deg, #22c55e 0%, #15803d 100%);
+        border: 2px solid rgba(15, 18, 28, 0.95);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M2 6l2.5 2.5L10 3' stroke='white' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 9px 9px;
+        pointer-events: none;
+        z-index: 2;
+    }
+    .badge-mint-feedback {
+        margin: 6px 0 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted);
+        min-height: 1.25em;
+        max-width: 100%;
+    }
+    .badge-mint-feedback a {
+        color: var(--cerulean);
+        text-decoration: none;
+        border-bottom: 1px dotted rgba(96, 165, 250, 0.5);
+    }
+    .badge-mint-feedback a:hover {
+        color: #93c5fd;
+    }
     
     /* ANIMATIONS */
     .loader {
@@ -1375,21 +1448,22 @@
             <div class="hero-stack">
               <h1>Phrase To Guess</h1>
               <div class="hero-badge-row">
-                <span class="hero-og-slot">
-                  <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="40" height="40" alt="OG badge" title="Season 1 players see this badge in full color" decoding="async" />
-                </span>
+                <button type="button" class="hero-og-slot" id="ogBadgeMintBtn" disabled aria-label="OG badge mint" title="OG badge">
+                  <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="40" height="40" alt="OG badge" decoding="async" />
+                </button>
                 <div class="score-milestones" id="scoreMilestones" aria-label="Score milestone badges">
-                  <div class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" title="Unlock at 10 points">
+                  <button type="button" class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" data-badge-kind="10" disabled title="Unlock at 10 points">
                     <span class="score-milestone__n">10</span>
-                  </div>
-                  <div class="score-milestone score-milestone--100 score-milestone--locked" id="scoreMilestone100" title="Unlock at 100 points">
+                  </button>
+                  <button type="button" class="score-milestone score-milestone--100 score-milestone--locked" id="scoreMilestone100" data-badge-kind="100" disabled title="Unlock at 100 points">
                     <span class="score-milestone__n">100</span>
-                  </div>
-                  <div class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" title="Unlock at 1000 points">
+                  </button>
+                  <button type="button" class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" data-badge-kind="1000" disabled title="Unlock at 1000 points">
                     <span class="score-milestone__n">1000</span>
-                  </div>
+                  </button>
                 </div>
               </div>
+              <p id="badgeMintFeedback" class="badge-mint-feedback" role="status" aria-live="polite"></p>
               <p class="lead">Guess the phrase. Watch the market.</p>
             </div>
             <div class="header-rewards-row">
@@ -1581,6 +1655,15 @@
     "function mintPriceWei() view returns (uint256)",
     "function balanceOf(address owner) view returns (uint256)",
   ];
+  /** Odznaki win / OG — ten sam wzorzec co Kontrakt-nft.sol (`publicMint(uri)` + priceWei). */
+  const PTG_OG_BADGE_NFT = "0x901969555E3495D79a04c6F44B97968cd0a4B466";
+  const PTG_WIN10_BADGE_NFT = "0x6fc798704Ff94F925Cc7b01B45E5333d2629C42D";
+  const PTG_WIN100_BADGE_NFT = "0xa93EEE6d23dB560c22BDCC63e37EebbC0d60B4b6";
+  const PTG_WIN1000_BADGE_NFT = "0x546b1Fa45dbBBCB646D5e19518Ca6427100e7194";
+  const NFT_BADGE_META_OG = "https://phrasetoguess.xyz/nft-badge-og.json";
+  const NFT_BADGE_META_10 = "https://phrasetoguess.xyz/nft-badge-10.json";
+  const NFT_BADGE_META_100 = "https://phrasetoguess.xyz/nft-badge-100.json";
+  const NFT_BADGE_META_1000 = "https://phrasetoguess.xyz/nft-badge-1000.json";
   /**
    * Base Builder Code — suffix ERC-8021 (schema 0) na końcu calldata mintu.
    * Kod bierzemy z <meta name="base:builder_code"> (jedno miejsce w <head>).
@@ -1918,6 +2001,7 @@
       setAuthGateVisible(false);
       refreshOgBadge();
       await syncUserProfile();
+      scheduleRefreshBadgeOnchainBalances();
       if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY && !pendingMint) {
           initGame(true);
       } else {
@@ -2060,7 +2144,130 @@
     img.title = isOg
       ? "Season 1 OG — thanks for playing early!"
       : "OG badge — full color for Season 1 players";
+    updateHeroBadgeMintUi();
   }
+
+  async function tryGetConnectedWalletSilent() {
+      const fe = getEmbeddedEthProvider();
+      if (fe && typeof fe.request === "function") {
+          try {
+              const acc = await fe.request({ method: "eth_accounts" });
+              if (acc && acc[0]) return { ethProvider: fe, accounts: acc };
+          } catch (_) {}
+      }
+      const inj = getInjectedProvider();
+      if (inj && typeof inj.request === "function") {
+          try {
+              const acc = await inj.request({ method: "eth_accounts" });
+              if (acc && acc[0]) return { ethProvider: inj, accounts: acc };
+          } catch (_) {}
+      }
+      return null;
+  }
+
+  function scheduleRefreshBadgeOnchainBalances() {
+      if (badgeOnchainRefreshT) clearTimeout(badgeOnchainRefreshT);
+      badgeOnchainRefreshT = setTimeout(function () {
+          badgeOnchainRefreshT = 0;
+          void refreshBadgeOnchainBalances();
+      }, 550);
+  }
+
+  function badgeHeld(key) {
+      const b = badgeOnchainBn[key];
+      return b != null && ethers.BigNumber.from(b).gt(0);
+  }
+
+  async function refreshBadgeOnchainBalances() {
+      const w = await tryGetConnectedWalletSilent();
+      badgeWalletProbed = !!(w && w.accounts && w.accounts[0]);
+      if (!w || !w.accounts[0]) {
+          badgeOnchainBn = { og: null, m10: null, m100: null, m1000: null };
+          updateHeroBadgeMintUi();
+          return;
+      }
+      const owner = w.accounts[0];
+      const p = w.ethProvider;
+      const pairs = [
+          ["og", PTG_OG_BADGE_NFT],
+          ["m10", PTG_WIN10_BADGE_NFT],
+          ["m100", PTG_WIN100_BADGE_NFT],
+          ["m1000", PTG_WIN1000_BADGE_NFT],
+      ];
+      for (let i = 0; i < pairs.length; i++) {
+          const key = pairs[i][0];
+          const addr = pairs[i][1];
+          try {
+              badgeOnchainBn[key] = await readNftBalanceBn(addr, owner, p);
+          } catch (e) {
+              console.warn("badge balance " + key, e);
+              badgeOnchainBn[key] = null;
+          }
+      }
+      updateHeroBadgeMintUi();
+  }
+
+  function updateHeroBadgeMintUi() {
+      const uid = String(myUserId || "guest").toLowerCase();
+      const isOgPlayer = SEASON1_OG_USER_IDS.has(uid);
+      const s = Number(currentScore) || 0;
+      const ogBtn = document.getElementById("ogBadgeMintBtn");
+      if (ogBtn) {
+          ogBtn.classList.remove("badge-slot--mintable", "badge-onchain--held");
+          const ogHeld = badgeHeld("og");
+          if (ogHeld) ogBtn.classList.add("badge-onchain--held");
+          const canTryOg =
+              isOgPlayer &&
+              badgeWalletProbed &&
+              !ogHeld &&
+              !badgeMintInFlight;
+          if (canTryOg) ogBtn.classList.add("badge-slot--mintable");
+          ogBtn.disabled =
+              !isOgPlayer ||
+              ogHeld ||
+              badgeMintInFlight ||
+              !badgeWalletProbed;
+          if (!isOgPlayer) {
+              ogBtn.title = "OG badge NFT — Season 1 players only";
+          } else if (ogHeld) {
+              ogBtn.title = "OG badge minted on Base";
+          } else if (!badgeWalletProbed) {
+              ogBtn.title = "Connect your Base wallet to mint the OG badge (~$0.10)";
+          } else {
+              ogBtn.title = "Tap to mint OG badge on Base (price set on contract)";
+          }
+      }
+      const milestones = [
+          { id: "scoreMilestone10", key: "m10", need: 10 },
+          { id: "scoreMilestone100", key: "m100", need: 100 },
+          { id: "scoreMilestone1000", key: "m1000", need: 1000 },
+      ];
+      milestones.forEach(({ id, key, need }) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.classList.remove("badge-slot--mintable", "badge-onchain--held");
+          const unlocked = s >= need;
+          const held = badgeHeld(key);
+          if (held) el.classList.add("badge-onchain--held");
+          const canMint =
+              unlocked &&
+              badgeWalletProbed &&
+              !held &&
+              !badgeMintInFlight;
+          if (canMint) el.classList.add("badge-slot--mintable");
+          el.disabled = !unlocked || held || badgeMintInFlight || !badgeWalletProbed;
+          if (!unlocked) {
+              el.title = "Unlock at " + need + " points, then mint on Base";
+          } else if (held) {
+              el.title = need + " win badge — minted";
+          } else if (!badgeWalletProbed) {
+              el.title = "Connect wallet to mint your " + need + " win badge (~$0.10)";
+          } else {
+              el.title = "Tap to mint " + need + " win badge (price on contract)";
+          }
+      });
+  }
+
   /** Mint-day badge in calendar (PTG-circle.png at site root). */
   const PTG_DAY_BADGE_IMAGE_URL = typeof window !== "undefined" ? `${window.location.origin}/PTG-circle.png` : "";
 
@@ -2120,9 +2327,13 @@
   let myUserId = "guest";
   let currentScore = 0;
   let gamesPlayedTodayCount = 0;
-  let pendingMint = false; 
+  let pendingMint = false;
   let mintCalendarDays = {};
   let userProfileUnsubscribe = null;
+  let badgeMintInFlight = false;
+  let badgeWalletProbed = false;
+  let badgeOnchainRefreshT = 0;
+  let badgeOnchainBn = { og: null, m10: null, m100: null, m1000: null };
 
   function mintCalendarStorageKey() {
       return "ptg_mintCal_s" + LEADERBOARD_SEASON + "_" + myUserId;
@@ -2276,6 +2487,7 @@
               await syncUserProfile();
               checkGameStateAndRender();
           }
+          scheduleRefreshBadgeOnchainBalances();
       } catch (e) {
           console.error("Critical error during startApp", e);
           clearTimeout(safeLoad);
@@ -2285,6 +2497,7 @@
           setAuthGateVisible(true);
           await syncUserProfile();
           checkGameStateAndRender();
+          scheduleRefreshBadgeOnchainBalances();
       }
   }
 
@@ -3253,12 +3466,13 @@
    * Portfel tylko podpisuje (eth_signTransaction); wysyłka eth_sendRawTransaction przez /api/ptg-broadcast-mint → Base.
    * Omija zepsuty HTTP RPC używany przy eth_sendTransaction w Rainbow / części WebView.
    */
-  async function signMintTxAndBroadcastViaSite(ethProvider, from, dataHex, valueHex) {
-      const gas = await ensureMintGasHexForSign(from, PTG_NFT_ADDRESS, dataHex, valueHex);
+  async function signMintTxAndBroadcastViaSite(ethProvider, from, toContract, dataHex, valueHex) {
+      const toResolved = ethers.utils.getAddress(toContract);
+      const gas = await ensureMintGasHexForSign(from, toResolved, dataHex, valueHex);
       const nonce = await getTxNonceHexFromProxy(from);
       const signPayload = {
           from: ethers.utils.getAddress(from),
-          to: PTG_NFT_ADDRESS,
+          to: toResolved,
           data: dataHex,
           value: valueHex,
           chainId: BASE_CHAIN_ID_HEX,
@@ -3285,6 +3499,299 @@
           throw new Error("Wallet returned an invalid signed transaction");
       }
       return postBroadcastMintRaw(rawSigned);
+  }
+
+  /**
+   * Wspólna ścieżka: publicMint(metadataUri) + value z kontraktu, receipt + wzrost balanceOf.
+   * @param {HTMLElement|null} statusHost — opcjonalnie wiersz statusu (np. #badgeMintFeedback lub #victoryStatus)
+   */
+  async function runPublicMintStringNftTx(nftAddress, metadataUri, statusHost) {
+      const zero = "0x0000000000000000000000000000000000000000";
+      if (!nftAddress || String(nftAddress).toLowerCase() === zero) {
+          throw new Error("NFT contract address missing");
+      }
+      const toNft = ethers.utils.getAddress(nftAddress);
+
+      let accounts;
+      let ethProvider = null;
+      try {
+          const fe = getEmbeddedEthProvider();
+          if (fe) {
+              await ensureBaseMainnet(fe);
+              accounts = await fe.request({ method: "eth_requestAccounts" });
+              ethProvider = fe;
+          }
+      } catch (mintSdkErr) {
+          console.warn("Mint: embedded wallet path skipped", mintSdkErr);
+      }
+      if (!accounts || !accounts[0]) {
+          if (ptgHost === "base" || ptgHost === "farcaster") {
+              throw new Error("Connect the wallet inside Base or Farcaster to mint.");
+          }
+          const injected = getInjectedProvider();
+          if (injected) {
+              await ensureBaseMainnet(injected);
+              accounts = await injected.request({ method: "eth_requestAccounts" });
+              ethProvider = injected;
+          }
+      }
+      if (!accounts || !accounts[0] || !ethProvider) {
+          throw new Error("No wallet found");
+      }
+
+      const minter = accounts[0];
+      const minterLc = minter.toLowerCase();
+      const userLc = String(myUserId || "").toLowerCase();
+
+      function setStatus(msg, color) {
+          if (!statusHost) return;
+          statusHost.textContent = msg;
+          if (color) statusHost.style.color = color;
+      }
+
+      if (db && myUserId && myUserId !== "guest" && userLc !== minterLc) {
+          setStatus("Linking wallet for mint…", "#94a3b8");
+          try {
+              await update(playerDocRef(myUserId), { mintWalletForMint: minterLc });
+          } catch (e) {
+              console.error("mintWalletForMint update", e);
+              throw new Error(
+                  "Could not save wallet link in Firebase. Check RTDB rules and your connection."
+              );
+          }
+      }
+
+      setStatus("Building mint transaction…", "#94a3b8");
+      const mintIface = new ethers.utils.Interface(PTG_NFT_ABI);
+      const dataHex = appendErc8021BuilderSuffix(
+          mintIface.encodeFunctionData("publicMint", [metadataUri])
+      );
+      const valueHex = await readMintPriceWeiHex(toNft, ethProvider);
+      const balBefore = await readNftBalanceBn(toNft, minter, ethProvider);
+
+      setStatus("Preparing transaction…", "#94a3b8");
+      const gasFields = await prepareMintTxGasFields(accounts[0], toNft, dataHex, valueHex);
+      const txPayloadFull = {
+          from: accounts[0],
+          to: toNft,
+          data: dataHex,
+          value: valueHex,
+          ...gasFields,
+      };
+      const txPayloadMinimal = {
+          from: accounts[0],
+          to: toNft,
+          data: dataHex,
+          value: valueHex,
+      };
+
+      let txHash;
+      let lastSendErr = null;
+
+      async function trySendTransaction(provider, payload) {
+          return await provider.request({
+              method: "eth_sendTransaction",
+              params: [payload],
+          });
+      }
+
+      async function runMintSendAttempts(provider, embeddedUi) {
+          setStatus(
+              embeddedUi
+                  ? "Confirm in Wallet (Click 'I'm safe')..."
+                  : "Confirm in your wallet...",
+              "#94a3b8"
+          );
+          if (Object.keys(gasFields).length > 0) {
+              try {
+                  setStatus(
+                      embeddedUi
+                          ? "Confirm in wallet (gas preset from Base RPC)…"
+                          : "Confirm in your wallet (gas preset from Base RPC)…",
+                      "#94a3b8"
+                  );
+                  return await trySendTransaction(provider, txPayloadFull);
+              } catch (err) {
+                  lastSendErr = err;
+                  console.warn("mint eth_sendTransaction with preset gas", err);
+              }
+          }
+          try {
+              setStatus(
+                  embeddedUi
+                      ? "Confirm in Wallet — wallet estimates gas…"
+                      : "Confirm in your wallet — wallet estimates gas…",
+                  "#94a3b8"
+              );
+              return await trySendTransaction(provider, txPayloadMinimal);
+          } catch (err2) {
+              lastSendErr = err2;
+              console.warn("mint eth_sendTransaction minimal", err2);
+          }
+          return null;
+      }
+
+      const feMint = getEmbeddedEthProvider();
+      if (
+          feMint &&
+          ethProvider === feMint &&
+          typeof feMint.request === "function" &&
+          accounts[0]
+      ) {
+          txHash = await runMintSendAttempts(feMint, true);
+      } else if (ethProvider && typeof ethProvider.request === "function") {
+          txHash = await runMintSendAttempts(ethProvider, false);
+      }
+
+      if (!txHash && ethProvider && typeof ethProvider.request === "function") {
+          try {
+              setStatus(
+                  "Sign in wallet — we submit via PhraseToGuess (wallet RPC workaround)…",
+                  "#94a3b8"
+              );
+              txHash = await signMintTxAndBroadcastViaSite(
+                  ethProvider,
+                  accounts[0],
+                  toNft,
+                  dataHex,
+                  valueHex
+              );
+          } catch (relayErr) {
+              console.warn("mint sign+broadcast relay", relayErr);
+              lastSendErr = relayErr;
+          }
+      }
+
+      if (!txHash) {
+          if (lastSendErr) console.warn("mint: user cancelled or send failed", lastSendErr);
+          throw new Error("mint_send_failed");
+      }
+
+      txHash = normalizeMintTxHash(txHash);
+
+      setStatus("Waiting for confirmation…", "#94a3b8");
+      let receipt;
+      try {
+          receipt = await waitForTxReceiptViaServer(txHash);
+      } catch (srvWaitErr) {
+          console.warn("Receipt poll: server proxy failed, trying wallet RPC", srvWaitErr);
+          const web3p = new ethers.providers.Web3Provider(ethProvider, "any");
+          receipt = await web3p.waitForTransaction(txHash, 1, 90000);
+      }
+      if (!receiptIndicatesSuccess(receipt)) {
+          throw new Error("Transaction reverted or not confirmed");
+      }
+
+      setStatus("Verifying mint on-chain…", "#94a3b8");
+      const pinnedTag = ethCallBlockTagFromReceipt(receipt);
+      async function readBal(tag) {
+          return readNftBalanceBn(toNft, minter, ethProvider, tag);
+      }
+      let balAfter = null;
+      if (pinnedTag !== "latest") {
+          try {
+              balAfter = await readBal(pinnedTag);
+          } catch (pinErr) {
+              console.warn("readNftBalanceBn at mint block", pinErr);
+          }
+      }
+      if (balAfter == null || !balAfter.gt(balBefore)) {
+          try {
+              const bLatest = await readBal("latest");
+              if (balAfter == null || bLatest.gt(balAfter)) balAfter = bLatest;
+          } catch (latestErr) {
+              if (balAfter == null) throw latestErr;
+          }
+      }
+      for (let i = 0; i < 12 && balAfter != null && !balAfter.gt(balBefore); i++) {
+          await new Promise((r) => setTimeout(r, 350));
+          try {
+              const b = await readBal("latest");
+              if (b.gt(balAfter)) balAfter = b;
+          } catch (pollBalErr) {
+              console.warn("readNftBalanceBn retry", pollBalErr);
+          }
+      }
+      if (balAfter == null || !balAfter.gt(balBefore)) {
+          throw new Error(
+              "NFT balance did not increase after the transaction. Check the tx on BaseScan."
+          );
+      }
+
+      return { txHash, minter, ethProvider };
+  }
+
+  function setBadgeMintFeedback(html, color) {
+      const el = document.getElementById("badgeMintFeedback");
+      if (!el) return;
+      el.innerHTML = html || "";
+      el.style.color = color || "var(--text-muted)";
+  }
+
+  async function mintWinBadgeFromUi(need, contractAddr, metadataUri) {
+      const s = Number(currentScore) || 0;
+      if (s < need) return;
+      if (badgeMintInFlight) return;
+      const key =
+          need === 10 ? "m10" : need === 100 ? "m100" : need === 1000 ? "m1000" : "";
+      if (key && badgeHeld(key)) return;
+      const fb = document.getElementById("badgeMintFeedback");
+      badgeMintInFlight = true;
+      updateHeroBadgeMintUi();
+      setBadgeMintFeedback("Preparing mint…", "#94a3b8");
+      try {
+          const { txHash } = await runPublicMintStringNftTx(contractAddr, metadataUri, fb);
+          const h = normalizeMintTxHash(txHash);
+          setBadgeMintFeedback(
+              'Minted. <a href="https://basescan.org/tx/' +
+                  h +
+                  '" target="_blank" rel="noopener noreferrer">View on BaseScan</a>',
+              "#86efac"
+          );
+          await refreshBadgeOnchainBalances();
+          updateHeroBadgeMintUi();
+      } catch (e) {
+          console.error(e);
+          const msg =
+              e && typeof e.message === "string"
+                  ? e.message
+                  : "Mint failed — try again or check the wallet.";
+          setBadgeMintFeedback(msg, "#fc401f");
+      } finally {
+          badgeMintInFlight = false;
+          updateHeroBadgeMintUi();
+      }
+  }
+
+  async function mintOgBadgeFromUi() {
+      const uid = String(myUserId || "guest").toLowerCase();
+      if (!SEASON1_OG_USER_IDS.has(uid)) return;
+      if (badgeMintInFlight) return;
+      if (badgeHeld("og")) return;
+      const fb = document.getElementById("badgeMintFeedback");
+      badgeMintInFlight = true;
+      updateHeroBadgeMintUi();
+      setBadgeMintFeedback("Preparing OG badge mint…", "#94a3b8");
+      try {
+          const { txHash } = await runPublicMintStringNftTx(PTG_OG_BADGE_NFT, NFT_BADGE_META_OG, fb);
+          const h = normalizeMintTxHash(txHash);
+          setBadgeMintFeedback(
+              'OG badge minted. <a href="https://basescan.org/tx/' +
+                  h +
+                  '" target="_blank" rel="noopener noreferrer">BaseScan</a>',
+              "#86efac"
+          );
+          await refreshBadgeOnchainBalances();
+          updateHeroBadgeMintUi();
+      } catch (e) {
+          console.error(e);
+          const msg =
+              e && typeof e.message === "string" ? e.message : "Mint failed.";
+          setBadgeMintFeedback(msg, "#fc401f");
+      } finally {
+          badgeMintInFlight = false;
+          updateHeroBadgeMintUi();
+      }
   }
 
   // --- MINT LOGIC: PhraseToGuess NFT + serwerowy voucher EIP-712 (brak mintu z samego Basescan) ---
@@ -3316,197 +3823,7 @@
           throw new Error("PTG_NFT_ADDRESS not set — deploy contract and paste address in index.html");
       }
 
-      let accounts;
-      let ethProvider = null;
-
-      try {
-          const fe = getEmbeddedEthProvider();
-          if (fe) {
-              await ensureBaseMainnet(fe);
-              accounts = await fe.request({ method: "eth_requestAccounts" });
-              ethProvider = fe;
-          }
-      } catch (mintSdkErr) {
-          console.warn("Mint: embedded wallet path skipped", mintSdkErr);
-      }
-      if (!accounts || !accounts[0]) {
-          if (ptgHost === "base" || ptgHost === "farcaster") {
-              throw new Error("Connect the wallet inside Base or Farcaster to mint.");
-          }
-          const injected = getInjectedProvider();
-          if (injected) {
-              await ensureBaseMainnet(injected);
-              accounts = await injected.request({ method: "eth_requestAccounts" });
-              ethProvider = injected;
-          }
-      }
-
-      if (!accounts || !accounts[0] || !ethProvider) {
-          throw new Error("No wallet found");
-      }
-
-      const minter = accounts[0];
-      const minterLc = minter.toLowerCase();
-      const userLc = String(myUserId || "").toLowerCase();
-
-      if (db && myUserId && myUserId !== "guest" && userLc !== minterLc) {
-          statusDiv.textContent = "Linking wallet for mint…";
-          try {
-              await update(playerDocRef(myUserId), {
-                  mintWalletForMint: minterLc,
-              });
-          } catch (e) {
-              console.error("mintWalletForMint update", e);
-              throw new Error(
-                  "Could not save wallet link in Firebase. Check RTDB rules and your connection."
-              );
-          }
-      }
-
-      statusDiv.textContent = "Building mint transaction…";
-      const mintIface = new ethers.utils.Interface(PTG_NFT_ABI);
-      const dataHex = appendErc8021BuilderSuffix(
-          mintIface.encodeFunctionData("publicMint", [METADATA_URL])
-      );
-      const valueHex = await readMintPriceWeiHex(PTG_NFT_ADDRESS, ethProvider);
-      const balBefore = await readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider);
-
-      statusDiv.textContent = "Preparing transaction…";
-      const gasFields = await prepareMintTxGasFields(accounts[0], PTG_NFT_ADDRESS, dataHex, valueHex);
-      const txPayloadFull = {
-          from: accounts[0],
-          to: PTG_NFT_ADDRESS,
-          data: dataHex,
-          value: valueHex,
-          ...gasFields,
-      };
-      const txPayloadMinimal = {
-          from: accounts[0],
-          to: PTG_NFT_ADDRESS,
-          data: dataHex,
-          value: valueHex,
-      };
-
-      let txHash;
-      let lastSendErr = null;
-
-      async function trySendTransaction(provider, payload) {
-          return await provider.request({
-              method: "eth_sendTransaction",
-              params: [payload],
-          });
-      }
-
-      async function runMintSendAttempts(provider, embeddedUi) {
-          statusDiv.textContent = embeddedUi
-              ? "Confirm in Wallet (Click 'I'm safe')..."
-              : "Confirm in your wallet...";
-          if (Object.keys(gasFields).length > 0) {
-              try {
-                  statusDiv.textContent = embeddedUi
-                      ? "Confirm in wallet (gas preset from Base RPC)…"
-                      : "Confirm in your wallet (gas preset from Base RPC)…";
-                  return await trySendTransaction(provider, txPayloadFull);
-              } catch (err) {
-                  lastSendErr = err;
-                  console.warn("mint eth_sendTransaction with preset gas", err);
-              }
-          }
-          try {
-              statusDiv.textContent = embeddedUi
-                  ? "Confirm in Wallet — wallet estimates gas…"
-                  : "Confirm in your wallet — wallet estimates gas…";
-              return await trySendTransaction(provider, txPayloadMinimal);
-          } catch (err2) {
-              lastSendErr = err2;
-              console.warn("mint eth_sendTransaction minimal", err2);
-          }
-          return null;
-      }
-
-      const feMint = getEmbeddedEthProvider();
-      if (
-          feMint &&
-          ethProvider === feMint &&
-          typeof feMint.request === "function" &&
-          accounts[0]
-      ) {
-          txHash = await runMintSendAttempts(feMint, true);
-      } else if (ethProvider && typeof ethProvider.request === "function") {
-          txHash = await runMintSendAttempts(ethProvider, false);
-      }
-
-      if (!txHash && ethProvider && typeof ethProvider.request === "function") {
-          try {
-              statusDiv.textContent =
-                  "Sign in wallet — we submit via PhraseToGuess (broken wallet RPC workaround)…";
-              txHash = await signMintTxAndBroadcastViaSite(
-                  ethProvider,
-                  accounts[0],
-                  dataHex,
-                  valueHex
-              );
-          } catch (relayErr) {
-              console.warn("mint sign+broadcast relay", relayErr);
-              lastSendErr = relayErr;
-          }
-      }
-
-      if (!txHash) {
-          if (lastSendErr) console.warn("mint: user cancelled or send failed", lastSendErr);
-          throw new Error("mint_send_failed");
-      }
-
-      txHash = normalizeMintTxHash(txHash);
-
-      statusDiv.textContent = "Waiting for confirmation…";
-      let receipt;
-      try {
-          receipt = await waitForTxReceiptViaServer(txHash);
-      } catch (srvWaitErr) {
-          console.warn("Receipt poll: server proxy failed, trying wallet RPC", srvWaitErr);
-          const web3p = new ethers.providers.Web3Provider(ethProvider, "any");
-          receipt = await web3p.waitForTransaction(txHash, 1, 90000);
-      }
-      if (!receiptIndicatesSuccess(receipt)) {
-          throw new Error("Transaction reverted or not confirmed");
-      }
-
-      statusDiv.textContent = "Verifying mint on-chain…";
-      const pinnedTag = ethCallBlockTagFromReceipt(receipt);
-      async function readBal(tag) {
-          return readNftBalanceBn(PTG_NFT_ADDRESS, minter, ethProvider, tag);
-      }
-      let balAfter = null;
-      if (pinnedTag !== "latest") {
-          try {
-              balAfter = await readBal(pinnedTag);
-          } catch (pinErr) {
-              console.warn("readNftBalanceBn at mint block", pinErr);
-          }
-      }
-      if (balAfter == null || !balAfter.gt(balBefore)) {
-          try {
-              const bLatest = await readBal("latest");
-              if (balAfter == null || bLatest.gt(balAfter)) balAfter = bLatest;
-          } catch (latestErr) {
-              if (balAfter == null) throw latestErr;
-          }
-      }
-      for (let i = 0; i < 12 && balAfter != null && !balAfter.gt(balBefore); i++) {
-          await new Promise((r) => setTimeout(r, 350));
-          try {
-              const b = await readBal("latest");
-              if (b.gt(balAfter)) balAfter = b;
-          } catch (pollBalErr) {
-              console.warn("readNftBalanceBn retry", pollBalErr);
-          }
-      }
-      if (balAfter == null || !balAfter.gt(balBefore)) {
-          throw new Error(
-              "NFT balance did not increase after the transaction — mint bonus was not applied. Check the tx on BaseScan."
-          );
-      }
+      const { txHash } = await runPublicMintStringNftTx(PTG_NFT_ADDRESS, METADATA_URL, statusDiv);
 
       // SUCCESS — dopiero po receipt + balance; Firebase: tylko przy pendingMint + unikalny tx (brak farmy +2)
       const hadPendingMint = pendingMint;
@@ -3581,6 +3898,7 @@
               runMintSuccessFullScreenConfetti();
           });
       });
+      scheduleRefreshBadgeOnchainBalances();
     } catch(e) { 
         console.error(e);
         showVictoryMintFailed();
@@ -3606,6 +3924,8 @@
   function updateScoreUI() {
       document.getElementById("scoreDisplay").textContent = currentScore;
       updateScoreMilestones();
+      scheduleRefreshBadgeOnchainBalances();
+      updateHeroBadgeMintUi();
   }
   function updateDailyUI() { 
       document.getElementById('dailyInfo').textContent = `Games: ${Math.min(gamesPlayedTodayCount, MAX_GAMES_PER_DAY)}/${MAX_GAMES_PER_DAY}`; 
@@ -3650,6 +3970,19 @@
   document.getElementById('connectWalletBtn')?.addEventListener('click', () => connectWalletForPlay());
   document.getElementById('leaderboardBtn').onclick = showLeaderboard;
   document.getElementById('closeLeaderboard').onclick = () => document.getElementById('leaderboardOverlay').classList.remove('show');
+
+  document.getElementById("ogBadgeMintBtn")?.addEventListener("click", function () {
+      void mintOgBadgeFromUi();
+  });
+  document.getElementById("scoreMilestone10")?.addEventListener("click", function () {
+      void mintWinBadgeFromUi(10, PTG_WIN10_BADGE_NFT, NFT_BADGE_META_10);
+  });
+  document.getElementById("scoreMilestone100")?.addEventListener("click", function () {
+      void mintWinBadgeFromUi(100, PTG_WIN100_BADGE_NFT, NFT_BADGE_META_100);
+  });
+  document.getElementById("scoreMilestone1000")?.addEventListener("click", function () {
+      void mintWinBadgeFromUi(1000, PTG_WIN1000_BADGE_NFT, NFT_BADGE_META_1000);
+  });
 
   initCategoryFilterPanel();
 
