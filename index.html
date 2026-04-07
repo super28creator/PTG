@@ -3988,18 +3988,23 @@
           console.warn("Mint: embedded wallet path skipped", mintSdkErr);
       }
       if (!accounts || !accounts[0]) {
-          if (ptgHost === "base" || ptgHost === "farcaster") {
-              throw new Error("Connect the wallet inside Base or Farcaster to mint.");
-          }
           const injected = getInjectedProvider();
           if (injected) {
-              await ensureBaseMainnet(injected);
-              accounts = await injected.request({ method: "eth_requestAccounts" });
-              ethProvider = injected;
+              try {
+                  await ensureBaseMainnet(injected);
+                  accounts = await injected.request({ method: "eth_requestAccounts" });
+                  ethProvider = injected;
+              } catch (injErr) {
+                  console.warn("Mint: injected wallet path", injErr);
+              }
           }
       }
       if (!accounts || !accounts[0] || !ethProvider) {
-          throw new Error("No wallet found");
+          const hint =
+              ptgHost === "base" || ptgHost === "farcaster"
+                  ? "Approve the wallet request in the Base / Farcaster app, or open this site in a normal browser with MetaMask (Base network)."
+                  : "Connect a wallet on Base (MetaMask, Coinbase Wallet, etc.) and try again.";
+          throw new Error("No wallet found — " + hint);
       }
 
       const minter = accounts[0];
@@ -4026,50 +4031,19 @@
           try {
               await update(playerDocRef(myUserId), { mintWalletForMint: minterLc });
           } catch (e) {
-              console.error("mintWalletForMint update", e);
-              throw new Error(
-                  "Could not save wallet link in Firebase. Check RTDB rules and your connection."
-              );
+              console.warn("mintWalletForMint update skipped — mint continues on-chain", e);
           }
       }
 
       setStatus("Building mint transaction…", "#94a3b8");
       const mintIface = new ethers.utils.Interface(PTG_NFT_ABI);
-      const dataHex = appendErc8021BuilderSuffix(
-          mintIface.encodeFunctionData("publicMint", [metadataUri])
-      );
+      const dataHexPlain = mintIface.encodeFunctionData("publicMint", [metadataUri]);
+      const dataHexWithBuilder = appendErc8021BuilderSuffix(dataHexPlain);
       const valueHex = await readMintPriceWeiHex(toNft, ethProvider);
       const balBefore = await readNftBalanceBn(toNft, minter, ethProvider);
 
       setStatus("Preparing transaction…", "#94a3b8");
       const fromChk = ethers.utils.getAddress(accounts[0]);
-      const gasFields = await prepareMintTxGasFields(fromChk, toNft, dataHex, valueHex);
-      const txBase = {
-          from: fromChk,
-          to: toNft,
-          data: dataHex,
-          value: valueHex,
-      };
-      const txPayloadMinimal = { ...txBase };
-      let txPayloadFull = null;
-      let txPayloadGasOnly = null;
-      if (Object.keys(gasFields).length > 0) {
-          txPayloadFull = { ...txBase, ...gasFields };
-          if (gasFields.maxFeePerGas && gasFields.maxPriorityFeePerGas) {
-              txPayloadFull.type = "0x2";
-              txPayloadFull.chainId = BASE_CHAIN_ID_HEX;
-          }
-          if (gasFields.gas) {
-              txPayloadFull.gasLimit = gasFields.gas;
-          }
-          if (gasFields.gas) {
-              txPayloadGasOnly = {
-                  ...txBase,
-                  gas: gasFields.gas,
-                  gasLimit: gasFields.gas,
-              };
-          }
-      }
 
       let txHash;
       let lastSendErr = null;
@@ -4081,55 +4055,98 @@
           });
       }
 
-      async function runMintSendAttempts(provider) {
-          const tryList = [];
-          tryList.push({ label: "minimal_wallet_estimate", payload: txPayloadMinimal });
-          if (txPayloadGasOnly) {
-              tryList.push({ label: "gas_limit_only", payload: txPayloadGasOnly });
-          }
-          if (txPayloadFull) {
-              tryList.push({ label: "full_eip1559_preset", payload: txPayloadFull });
-          }
-          for (let t = 0; t < tryList.length; t++) {
-              try {
-                  return await trySendTransaction(provider, tryList[t].payload);
-              } catch (err) {
-                  lastSendErr = err;
-                  console.warn("mint eth_sendTransaction " + tryList[t].label, err);
+      async function attemptMintPipeline(dHex, passLabel) {
+          let passLastErr = null;
+          const gasFields = await prepareMintTxGasFields(fromChk, toNft, dHex, valueHex);
+          const txBase = {
+              from: fromChk,
+              to: toNft,
+              data: dHex,
+              value: valueHex,
+          };
+          const txPayloadMinimal = { ...txBase };
+          let txPayloadFull = null;
+          let txPayloadGasOnly = null;
+          if (Object.keys(gasFields).length > 0) {
+              txPayloadFull = { ...txBase, ...gasFields };
+              if (gasFields.maxFeePerGas && gasFields.maxPriorityFeePerGas) {
+                  txPayloadFull.type = "0x2";
+                  txPayloadFull.chainId = BASE_CHAIN_ID_HEX;
+              }
+              if (gasFields.gas) {
+                  txPayloadFull.gasLimit = gasFields.gas;
+              }
+              if (gasFields.gas) {
+                  txPayloadGasOnly = {
+                      ...txBase,
+                      gas: gasFields.gas,
+                      gasLimit: gasFields.gas,
+                  };
               }
           }
-          return null;
-      }
 
-      const feMint = getEmbeddedEthProvider();
-      if (
-          feMint &&
-          ethProvider === feMint &&
-          typeof feMint.request === "function" &&
-          accounts[0]
-      ) {
-          txHash = await runMintSendAttempts(feMint);
-      } else if (ethProvider && typeof ethProvider.request === "function") {
-          txHash = await runMintSendAttempts(ethProvider);
-      }
-
-      if (!txHash && ethProvider && typeof ethProvider.request === "function") {
-          try {
-              setStatus(
-                  "Sign in wallet — we submit via PhraseToGuess (wallet RPC workaround)…",
-                  "#94a3b8"
-              );
-              txHash = await signMintTxAndBroadcastViaSite(
-                  ethProvider,
-                  accounts[0],
-                  toNft,
-                  dataHex,
-                  valueHex
-              );
-          } catch (relayErr) {
-              console.warn("mint sign+broadcast relay", relayErr);
-              lastSendErr = relayErr;
+          async function runMintSendAttempts(provider) {
+              const tryList = [];
+              tryList.push({ label: passLabel + "_minimal", payload: txPayloadMinimal });
+              if (txPayloadGasOnly) {
+                  tryList.push({ label: passLabel + "_gas_only", payload: txPayloadGasOnly });
+              }
+              if (txPayloadFull) {
+                  tryList.push({ label: passLabel + "_full_eip1559", payload: txPayloadFull });
+              }
+              for (let t = 0; t < tryList.length; t++) {
+                  try {
+                      return await trySendTransaction(provider, tryList[t].payload);
+                  } catch (err) {
+                      passLastErr = err;
+                      console.warn("mint eth_sendTransaction " + tryList[t].label, err);
+                  }
+              }
+              return null;
           }
+
+          let h = null;
+          const feMint = getEmbeddedEthProvider();
+          if (
+              feMint &&
+              ethProvider === feMint &&
+              typeof feMint.request === "function" &&
+              accounts[0]
+          ) {
+              h = await runMintSendAttempts(feMint);
+          } else if (ethProvider && typeof ethProvider.request === "function") {
+              h = await runMintSendAttempts(ethProvider);
+          }
+
+          if (!h && ethProvider && typeof ethProvider.request === "function") {
+              try {
+                  setStatus(
+                      "Sign in wallet — we submit via PhraseToGuess (wallet RPC workaround)…",
+                      "#94a3b8"
+                  );
+                  h = await signMintTxAndBroadcastViaSite(
+                      ethProvider,
+                      accounts[0],
+                      toNft,
+                      dHex,
+                      valueHex
+                  );
+              } catch (relayErr) {
+                  console.warn("mint sign+broadcast relay", relayErr);
+                  passLastErr = relayErr;
+              }
+          }
+          return { hash: h, lastErr: passLastErr };
+      }
+
+      let p = await attemptMintPipeline(dataHexWithBuilder, "builder");
+      txHash = p.hash;
+      lastSendErr = p.lastErr;
+      if (!txHash && dataHexWithBuilder !== dataHexPlain) {
+          console.warn("mint: retrying without Base builder calldata suffix");
+          p = await attemptMintPipeline(dataHexPlain, "plain");
+          txHash = p.hash;
+          if (p.lastErr) lastSendErr = p.lastErr;
       }
 
       if (!txHash) {
