@@ -4154,15 +4154,8 @@
       if (!txHash) {
           if (lastSendErr) console.warn("mint: user cancelled or send failed", lastSendErr);
           const detail = mintWalletErrorDetail(lastSendErr);
-          const lower = detail.toLowerCase();
-          if (/user rejected|user denied|rejected the request|denied transaction|4001|action_?cancel/i.test(lower)) {
-              throw new Error("Transaction was cancelled in the wallet.");
-          }
-          throw new Error(
-              detail.length > 0
-                  ? "Mint could not be sent: " + detail.slice(0, 320)
-                  : "Mint could not be sent. Use Base network, keep a little ETH for gas, and approve the transaction in your wallet."
-          );
+          if (detail) console.warn("mint send detail", detail);
+          throw new Error("MINT_UI_FAILED");
       }
 
       txHash = normalizeMintTxHash(txHash);
@@ -4177,7 +4170,7 @@
           receipt = await web3p.waitForTransaction(txHash, 1, 90000);
       }
       if (!receiptIndicatesSuccess(receipt)) {
-          throw new Error("Transaction reverted or not confirmed");
+          throw new Error("MINT_UI_FAILED");
       }
 
       setStatus("Verifying mint on-chain…", "#94a3b8");
@@ -4211,21 +4204,20 @@
           }
       }
       if (balAfter == null || !balAfter.gt(balBefore)) {
-          throw new Error(
-              "NFT balance did not increase after the transaction. Check the tx on BaseScan."
-          );
+          console.warn("mint: balance did not increase after tx", txHash);
+          throw new Error("MINT_UI_FAILED");
       }
 
       return { txHash, minter, ethProvider };
   }
 
-  function setBadgeMintFeedback(html, color) {
+  function setBadgeMintFeedback(text, color) {
       const el = document.getElementById("badgeMintFeedback");
       if (!el) return;
-      const s = html || "";
-      el.innerHTML = s;
+      const s = text == null ? "" : String(text).trim();
+      el.textContent = s;
       el.style.color = color || "var(--text-muted)";
-      el.style.display = s.trim() ? "" : "none";
+      el.style.display = s ? "" : "none";
   }
 
   async function mintWinBadgeFromUi(need, contractAddr, metadataUri) {
@@ -4249,21 +4241,13 @@
               }
           }
           profileBadgesMinted[key] = true;
-          setBadgeMintFeedback(
-              'Minted. <a href="https://basescan.org/tx/' +
-                  h +
-                  '" target="_blank" rel="noopener noreferrer">View on BaseScan</a>',
-              "#86efac"
-          );
+          console.info("badge mint tx", h);
+          setBadgeMintFeedback("Success.", "#86efac");
           await refreshBadgeOnchainBalances();
           updateHeroBadgeMintUi();
       } catch (e) {
           console.error(e);
-          const msg =
-              e && typeof e.message === "string"
-                  ? e.message
-                  : "Mint failed — try again or check the wallet.";
-          setBadgeMintFeedback(msg, "#fc401f");
+          setBadgeMintFeedback("Failed.", "#fc401f");
       } finally {
           badgeMintInFlight = false;
           updateHeroBadgeMintUi();
@@ -4289,19 +4273,13 @@
               }
           }
           profileBadgesMinted.og = true;
-          setBadgeMintFeedback(
-              'OG badge minted. <a href="https://basescan.org/tx/' +
-                  h +
-                  '" target="_blank" rel="noopener noreferrer">BaseScan</a>',
-              "#86efac"
-          );
+          console.info("OG badge mint tx", h);
+          setBadgeMintFeedback("Success.", "#86efac");
           await refreshBadgeOnchainBalances();
           updateHeroBadgeMintUi();
       } catch (e) {
           console.error(e);
-          const msg =
-              e && typeof e.message === "string" ? e.message : "Mint failed.";
-          setBadgeMintFeedback(msg, "#fc401f");
+          setBadgeMintFeedback("Failed.", "#fc401f");
       } finally {
           badgeMintInFlight = false;
           updateHeroBadgeMintUi();
@@ -4310,19 +4288,12 @@
 
   // --- MINT LOGIC: PhraseToGuess NFT + serwerowy voucher EIP-712 (brak mintu z samego Basescan) ---
   function showVictoryMintFailed(err) {
+      if (err) console.error(err);
       const statusDiv = document.getElementById("victoryStatus");
       const btn = document.getElementById("victoryMintBtn");
       const txL = document.getElementById("victoryTxLink");
       if (statusDiv) {
-          const base =
-              "Mint reverted on-chain. Farcaster/Base use smart contract wallets — the deployed NFT must use " +
-              "publicMint with _mint (see Kontrakt-nft.sol in this repo), then redeploy trophy + badge contracts and paste new addresses.";
-          const extra =
-              err && typeof err.message === "string" && err.message.trim() &&
-              !/mint_send_failed|user rejected|denied/i.test(err.message)
-                  ? " (" + err.message.trim().slice(0, 120) + ")"
-                  : "";
-          statusDiv.textContent = base + extra;
+          statusDiv.textContent = "Failed.";
           statusDiv.style.color = "#fc401f";
       }
       if (btn) {
@@ -4338,7 +4309,8 @@
     const statusDiv = document.getElementById('victoryStatus');
     if (!btn || !statusDiv) return;
     btn.innerHTML = "Processing..."; btn.disabled = true;
-    statusDiv.textContent = "Check your wallet! (Click 'I'm Safe' if warned)"; statusDiv.style.color = "#94a3b8";
+    statusDiv.textContent = "";
+    statusDiv.style.color = "#94a3b8";
 
       const zero = "0x0000000000000000000000000000000000000000";
       if (!PTG_NFT_ADDRESS || PTG_NFT_ADDRESS.toLowerCase() === zero) {
@@ -4404,11 +4376,12 @@
           persistMintCalendarToStorage(mintCalendarDays);
           renderCalendarMonth();
       }
-      statusDiv.textContent = "Success! Trophy Minted. 🏆";
+      console.info("trophy mint tx", txHash);
+      statusDiv.textContent = "Success.";
       statusDiv.style.color = "#66c800";
-      btn.innerHTML = "MINTED! 🏆";
-      document.getElementById("victoryTxLink").innerHTML =
-          `<a href="https://basescan.org/tx/${txHash}" target="_blank" rel="noopener noreferrer">View on BaseScan</a>`;
+      btn.innerHTML = "<span>OK</span>";
+      const txL = document.getElementById("victoryTxLink");
+      if (txL) txL.textContent = "";
       document.getElementById("victoryModal").classList.remove("show");
       if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY) {
           void initGame(true);
