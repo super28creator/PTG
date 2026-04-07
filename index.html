@@ -4321,6 +4321,10 @@
               if (userData.lastMintBonusTxHash === txHash) {
                   return userData;
               }
+              if (!userData.mintCalendar || typeof userData.mintCalendar !== "object") {
+                  userData.mintCalendar = {};
+              }
+              userData.mintCalendar[mintDay] = true;
               if (!userData.pendingMint) {
                   return userData;
               }
@@ -4328,10 +4332,6 @@
               userData.mintCount = (userData.mintCount || 0) + 1;
               userData.pendingMint = false;
               userData.lastMintBonusTxHash = txHash;
-              if (!userData.mintCalendar || typeof userData.mintCalendar !== "object") {
-                  userData.mintCalendar = {};
-              }
-              userData.mintCalendar[mintDay] = true;
               return userData;
           });
           try {
