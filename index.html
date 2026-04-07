@@ -2308,6 +2308,17 @@
       return null;
   }
 
+  /** Adres, dla którego sprawdzamy balanceOf odznak — zawsze ten sam co profil gry, jeśli to portfel 0x. */
+  function gameLinkedWalletAddress() {
+      const uid = String(myUserId || "").trim().toLowerCase();
+      if (!/^0x[a-f0-9]{40}$/.test(uid)) return null;
+      try {
+          return ethers.utils.getAddress(uid);
+      } catch (_) {
+          return null;
+      }
+  }
+
   function scheduleRefreshBadgeOnchainBalances() {
       if (badgeOnchainRefreshT) clearTimeout(badgeOnchainRefreshT);
       badgeOnchainRefreshT = setTimeout(function () {
@@ -2323,14 +2334,27 @@
 
   async function refreshBadgeOnchainBalances() {
       const w = await tryGetConnectedWalletSilent();
-      badgeWalletProbed = !!(w && w.accounts && w.accounts[0]);
-      if (!w || !w.accounts[0]) {
+      const gameAddr = gameLinkedWalletAddress();
+      let owner = null;
+      if (gameAddr) {
+          owner = gameAddr;
+      } else if (w && w.accounts && w.accounts[0]) {
+          try {
+              owner = ethers.utils.getAddress(w.accounts[0]);
+          } catch (_) {
+              owner = w.accounts[0];
+          }
+      }
+      badgeWalletProbed = !!owner;
+      if (!owner) {
           badgeOnchainBn = { og: null, m10: null, m100: null, m1000: null };
           updateHeroBadgeMintUi();
           return;
       }
-      const owner = w.accounts[0];
-      const p = w.ethProvider;
+      const p =
+          w && w.ethProvider && w.accounts && w.accounts[0]
+              ? w.ethProvider
+              : getInjectedProvider() || getEmbeddedEthProvider();
       const pairs = [
           ["og", PTG_OG_BADGE_NFT],
           ["m10", PTG_WIN10_BADGE_NFT],
