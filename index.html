@@ -494,43 +494,12 @@
         width: max-content;
         max-width: 100%;
     }
-    .category-pool-summary {
-        grid-column: 1 / -1;
-        margin: 0 0 4px;
-        padding: 0 2px;
-        font-size: 11px;
-        font-weight: 600;
-        line-height: 1.35;
-        color: var(--gray-50);
-    }
-    .category-pool-summary[hidden] {
-        display: none !important;
-    }
     .meta-tries { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--danger); }
     .chip { padding: 8px 14px; background: rgba(255,255,255,0.03); border-radius: 999px; font-weight: 600; border: var(--glass-border); display: flex; align-items: center; gap: 6px;}
     .user-chip { border-color: var(--cerulean); background: rgba(0, 0, 255, 0.12); color: #fff; text-shadow: 0 0 10px rgba(60, 138, 255, 0.35); }
     .user-chip--base { border-color: rgba(0, 82, 255, 0.55); background: rgba(0, 40, 120, 0.2); }
     .user-chip--farcaster { border-color: rgba(138, 99, 255, 0.5); background: rgba(70, 40, 120, 0.18); }
     .user-chip--browser { border-color: rgba(60, 138, 255, 0.5); }
-
-    /* --- CATEGORY LIST (two columns, bullets) --- */
-    .available-cats {
-      columns: 2;
-      column-gap: 1.5rem;
-      padding-left: 1.15rem;
-      margin: 0;
-      list-style: disc;
-      list-style-position: outside;
-      color: #cbd5e1;
-      font-size: 14px;
-      line-height: 1.55;
-      max-width: 100%;
-    }
-    .available-cats li {
-      break-inside: avoid;
-      padding-left: 0.15rem;
-      margin-bottom: 0.3rem;
-    }
 
     /* --- SOCIAL & FOOTER: te same błękity co reszta UI (base blue / cerulean), lekko przygaszone --- */
     .social-section {
@@ -1318,15 +1287,10 @@
         outline: 2px solid var(--cerulean);
         outline-offset: 2px;
     }
-    /* Można zamintować — podświetlenie (portfel + próg / OG) */
+    /* Mintable — subtelna obwódka bez pulsowania (unikaj „migania” przy wejściu) */
     .badge-slot--mintable {
         cursor: pointer !important;
-        animation: badge-mintable-glow 2.2s ease-in-out infinite;
-        box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.45), 0 0 22px rgba(59, 130, 246, 0.35);
-    }
-    @keyframes badge-mintable-glow {
-        0%, 100% { box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.45), 0 0 18px rgba(59, 130, 246, 0.3); }
-        50% { box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.65), 0 0 28px rgba(59, 130, 246, 0.5); }
+        box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.45), 0 0 14px rgba(59, 130, 246, 0.22);
     }
     .badge-onchain--held {
         position: relative;
@@ -1545,10 +1509,6 @@
       font-weight: 600;
       color: #fbbf24;
     }
-    .category-filter-panel--readonly .category-filter-list {
-      opacity: 0.72;
-      pointer-events: none;
-    }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
@@ -1624,7 +1584,7 @@
   <div class="card card--main-game">
     <div class="cal-floating-tools" role="toolbar" aria-label="Game tools">
       <div class="cal-floating-tools__icons">
-        <button type="button" id="categoryFilterToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="categoryFilterPanel" title="Pula kategorii (min. 4)" aria-label="Wybierz kategorie do losowania fraz">
+        <button type="button" id="categoryFilterToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="categoryFilterPanel" title="Category pool" aria-label="Choose categories for new phrases">
           <svg class="cal-icon-svg cal-icon-svg--star" viewBox="0 0 24 24" aria-hidden="true">
             <polygon points="12 2 15 9 22 9 17 14 19 22 12 18 5 22 7 14 2 9 9 9"/>
           </svg>
@@ -1688,7 +1648,6 @@
         <div class="daily-info-pill" id="dailyInfo">Games: 0/3</div>
         <div class="chip meta__mistakes game-status-pill game-status-pill--mistakes" id="mistakesPill">Mistakes: <span id="tries" class="meta-tries">0</span><span class="meta-mistakes-max">/5</span></div>
       </div>
-      <p id="categoryPoolSummary" class="category-pool-summary" hidden role="status" aria-live="polite"></p>
     </div>
 
     <div id="calendarPanel" class="calendar-panel" hidden>
@@ -1697,9 +1656,9 @@
     </div>
 
     <div id="categoryFilterPanel" class="category-filter-panel" hidden>
-      <div class="category-filter-heading">Pula kategorii</div>
-      <p class="category-filter-hint">Zaznacz minimum <strong id="categoryMinLabel">4</strong> kategorie. Nowe frazy losują się <strong>tylko</strong> z zaznaczonych (nie z całej listy).</p>
-      <div id="categoryFilterList" class="category-filter-list" role="group" aria-label="Categories in rotation"></div>
+      <div class="category-filter-heading">Category pool</div>
+      <p class="category-filter-hint">You must choose at least <strong id="categoryMinLabel">4</strong> categories.</p>
+      <div id="categoryFilterList" class="category-filter-list" role="group" aria-label="Categories for new games"></div>
       <div id="categoryFilterMsg" class="category-filter-msg" role="status" aria-live="polite"></div>
     </div>
 
@@ -1728,22 +1687,6 @@
   </div>
 
   <div class="card">
-    <h3 style="margin-top:0; font-size: 16px; color: var(--cerulean); text-transform: uppercase; letter-spacing: 1px;">Categories</h3>
-    <ul class="available-cats">
-      <li>Animals</li>
-      <li>Crypto</li>
-      <li>Onchain</li>
-      <li>Economics</li>
-      <li>Finance</li>
-      <li>DeFi</li>
-      <li>Science</li>
-      <li>Sports</li>
-      <li>Games</li>
-      <li>Pokemon</li>
-      <li>Movies</li>
-      <li>Stars</li>
-    </ul>
-
     <div class="social-section">
         <p class="social-section-label">JOIN COMMUNITY</p>
         <div class="social-row">
@@ -2666,7 +2609,6 @@
       const merged = mergeActiveRoundCategoryIntoPool(normalized);
       persistCategoryFilter(merged);
       renderCategoryFilterCheckboxes();
-      refreshCategoryPoolSummary();
       if (merged.length !== normalized.length) {
           void syncCategoryPoolToServer(merged);
       }
@@ -2712,10 +2654,6 @@
           row.appendChild(span);
           list.appendChild(row);
       });
-      const panel = document.getElementById("categoryFilterPanel");
-      if (panel && !panel.hasAttribute("hidden")) {
-          syncCategoryPanelInteractivity();
-      }
   }
 
   function initCategoryFilterPanel() {
@@ -2731,11 +2669,6 @@
   function onCategoryFilterCheckboxChange(ev) {
       const cb = ev.target;
       if (!cb || cb.type !== "checkbox") return;
-      if (isActiveIncompleteRound()) {
-          renderCategoryFilterCheckboxes();
-          syncCategoryPanelInteractivity();
-          return;
-      }
       const list = document.getElementById("categoryFilterList");
       const msgEl = document.getElementById("categoryFilterMsg");
       if (!list) return;
@@ -2748,15 +2681,14 @@
           if (msgEl) {
               msgEl.textContent =
                   need >= MIN_CATEGORY_POOL
-                      ? "Zostaw co najmniej " + need + " kategorie zaznaczone."
-                      : "Wszystkie dostępne kategorie muszą być zaznaczone.";
+                      ? "Keep at least " + need + " categories selected."
+                      : "All available categories must stay selected.";
           }
           return;
       }
       persistCategoryFilter(names);
       if (msgEl) msgEl.textContent = "";
       void syncCategoryPoolToServer(names);
-      refreshCategoryPoolSummary();
   }
 
   /** Z Firebase po sync — jednorazowe odtworzenie rundy po odświeżeniu. */
@@ -2800,8 +2732,8 @@
       if (!Number.isFinite(g) || g !== gamesPlayedTodayCount) return false;
       const cat = round.category;
       if (typeof cat !== "string" || !cat) return false;
-      const catKeys = getPlayableCategoryKeys();
-      if (!catKeys.includes(cat)) return false;
+      const allCats = allNonEmptyCategoryKeys();
+      if (!allCats.includes(cat)) return false;
       const sec = typeof round.secret === "string" ? round.secret.toUpperCase() : "";
       if (!sec || !CATEGORIES[cat]?.some((p) => p.toUpperCase() === sec)) return false;
       const rev = typeof round.revealedStr === "string" ? round.revealedStr : "";
@@ -3074,7 +3006,7 @@
       );
   }
 
-  /** Trwa nierozstrzygnięta fraza — blokada poolu (gwiazdka) i „New Category” do końca rundy. */
+  /** Nierozstrzygnięta fraza — „New Category” zablokowane do końca rundy (pula checkboxów może się zmieniać; losowanie od następnej rundy). */
   function isActiveIncompleteRound() {
       if (!isLoggedIn() || gameOver || pendingMint) return false;
       if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) return false;
@@ -3090,79 +3022,25 @@
       if (!el) return;
       if (currentCategory) {
           el.textContent = "Category: " + currentCategory;
-          refreshCategoryPoolSummary();
           return;
       }
       if (!isLoggedIn()) {
           el.textContent = "Category: —";
-          refreshCategoryPoolSummary();
           return;
       }
       if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) {
           el.textContent = "Daily limit reached";
-          refreshCategoryPoolSummary();
           return;
       }
       if (pendingMint) {
           el.textContent = "Category: —";
-          refreshCategoryPoolSummary();
           return;
       }
       el.textContent = "Category: —";
-      refreshCategoryPoolSummary();
-  }
-
-  /** Wiersz pod statusem: gdy pula jest węższa niż wszystkie kategorie — pokaż które są w grze. */
-  function refreshCategoryPoolSummary() {
-      const el = document.getElementById("categoryPoolSummary");
-      if (!el) return;
-      if (!isLoggedIn()) {
-          el.setAttribute("hidden", "");
-          el.textContent = "";
-          return;
-      }
-      const keys = getPlayableCategoryKeys();
-      const valid = allNonEmptyCategoryKeys();
-      if (!keys.length || !valid.length || keys.length >= valid.length) {
-          el.setAttribute("hidden", "");
-          el.textContent = "";
-          return;
-      }
-      el.removeAttribute("hidden");
-      const show = keys.slice(0, 5).join(", ");
-      const more = keys.length > 5 ? " +" + (keys.length - 5) : "";
-      el.textContent = "Frazy tylko z: " + show + more;
-  }
-
-  /** Panel otwarty: zablokuj checkboxy na czas nierozstrzygniętej rundy (gwiazdka zawsze klikalna). */
-  function syncCategoryPanelInteractivity() {
-      const panel = document.getElementById("categoryFilterPanel");
-      const msgEl = document.getElementById("categoryFilterMsg");
-      if (!panel) return;
-      if (panel.hasAttribute("hidden")) {
-          panel.classList.remove("category-filter-panel--readonly");
-          return;
-      }
-      const locked = isActiveIncompleteRound();
-      panel.classList.toggle("category-filter-panel--readonly", locked);
-      const list = document.getElementById("categoryFilterList");
-      if (list) {
-          list.querySelectorAll("input[type=checkbox]").forEach((inp) => {
-              inp.disabled = locked;
-          });
-      }
-      if (!msgEl) return;
-      if (locked) {
-          msgEl.textContent =
-              "Trwa runda — zmiana zaznaczeń możliwa po wygranej lub przegranej.";
-      } else if (/Trwa runda —/.test(msgEl.textContent)) {
-          msgEl.textContent = "";
-      }
   }
 
   function syncRoundLockUI() {
       const catGrey = isPhraseRoundLocked();
-      const poolLocked = isActiveIncompleteRound();
       const cat = document.getElementById("categoryDisplay");
       if (cat) {
           cat.classList.toggle("is-round-locked", catGrey);
@@ -3173,11 +3051,8 @@
           toggle.disabled = false;
           toggle.style.opacity = "";
           toggle.style.pointerEvents = "";
-          toggle.title = poolLocked
-              ? "Pula kategorii (podgląd — edycja po rundzie)"
-              : "Pula kategorii (min. 4)";
+          toggle.title = "Category pool";
       }
-      syncCategoryPanelInteractivity();
   }
 
   async function initGame(newCat = true) {
@@ -4669,7 +4544,6 @@
               categoryFilterToggle.setAttribute("aria-expanded", "true");
               const minEl = document.getElementById("categoryMinLabel");
               if (minEl) minEl.textContent = String(minCategoryPickRequired());
-              syncCategoryPanelInteractivity();
           } else {
               closeCategoryFilterPanelUI();
           }
