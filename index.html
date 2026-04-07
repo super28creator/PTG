@@ -212,9 +212,9 @@
         max-width: 100%;
         width: max-content;
     }
-    /* Kolumna ikon + blok wyniku — bez nadmiernego % szerokości w miniappach */
+    /* Kolumna ikon + blok wyniku — więcej miejsca, żeby puchar+wynik nie nachodził na 4. odznakę (SS3) */
     .card--main-game .card-header-main {
-        padding-right: clamp(108px, 30vw, 172px);
+        padding-right: clamp(132px, 36vw, 204px);
     }
 
     /* --- TYPOGRAPHY --- */
@@ -622,12 +622,11 @@
         width: 100%;
         box-sizing: border-box;
     }
-    /* 6 × BaseScan — te same „coiny” co odznaki w hero (kółko + cienki metal, bez inset) */
+    /* 6 × BaseScan (SS4): jak przyciski X/Discord — niebieski gradient + mały kwadrat z ikoną, bez czarnego środka */
     .contract-links-row {
-        --contract-chip-size: clamp(44px, 10.5vw, 56px);
         display: grid;
         grid-template-columns: repeat(6, minmax(0, 1fr));
-        gap: clamp(8px, 2.4vw, 14px);
+        gap: 10px;
         margin: 12px 0 0;
         padding: 0;
         list-style: none;
@@ -644,53 +643,71 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: var(--contract-chip-size);
-        height: var(--contract-chip-size);
+        width: 100%;
+        max-width: 56px;
+        aspect-ratio: 1;
+        margin: 0 auto;
         box-sizing: border-box;
         flex-shrink: 0;
-        border-radius: 50%;
+        border-radius: 14px;
         overflow: hidden;
         text-decoration: none;
         color: rgba(232, 240, 255, 0.92);
-        background: rgba(10, 11, 16, 0.35);
-        border: 1px solid rgba(148, 163, 184, 0.42);
+        background: linear-gradient(
+            118deg,
+            rgba(20, 35, 110, 0.9) 0%,
+            rgba(35, 55, 150, 0.88) 35%,
+            rgba(45, 85, 195, 0.82) 68%,
+            rgba(60, 138, 255, 0.38) 100%
+        );
+        border: 1px solid rgba(60, 138, 255, 0.32);
         box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.1),
-            0 3px 14px rgba(0, 0, 0, 0.4);
-        transition: transform 0.2s var(--ease-base), border-color 0.2s, box-shadow 0.2s, background 0.2s;
+            0 2px 0 rgba(0, 0, 0, 0.1) inset,
+            0 6px 20px rgba(0, 25, 140, 0.32),
+            0 0 0 1px rgba(255, 255, 255, 0.06);
+        transition: transform 0.22s var(--ease-base), border-color 0.22s, box-shadow 0.22s, background 0.22s;
     }
     .contract-link-chip:hover {
-        border-color: rgba(186, 230, 253, 0.55);
-        background: rgba(15, 40, 85, 0.28);
+        color: rgba(255, 255, 255, 0.98);
+        border-color: rgba(100, 170, 255, 0.45);
+        background: linear-gradient(
+            118deg,
+            rgba(28, 48, 135, 0.95) 0%,
+            rgba(42, 72, 175, 0.92) 38%,
+            rgba(55, 105, 215, 0.86) 72%,
+            rgba(80, 155, 255, 0.48) 100%
+        );
         box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.14),
-            0 4px 18px rgba(37, 99, 235, 0.22),
-            0 6px 24px rgba(34, 211, 238, 0.1);
-        transform: translateY(-1px);
+            0 2px 0 rgba(255, 255, 255, 0.08) inset,
+            0 10px 28px rgba(0, 40, 180, 0.42);
+        transform: translateY(-2px);
     }
     .contract-link-chip:focus-visible {
         outline: 2px solid var(--cerulean);
         outline-offset: 3px;
     }
     .contract-link-chip__inset {
-        width: 72%;
-        height: 72%;
-        border-radius: 50%;
+        width: 58%;
+        height: 58%;
+        max-width: 34px;
+        max-height: 34px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(20, 45, 95, 0.22);
-        border: 1px solid rgba(96, 165, 250, 0.28);
-        box-shadow: none;
-        transition: background 0.2s, border-color 0.2s;
+        background: rgba(60, 138, 255, 0.12);
+        border: 1px solid rgba(100, 165, 255, 0.22);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+        transition: background 0.22s, border-color 0.22s, box-shadow 0.22s;
     }
     .contract-link-chip:hover .contract-link-chip__inset {
-        background: rgba(37, 99, 235, 0.18);
-        border-color: rgba(147, 197, 253, 0.42);
+        background: rgba(60, 138, 255, 0.18);
+        border-color: rgba(140, 190, 255, 0.28);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14) inset;
     }
     .contract-link-chip__inset svg.social-icon--basescan {
-        width: 58%;
-        height: 58%;
+        width: 62%;
+        height: 62%;
         max-width: 20px;
         max-height: 20px;
         fill: none;
@@ -1041,19 +1058,21 @@
         box-sizing: border-box;
         min-width: 0;
     }
-    /* Hero: 4 „coiny” jak na mocku — cienki metaliczny pierścień, bez inset; ~wysokość linii tytułu */
+    /* Hero odznaki (SS3): jeden cienki pierścień, bez „talerza” pod PNG i bez białego wykrojnika od znacznika */
     .hero-stack .hero-badge-row {
-        --hero-badge-side: clamp(56px, 5vw + 32px, 80px);
+        --hero-badge-side: clamp(58px, 5.2vw + 34px, 82px);
         flex-wrap: nowrap;
         justify-content: flex-start;
         align-items: center;
-        gap: clamp(14px, 4.5vw, 26px);
+        gap: clamp(12px, 4vw, 22px);
         overflow: visible;
         width: 100%;
-        max-width: min(100%, 380px);
+        max-width: 100%;
         min-width: 0;
         margin: 2px 0 0;
         padding: 0;
+        padding-right: 4px;
+        box-sizing: border-box;
     }
     .hero-stack .hero-badge-row .score-milestone,
     .hero-stack .hero-badge-row .hero-og-slot {
@@ -1069,12 +1088,10 @@
         flex-shrink: 0;
         overflow: hidden;
         padding: 0;
-        transition: border-color 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease, opacity 0.25s ease;
-        background: rgba(10, 11, 16, 0.35);
-        border: 1px solid rgba(148, 163, 184, 0.42);
-        box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.1),
-            0 3px 14px rgba(0, 0, 0, 0.4);
+        transition: border-color 0.25s ease, filter 0.25s ease, opacity 0.25s ease;
+        background: transparent;
+        border: 1px solid rgba(58, 64, 78, 0.88);
+        box-shadow: none;
     }
     .milestone-badge-img {
         width: 100%;
@@ -1092,20 +1109,16 @@
         opacity: 0.38;
     }
     .hero-stack .hero-badge-row .score-milestone.score-milestone--unlocked .milestone-badge-img {
-        filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45));
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
         opacity: 1;
     }
     .hero-stack .hero-badge-row .score-milestone.score-milestone--unlocked {
-        border-color: rgba(90, 98, 115, 0.72);
-        box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.06),
-            0 3px 12px rgba(0, 0, 0, 0.38);
+        border-color: rgba(82, 88, 102, 0.85);
+        box-shadow: none;
     }
     .hero-stack .hero-badge-row .score-milestone.score-milestone--locked {
-        border-color: rgba(48, 52, 62, 0.9);
-        box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.04),
-            0 2px 10px rgba(0, 0, 0, 0.5);
+        border-color: rgba(42, 46, 56, 0.95);
+        box-shadow: none;
     }
     .rewards-strip > div {
         display: flex;
@@ -1137,27 +1150,21 @@
     .hero-stack .lead {
         margin-top: 0;
     }
-    /* OG aktywny: jasna obwódka + cyjan u dołu (mock); zgaszony = jak zablokowany milestone */
+    /* OG aktywny (SS3): obwódka + poświata tylko na PNG; slot bez szarego tła */
     .hero-stack .hero-badge-row .hero-og-slot:not(:has(.og-badge--dim)) {
-        border-color: rgba(186, 230, 253, 0.55);
-        background: rgba(15, 40, 85, 0.25);
-        box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.16),
-            0 4px 18px rgba(37, 99, 235, 0.22),
-            0 8px 28px rgba(34, 211, 238, 0.12);
+        border-color: rgba(125, 180, 230, 0.5);
+        background: transparent;
+        box-shadow: none;
     }
     .hero-stack .hero-badge-row .hero-og-slot:not(:has(.og-badge--dim)) .og-badge {
         filter:
-            drop-shadow(0 6px 14px rgba(34, 211, 238, 0.55))
-            drop-shadow(0 10px 22px rgba(37, 99, 235, 0.25))
-            drop-shadow(0 -2px 8px rgba(59, 130, 246, 0.15));
+            drop-shadow(0 8px 18px rgba(34, 211, 238, 0.45))
+            drop-shadow(0 4px 12px rgba(37, 99, 235, 0.3));
     }
     .hero-stack .hero-badge-row .hero-og-slot:has(.og-badge--dim) {
-        border-color: rgba(48, 52, 62, 0.9);
-        background: rgba(10, 11, 16, 0.35);
-        box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.04),
-            0 2px 10px rgba(0, 0, 0, 0.5);
+        border-color: rgba(42, 46, 56, 0.95);
+        background: transparent;
+        box-shadow: none;
     }
     .hero-og-slot .og-badge {
         width: 100%;
@@ -1257,15 +1264,9 @@
         pointer-events: none;
         z-index: 2;
     }
+    /* W hero nie rysujemy znacznika w rogu — wyglądał jak „wykrojnik” na obwódce (SS3) */
     .hero-badge-row .badge-onchain--held::after {
-        width: 11px;
-        height: 11px;
-        right: 0;
-        bottom: 0;
-        border-width: 1.5px;
-        border-color: rgba(248, 250, 252, 0.92);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-        background-size: 7px 7px;
+        display: none;
     }
     .badge-mint-feedback {
         margin: 6px 0 0;
