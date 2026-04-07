@@ -1164,6 +1164,39 @@
         filter: none;
         opacity: 1;
     }
+    @keyframes heroBadgeUnlockGlow {
+        0% {
+            filter: brightness(1);
+            box-shadow: 0 0 0 0 rgba(96, 165, 250, 0);
+        }
+        35% {
+            filter: brightness(1.14);
+            box-shadow:
+                0 0 18px rgba(59, 130, 246, 0.55),
+                0 0 36px rgba(96, 165, 250, 0.28);
+        }
+        60% {
+            filter: brightness(1.06);
+            box-shadow: 0 0 12px rgba(96, 165, 250, 0.4);
+        }
+        100% {
+            filter: brightness(1);
+            box-shadow: 0 0 0 0 transparent;
+        }
+    }
+    button.score-milestone.hero-badge--unlock-celebrate,
+    button.hero-og-slot.hero-badge--unlock-celebrate {
+        position: relative;
+        animation: heroBadgeUnlockGlow 1s ease-in-out 2;
+        z-index: 1;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        button.score-milestone.hero-badge--unlock-celebrate,
+        button.hero-og-slot.hero-badge--unlock-celebrate {
+            animation-iteration-count: 1;
+            animation-duration: 0.7s;
+        }
+    }
     .rewards-strip > div {
         display: flex;
         align-items: center;
@@ -1785,6 +1818,8 @@
 
   /**
    * PhraseToGuessNFT (Base) — `publicMint(METADATA_URL)` + `priceWei`; wklej adres po deployu Kontrakt-nft.sol.
+   * Po zmianie w Kontrakt-nft.sol (publicMint bez _safeMint dla portfeli kontraktowych) zdeployuj ponownie
+   * ten kontrakt oraz kontrakty odznak poniżej i podmień adresy.
    */
   const PTG_NFT_ADDRESS = "0x9f9343A6833190EE0c816f71D72CE450b1ee8530";
   const PTG_NFT_ABI = [
@@ -2351,6 +2386,25 @@
       updateHeroBadgeMintUi();
   }
 
+  let __milestoneScoreUnlockPrev = null;
+  let __badgeHeldCelebratePrev = null;
+
+  function triggerHeroBadgeUnlockCelebrate(el) {
+      if (!el) return;
+      el.classList.remove("hero-badge--unlock-celebrate");
+      void el.offsetWidth;
+      el.classList.add("hero-badge--unlock-celebrate");
+      const done = () => {
+          el.classList.remove("hero-badge--unlock-celebrate");
+      };
+      el.addEventListener("animationend", done, { once: true });
+      const fallbackMs =
+          window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+              ? 900
+              : 2600;
+      setTimeout(done, fallbackMs);
+  }
+
   function updateHeroBadgeMintUi() {
       const uid = String(myUserId || "guest").toLowerCase();
       const isOgPlayer = SEASON1_OG_USER_IDS.has(uid);
@@ -2410,6 +2464,24 @@
               el.title = "Tap to mint " + need + " win badge (price on contract)";
           }
       });
+      const heldNow = {
+          og: badgeHeld("og"),
+          m10: badgeHeld("m10"),
+          m100: badgeHeld("m100"),
+          m1000: badgeHeld("m1000"),
+      };
+      if (__badgeHeldCelebratePrev !== null) {
+          if (heldNow.og && !__badgeHeldCelebratePrev.og && ogBtn) {
+              triggerHeroBadgeUnlockCelebrate(ogBtn);
+          }
+          milestones.forEach(({ id, key }) => {
+              if (heldNow[key] && !__badgeHeldCelebratePrev[key]) {
+                  const el = document.getElementById(id);
+                  if (el) triggerHeroBadgeUnlockCelebrate(el);
+              }
+          });
+      }
+      __badgeHeldCelebratePrev = heldNow;
   }
 
   /** Mint-day badge in calendar (PTG-circle.png at site root). */
@@ -4169,12 +4241,20 @@
   }
 
   // --- MINT LOGIC: PhraseToGuess NFT + serwerowy voucher EIP-712 (brak mintu z samego Basescan) ---
-  function showVictoryMintFailed() {
+  function showVictoryMintFailed(err) {
       const statusDiv = document.getElementById("victoryStatus");
       const btn = document.getElementById("victoryMintBtn");
       const txL = document.getElementById("victoryTxLink");
       if (statusDiv) {
-          statusDiv.textContent = "Failed";
+          const base =
+              "Mint reverted on-chain. Farcaster/Base use smart contract wallets — the deployed NFT must use " +
+              "publicMint with _mint (see Kontrakt-nft.sol in this repo), then redeploy trophy + badge contracts and paste new addresses.";
+          const extra =
+              err && typeof err.message === "string" && err.message.trim() &&
+              !/mint_send_failed|user rejected|denied/i.test(err.message)
+                  ? " (" + err.message.trim().slice(0, 120) + ")"
+                  : "";
+          statusDiv.textContent = base + extra;
           statusDiv.style.color = "#fc401f";
       }
       if (btn) {
@@ -4275,7 +4355,7 @@
       scheduleRefreshBadgeOnchainBalances();
     } catch(e) { 
         console.error(e);
-        showVictoryMintFailed();
+        showVictoryMintFailed(e);
     }
   }
 
@@ -4286,13 +4366,18 @@
           { el: document.getElementById("scoreMilestone100"), need: 100 },
           { el: document.getElementById("scoreMilestone1000"), need: 1000 },
       ];
+      const nowUnlock = { 10: s >= 10, 100: s >= 100, 1000: s >= 1000 };
       pairs.forEach(({ el, need }) => {
           if (!el) return;
-          const on = s >= need;
+          const on = nowUnlock[need];
+          if (__milestoneScoreUnlockPrev !== null && on && !__milestoneScoreUnlockPrev[need]) {
+              triggerHeroBadgeUnlockCelebrate(el);
+          }
           el.classList.toggle("score-milestone--unlocked", on);
           el.classList.toggle("score-milestone--locked", !on);
           el.title = on ? need + " points — unlocked!" : "Unlock at " + need + " points";
       });
+      __milestoneScoreUnlockPrev = nowUnlock;
   }
 
   function updateScoreUI() {

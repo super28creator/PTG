@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 /*
   PhraseToGuess NFT — ERC-721 (single file, jak weryfikacja na Basescan).
   - owner: mintTo(to, tokenURI), setPrice, withdraw(to)
-  - każdy: publicMint(tokenURI) payable (msg.value >= priceWei; nadpłata wraca)
+  - każdy: publicMint(tokenURI) payable — _mint + URI (bez safeMint, żeby portfele kontraktowe Farcaster/Base nie revertowały)
   - ReentrancyGuard na publicMint / withdraw
   - Brak setTokenURI: URI zapisane przy mincie jest ostateczne (nie da się podmienić z poziomu kontraktu).
   Cena w wei: ~1¢ przy ~$3.3k/ETH → 3_000_000_000_000 (0.000003 ETH), NIE 3_000_000_000_000_000 (0.003 ETH).
@@ -285,11 +285,17 @@ contract PhraseToGuessNFT is ERC165, IERC721Metadata, Ownable, ReentrancyGuard {
         return tokenId;
     }
 
+    /**
+     * Publiczny mint bez _safeMint: portfele kontraktowe (Farcaster / Base App / ERC-4337)
+     * często nie implementują IERC721Receiver — _safeMint wtedy zwraca "transfer to non ERC721Receiver".
+     * _mint + URI jest typowe dla płatnych mintów; użytkownik nadal może przenieść NFT z konta.
+     */
     function publicMint(string memory tokenURI_) external payable nonReentrant returns (uint256) {
         require(msg.value >= priceWei, "Insufficient payment");
         uint256 tokenId = nextTokenId;
         nextTokenId += 1;
-        _safeMint(msg.sender, tokenId, tokenURI_);
+        _mint(msg.sender, tokenId);
+        _setTokenURI(tokenId, tokenURI_);
         emit Minted(msg.sender, tokenId, tokenURI_);
 
         uint256 paid = msg.value;
