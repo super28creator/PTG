@@ -102,6 +102,13 @@
       --font-main: 'Inter', system-ui, sans-serif;
       --font-mono: 'Roboto Mono', monospace;
       --ease-base: cubic-bezier(0.4, 0, 0.2, 1);
+
+      /* Odznaki — ten sam wygląd w Base App / Farcaster / przeglądarce */
+      --badge-slot-radius: 14px;
+      --badge-glow-blue: rgba(59, 130, 246, 0.55);
+      --badge-glow-ring: rgba(37, 99, 235, 0.35);
+      --badge-tray-bg: rgba(8, 14, 40, 0.72);
+      --badge-tray-border: rgba(60, 138, 255, 0.22);
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
@@ -944,21 +951,80 @@
         box-sizing: border-box;
         min-width: 0;
     }
-    /* Odznaki punktów — obok OG, ten sam rozmiar kółka */
     .score-milestones {
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         max-width: 100%;
     }
+    /* --- Pasek odznak: jeden styl Base blue (Farcaster + Base App) --- */
+    .hero-badge-tray {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        padding: 12px 12px 14px;
+        border-radius: 18px;
+        background: var(--badge-tray-bg);
+        border: 1px solid var(--badge-tray-border);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 4px 24px rgba(0, 0, 0, 0.35);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+    }
+    html[data-ptg-host="base"] .hero-badge-tray {
+        transform: translateZ(0);
+    }
+    .hero-badge-tray__head {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        margin: 0 0 12px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 42%, #1d4ed8 100%);
+        border: 1px solid rgba(147, 197, 253, 0.35);
+        box-shadow:
+            0 0 0 1px rgba(37, 99, 235, 0.25),
+            0 8px 28px rgba(37, 99, 235, 0.28),
+            inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    }
+    .hero-badge-tray__head-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.14);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .hero-badge-tray__head-icon svg {
+        width: 18px;
+        height: 18px;
+        stroke: #fff;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    .hero-badge-tray__head-label {
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    }
+    /* Slot: zaokrąglony kwadrat + warstwowa poświata (jak profil Base) */
     .score-milestone {
-        width: var(--hero-badge-diameter, 40px);
-        height: var(--hero-badge-diameter, 40px);
-        min-width: var(--hero-badge-diameter, 40px);
-        min-height: var(--hero-badge-diameter, 40px);
-        border-radius: 50%;
+        width: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
+        height: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
+        min-width: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
+        min-height: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
+        border-radius: var(--badge-slot-radius);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -966,74 +1032,63 @@
         font-variant-numeric: tabular-nums;
         line-height: 1;
         flex-shrink: 0;
-        border: 2px solid rgba(255, 255, 255, 0.14);
+        border: none;
         overflow: hidden;
-        padding: 0 1px;
-        transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+        padding: 0 2px;
+        font-family: var(--font-main);
+        transition: background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease, filter 0.3s ease;
+        box-shadow:
+            0 0 0 1px rgba(59, 130, 246, 0.2),
+            0 0 0 3px rgba(30, 58, 138, 0.35),
+            0 0 18px rgba(37, 99, 235, 0.22),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
     .score-milestone__n {
         display: block;
         text-align: center;
         max-width: 100%;
         overflow: hidden;
-        font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-        line-height: 0.92;
+        font-family: var(--font-main);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1;
     }
-    /* Zablokowane: wyłącznie szarość, bez koloru „apteczki” */
     .score-milestone.score-milestone--locked {
-        background: linear-gradient(165deg, #3d4049 0%, #2e3038 48%, #25262d 100%);
-        border-color: rgba(255, 255, 255, 0.09);
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
-        opacity: 1;
-        filter: none;
+        background: linear-gradient(160deg, #0f172a 0%, #1e293b 45%, #172554 100%);
+        box-shadow:
+            0 0 0 1px rgba(51, 65, 85, 0.7),
+            0 0 0 2px rgba(15, 23, 42, 0.9),
+            inset 0 2px 8px rgba(0, 0, 0, 0.45);
+        filter: saturate(0.65) brightness(0.92);
     }
     .score-milestone.score-milestone--locked .score-milestone__n {
-        color: #7c818f;
+        color: #64748b;
         text-shadow: none;
     }
     .score-milestone--10 .score-milestone__n {
-        font-size: clamp(12px, 3.2vw, 14px);
+        font-size: clamp(13px, 3.4vw, 15px);
     }
     .score-milestone--100 .score-milestone__n {
-        font-size: clamp(9.5px, 2.75vw, 11.5px);
-        letter-spacing: -0.03em;
+        font-size: clamp(10px, 2.8vw, 12px);
     }
     .score-milestone--1000 .score-milestone__n {
-        font-size: clamp(7.75px, 2.2vw, 9.25px);
-        letter-spacing: -0.055em;
+        font-size: clamp(8px, 2.3vw, 10px);
     }
-    /* Odblokowane — barwy prestiżowe */
-    .score-milestone--10.score-milestone--unlocked {
-        background: radial-gradient(circle at 30% 25%, rgba(255, 200, 200, 0.35) 0%, transparent 45%),
-            linear-gradient(155deg, #9f1239 0%, #6b0f1a 42%, #3f0d12 100%);
-        border-color: rgba(251, 113, 133, 0.55);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    /* Odblokowane — jeden „neon” Base blue dla wszystkich progów */
+    .score-milestone.score-milestone--unlocked {
+        background:
+            radial-gradient(ellipse 80% 70% at 35% 25%, rgba(147, 197, 253, 0.45) 0%, transparent 55%),
+            linear-gradient(155deg, #172554 0%, #1d4ed8 38%, #2563eb 72%, #1e40af 100%);
+        box-shadow:
+            0 0 0 1px rgba(147, 197, 253, 0.45),
+            0 0 0 3px rgba(37, 99, 235, 0.35),
+            0 0 22px rgba(59, 130, 246, 0.45),
+            inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        filter: none;
     }
-    .score-milestone--10.score-milestone--unlocked .score-milestone__n {
-        color: #ffe4e6;
-        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
-    }
-    .score-milestone--100.score-milestone--unlocked {
-        background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.55) 0%, transparent 42%),
-            linear-gradient(160deg, #f8fafc 0%, #cbd5e1 38%, #94a3b8 72%, #64748b 100%);
-        border-color: rgba(241, 245, 249, 0.9);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
-    }
-    .score-milestone--100.score-milestone--unlocked .score-milestone__n {
-        color: #0f172a;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.22);
-    }
-    .score-milestone--1000.score-milestone--unlocked {
-        background: radial-gradient(circle at 30% 22%, rgba(255, 248, 220, 0.5) 0%, transparent 40%),
-            linear-gradient(158deg, #f5deb3 0%, #d4a574 32%, #b8860b 58%, #6b4c0a 100%);
-        border-color: rgba(234, 211, 150, 0.85);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
-    }
-    .score-milestone--1000.score-milestone--unlocked .score-milestone__n {
-        color: #1a1208;
-        text-shadow: none;
+    .score-milestone.score-milestone--unlocked .score-milestone__n {
+        color: #f8fafc;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
     }
     .rewards-strip > div {
         display: flex;
@@ -1054,8 +1109,6 @@
         line-height: 1.08;
     }
     .hero-badge-row {
-        /* Większe kółko OG + odznaki; ta sama średnica dla wszystkich */
-        --hero-badge-diameter: clamp(36px, 7.25vw, 44px);
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
@@ -1064,21 +1117,41 @@
         max-width: 100%;
         min-width: 0;
     }
-    /* OG: to samo kółko co milestone; powiększenie grafiki (scale), nie „gruba obwódka” */
+    .hero-badge-tray .hero-badge-row {
+        --hero-badge-side: clamp(42px, 9.5vw, 52px);
+        gap: 10px 12px;
+    }
+    /* OG: ten sam slot kwadratowy + niebieska poświata co milestone */
     .hero-og-slot {
-        width: var(--hero-badge-diameter);
-        height: var(--hero-badge-diameter);
-        min-width: var(--hero-badge-diameter);
-        min-height: var(--hero-badge-diameter);
+        width: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
+        height: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
+        min-width: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
+        min-height: var(--hero-badge-side, clamp(42px, 9.5vw, 52px));
         flex-shrink: 0;
-        border-radius: 50%;
+        border-radius: var(--badge-slot-radius);
         overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
         border: none;
-        background: transparent;
+        background:
+            radial-gradient(ellipse 80% 70% at 35% 25%, rgba(147, 197, 253, 0.25) 0%, transparent 55%),
+            linear-gradient(155deg, #172554 0%, #1d4ed8 42%, #2563eb 100%);
+        box-shadow:
+            0 0 0 1px rgba(147, 197, 253, 0.35),
+            0 0 0 3px rgba(37, 99, 235, 0.3),
+            0 0 20px rgba(59, 130, 246, 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        transition: box-shadow 0.3s ease, filter 0.3s ease, opacity 0.3s ease;
+    }
+    .hero-og-slot:has(.og-badge--dim) {
+        background: linear-gradient(160deg, #0f172a 0%, #1e293b 45%, #172554 100%);
+        box-shadow:
+            0 0 0 1px rgba(51, 65, 85, 0.7),
+            0 0 0 2px rgba(15, 23, 42, 0.9),
+            inset 0 2px 8px rgba(0, 0, 0, 0.45);
+        filter: saturate(0.55) brightness(0.88);
     }
     .hero-og-slot .og-badge {
         width: 100%;
@@ -1086,8 +1159,7 @@
         max-width: none;
         object-fit: contain;
         display: block;
-        /* PNG ma przezroczyste marginesy — większa skala wypełnia slot jak kółka 10/100/1000 */
-        transform: scale(1.48);
+        transform: scale(1.22);
         transform-origin: center center;
     }
     .hero-stack .lead {
@@ -1136,15 +1208,28 @@
         outline: 2px solid var(--cerulean);
         outline-offset: 2px;
     }
-    /* Można zamintować — podświetlenie (portfel + próg / OG) */
+    /* Można zamintować — mocniejsza „neon” poświata (spójna z slotem) */
     .badge-slot--mintable {
         cursor: pointer !important;
         animation: badge-mintable-glow 2.2s ease-in-out infinite;
-        box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.45), 0 0 22px rgba(59, 130, 246, 0.35);
     }
     @keyframes badge-mintable-glow {
-        0%, 100% { box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.45), 0 0 18px rgba(59, 130, 246, 0.3); }
-        50% { box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.65), 0 0 28px rgba(59, 130, 246, 0.5); }
+        0%, 100% {
+            box-shadow:
+                0 0 0 1px rgba(147, 197, 253, 0.55),
+                0 0 0 4px rgba(37, 99, 235, 0.3),
+                0 0 26px rgba(59, 130, 246, 0.55),
+                0 0 42px rgba(37, 99, 235, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        }
+        50% {
+            box-shadow:
+                0 0 0 2px rgba(186, 230, 253, 0.75),
+                0 0 0 6px rgba(59, 130, 246, 0.35),
+                0 0 36px rgba(96, 165, 250, 0.65),
+                0 0 56px rgba(37, 99, 235, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.28);
+        }
     }
     .badge-onchain--held {
         position: relative;
@@ -1152,8 +1237,8 @@
     .badge-onchain--held::after {
         content: "";
         position: absolute;
-        right: -2px;
-        bottom: -2px;
+        right: 2px;
+        bottom: 2px;
         width: 14px;
         height: 14px;
         border-radius: 50%;
@@ -1447,20 +1532,31 @@
         <div class="card-header-main">
             <div class="hero-stack">
               <h1>Phrase To Guess</h1>
-              <div class="hero-badge-row">
-                <button type="button" class="hero-og-slot" id="ogBadgeMintBtn" disabled aria-label="OG badge mint" title="OG badge">
-                  <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="40" height="40" alt="OG badge" decoding="async" />
-                </button>
-                <div class="score-milestones" id="scoreMilestones" aria-label="Score milestone badges">
-                  <button type="button" class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" data-badge-kind="10" disabled title="Unlock at 10 points">
-                    <span class="score-milestone__n">10</span>
+              <div class="hero-badge-tray">
+                <div class="hero-badge-tray__head" role="group" aria-label="Badges">
+                  <span class="hero-badge-tray__head-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </span>
+                  <span class="hero-badge-tray__head-label">Badges</span>
+                </div>
+                <div class="hero-badge-row">
+                  <button type="button" class="hero-og-slot" id="ogBadgeMintBtn" disabled aria-label="OG badge mint" title="OG badge">
+                    <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="40" height="40" alt="OG badge" decoding="async" />
                   </button>
-                  <button type="button" class="score-milestone score-milestone--100 score-milestone--locked" id="scoreMilestone100" data-badge-kind="100" disabled title="Unlock at 100 points">
-                    <span class="score-milestone__n">100</span>
-                  </button>
-                  <button type="button" class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" data-badge-kind="1000" disabled title="Unlock at 1000 points">
-                    <span class="score-milestone__n">1000</span>
-                  </button>
+                  <div class="score-milestones" id="scoreMilestones" aria-label="Score milestone badges">
+                    <button type="button" class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" data-badge-kind="10" disabled title="Unlock at 10 points">
+                      <span class="score-milestone__n">10</span>
+                    </button>
+                    <button type="button" class="score-milestone score-milestone--100 score-milestone--locked" id="scoreMilestone100" data-badge-kind="100" disabled title="Unlock at 100 points">
+                      <span class="score-milestone__n">100</span>
+                    </button>
+                    <button type="button" class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" data-badge-kind="1000" disabled title="Unlock at 1000 points">
+                      <span class="score-milestone__n">1000</span>
+                    </button>
+                  </div>
                 </div>
               </div>
               <p id="badgeMintFeedback" class="badge-mint-feedback" role="status" aria-live="polite"></p>
@@ -1947,54 +2043,60 @@
    */
   async function resolveMiniAppIdentity() {
       ptgHost = "browser";
-      if (!sdk || sdk.context == null) return;
-
-      let ctx;
       try {
-          ctx = await sdk.context;
-      } catch (e) {
-          console.warn("Mini App context", e);
-          return;
-      }
-      if (!ctx || typeof ctx !== "object") return;
+          if (!sdk || sdk.context == null) return;
 
-      const rawFid = ctx.client && ctx.client.clientFid;
-      const clientNum = rawFid != null && String(rawFid) !== "" ? Number(rawFid) : NaN;
-      const isBaseApp = clientNum === BASE_APP_CLIENT_FID;
+          let ctx;
+          try {
+              ctx = await sdk.context;
+          } catch (e) {
+              console.warn("Mini App context", e);
+              return;
+          }
+          if (!ctx || typeof ctx !== "object") return;
 
-      if (isBaseApp) {
-          ptgHost = "base";
+          const rawFid = ctx.client && ctx.client.clientFid;
+          const clientNum = rawFid != null && String(rawFid) !== "" ? Number(rawFid) : NaN;
+          const isBaseApp = clientNum === BASE_APP_CLIENT_FID;
+
+          if (isBaseApp) {
+              ptgHost = "base";
+              try {
+                  const fe = getEmbeddedEthProvider();
+                  if (fe) {
+                      const acc = await fe.request({ method: "eth_accounts" });
+                      if (acc && acc[0] && applyWalletIdentity(acc[0], "base")) return;
+                  }
+              } catch (e) {
+                  console.warn("Base eth_accounts", e);
+              }
+              if (applyFarcasterProfileUser(ctx.user, true)) return;
+              return;
+          }
+
+          if (ctx.user && (ctx.user.username || ctx.user.fid != null)) {
+              ptgHost = "farcaster";
+              if (applyFarcasterProfileUser(ctx.user, false)) return;
+          }
+
           try {
               const fe = getEmbeddedEthProvider();
               if (fe) {
+                  ptgHost = "farcaster";
                   const acc = await fe.request({ method: "eth_accounts" });
-                  if (acc && acc[0] && applyWalletIdentity(acc[0], "base")) return;
+                  if (acc && acc[0] && applyWalletIdentity(acc[0], "farcaster")) return;
+                  return;
               }
           } catch (e) {
-              console.warn("Base eth_accounts", e);
+              console.warn("Mini app eth_accounts", e);
           }
-          if (applyFarcasterProfileUser(ctx.user, true)) return;
-          return;
-      }
 
-      if (ctx.user && (ctx.user.username || ctx.user.fid != null)) {
-          ptgHost = "farcaster";
-          if (applyFarcasterProfileUser(ctx.user, false)) return;
+          ptgHost = "browser";
+      } finally {
+          try {
+              document.documentElement.setAttribute("data-ptg-host", ptgHost);
+          } catch (_) {}
       }
-
-      try {
-          const fe = getEmbeddedEthProvider();
-          if (fe) {
-              ptgHost = "farcaster";
-              const acc = await fe.request({ method: "eth_accounts" });
-              if (acc && acc[0] && applyWalletIdentity(acc[0], "farcaster")) return;
-              return;
-          }
-      } catch (e) {
-          console.warn("Mini app eth_accounts", e);
-      }
-
-      ptgHost = "browser";
   }
 
   async function finishLoginAfterIdentity() {
