@@ -1584,7 +1584,7 @@
         </div>
 
         <div style="margin-top:25px;">
-            <button class="ghost" onclick="closeLossModal()" style="width:100%; font-size:14px; padding: 16px; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fff;">Next phrase (same category)</button>
+            <button class="ghost" onclick="closeLossModal()" style="width:100%; font-size:14px; padding: 16px; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fff;">Next category</button>
         </div>
     </div>
 </div>
@@ -4511,7 +4511,7 @@
       }
       void (async () => {
           await syncUserProfile();
-          if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY) void initGame(false);
+          if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY) void initGame(true);
           else checkGameStateAndRender();
       })();
   }
