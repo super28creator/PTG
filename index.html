@@ -610,6 +610,95 @@
     }
     .social-row { display: flex; gap: 12px; flex-wrap: wrap; }
     .social-row + .social-row { margin-top: 12px; }
+    .social-row--single {
+        display: block;
+    }
+    .social-row--single .social-btn {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    /* 6 kontraktów BaseScan — kompaktowe kwadraty w jednym rzędzie */
+    .contract-links-row {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: clamp(6px, 2vw, 10px);
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+        max-width: 100%;
+    }
+    .contract-links-row > li {
+        margin: 0;
+        padding: 0;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .contract-link-chip {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        max-width: clamp(40px, 13.5vw, 52px);
+        aspect-ratio: 1;
+        margin: 0 auto;
+        box-sizing: border-box;
+        border-radius: 12px;
+        overflow: hidden;
+        text-decoration: none;
+        background: linear-gradient(
+            118deg,
+            rgba(20, 35, 110, 0.88) 0%,
+            rgba(35, 55, 150, 0.85) 38%,
+            rgba(45, 85, 195, 0.78) 70%,
+            rgba(60, 138, 255, 0.32) 100%
+        );
+        border: 1px solid rgba(60, 138, 255, 0.28);
+        box-shadow:
+            0 1px 0 rgba(0, 0, 0, 0.12) inset,
+            0 4px 14px rgba(0, 25, 120, 0.28);
+        transition: transform 0.2s var(--ease-base), border-color 0.2s, box-shadow 0.2s;
+    }
+    .contract-link-chip:hover {
+        border-color: rgba(100, 170, 255, 0.42);
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.06) inset,
+            0 6px 18px rgba(0, 40, 160, 0.38);
+        transform: translateY(-1px);
+    }
+    .contract-link-chip:focus-visible {
+        outline: 2px solid var(--cerulean);
+        outline-offset: 2px;
+    }
+    .contract-link-chip svg.social-icon--basescan {
+        width: 76%;
+        height: 76%;
+        max-width: 38px;
+        max-height: 38px;
+        min-width: 26px;
+        min-height: 26px;
+        fill: none;
+        flex-shrink: 0;
+    }
+    .contract-link-chip .basescan-ring {
+        fill: rgba(168, 198, 232, 0.42);
+    }
+    .contract-link-chip g.basescan-bars {
+        fill: rgba(232, 240, 255, 0.96);
+    }
+    .contract-link-chip:hover .basescan-ring {
+        fill: rgba(195, 218, 248, 0.55);
+    }
+    .contract-link-chip:hover g.basescan-bars {
+        fill: rgba(248, 252, 255, 1);
+    }
+    @media (max-width: 380px) {
+        .contract-links-row {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+    }
 
     /* --- MODALS --- */
     .modal-overlay { 
@@ -966,10 +1055,12 @@
         font-variant-numeric: tabular-nums;
         line-height: 1;
         flex-shrink: 0;
-        border: 2px solid rgba(255, 255, 255, 0.14);
+        border: none;
         overflow: hidden;
-        padding: 0 1px;
-        transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+        transition: box-shadow 0.25s ease, filter 0.25s ease;
     }
     .score-milestone__n {
         display: block;
@@ -981,11 +1072,10 @@
         letter-spacing: 0.02em;
         line-height: 0.92;
     }
-    /* Zablokowane: wyłącznie szarość, bez koloru „apteczki” */
+    /* Zablokowane: bez ramki/tła — tylko przyciemniona grafika */
     .score-milestone.score-milestone--locked {
-        background: linear-gradient(165deg, #3d4049 0%, #2e3038 48%, #25262d 100%);
-        border-color: rgba(255, 255, 255, 0.09);
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+        background: transparent;
+        box-shadow: none;
         opacity: 1;
         filter: none;
     }
@@ -1004,29 +1094,20 @@
         font-size: clamp(7.75px, 2.2vw, 9.25px);
         letter-spacing: -0.055em;
     }
-    /* Odblokowane — barwy prestiżowe */
-    .score-milestone--10.score-milestone--unlocked {
+    /* Odblokowane — ta sama skala co OG (PNG z przezroczystym marginesem) */
+    .score-milestone--10.score-milestone--unlocked,
+    .score-milestone--100.score-milestone--unlocked,
+    .score-milestone--1000.score-milestone--unlocked {
         background: transparent;
-        border-color: rgba(251, 113, 133, 0.55);
         box-shadow: none;
     }
     .score-milestone--10.score-milestone--unlocked .score-milestone__n {
         color: #ffe4e6;
         text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
     }
-    .score-milestone--100.score-milestone--unlocked {
-        background: transparent;
-        border-color: rgba(241, 245, 249, 0.9);
-        box-shadow: none;
-    }
     .score-milestone--100.score-milestone--unlocked .score-milestone__n {
         color: #0f172a;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.22);
-    }
-    .score-milestone--1000.score-milestone--unlocked {
-        background: transparent;
-        border-color: rgba(234, 211, 150, 0.85);
-        box-shadow: none;
     }
     .score-milestone--1000.score-milestone--unlocked .score-milestone__n {
         color: #1a1208;
@@ -1035,10 +1116,13 @@
     .milestone-badge-img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        max-width: none;
+        object-fit: contain;
         object-position: center;
         display: block;
         border-radius: 50%;
+        transform: scale(1.48);
+        transform-origin: center center;
         pointer-events: none;
         user-select: none;
         -webkit-user-drag: none;
@@ -1080,12 +1164,12 @@
         max-width: 100%;
         min-width: 0;
     }
-    /* OG: to samo kółko co milestone; powiększenie grafiki (scale), nie „gruba obwódka” */
+    /* OG: minimalnie mniejsze kółko niż milestone’y (ta sama grafika, ciaśniejszy slot) */
     .hero-og-slot {
-        width: var(--hero-badge-diameter);
-        height: var(--hero-badge-diameter);
-        min-width: var(--hero-badge-diameter);
-        min-height: var(--hero-badge-diameter);
+        width: calc(var(--hero-badge-diameter) * 0.9);
+        height: calc(var(--hero-badge-diameter) * 0.9);
+        min-width: calc(var(--hero-badge-diameter) * 0.9);
+        min-height: calc(var(--hero-badge-diameter) * 0.9);
         flex-shrink: 0;
         border-radius: 50%;
         overflow: hidden;
@@ -1182,6 +1266,9 @@
         background-size: 9px 9px;
         pointer-events: none;
         z-index: 2;
+    }
+    .hero-badge-row .badge-onchain--held::after {
+        display: none;
     }
     .badge-mint-feedback {
         margin: 6px 0 0;
@@ -1429,7 +1516,7 @@
         </div>
 
         <div style="margin-top:25px;">
-            <button class="ghost" onclick="closeLossModal()" style="width:100%; font-size:14px; padding: 16px; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fff;">Close & Next Game</button>
+            <button class="ghost" onclick="closeLossModal()" style="width:100%; font-size:14px; padding: 16px; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fff;">Next phrase (same category)</button>
         </div>
     </div>
 </div>
@@ -1522,7 +1609,7 @@
     <div class="status" id="status"></div>
     
     <div class="controls">
-      <button class="btn" id="newCategoryBtn" style="width: 100%; display: none;">New Game</button>
+      <button class="btn" id="newCategoryBtn" style="width: 100%; display: none;" type="button" aria-label="Draw a new category and phrase">New Category</button>
       
       <button id="recoverMintBtn" class="big-mint-btn" style="display:none; font-size: 16px; padding: 16px;" onclick="document.getElementById('victoryModal').classList.add('show')">
           ✨ Claim Your Pending Trophy
@@ -1573,23 +1660,7 @@
                 </span>
             </a>
         </div>
-        <div class="social-row">
-            <a href="https://basescan.org/address/0x9f9343A6833190EE0c816f71D72CE450b1ee8530" target="_blank" rel="noopener noreferrer" class="social-btn" title="PhraseToGuess NFT contract on Base">
-                <span class="social-btn__body">
-                  <span class="social-icon-sq" aria-hidden="true">
-                    <svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">
-                      <path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/>
-                      <g class="basescan-bars">
-                        <rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/>
-                        <rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/>
-                        <rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/>
-                        <rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/>
-                      </g>
-                    </svg>
-                  </span>
-                  <span class="social-btn__text">BaseScan</span>
-                </span>
-            </a>
+        <div class="social-row social-row--single">
             <a href="https://social-connect28.vercel.app/" target="_blank" rel="noopener noreferrer" class="social-btn" title="Super Creator — founder hub">
                 <span class="social-btn__body">
                   <span class="social-icon-sq" aria-hidden="true"><svg class="social-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>
@@ -1597,6 +1668,14 @@
                 </span>
             </a>
         </div>
+        <ul class="contract-links-row" aria-label="Smart contracts on Base">
+            <li><a href="https://basescan.org/address/0x9f9343A6833190EE0c816f71D72CE450b1ee8530" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="Daily Mint — BaseScan" aria-label="Daily Mint on BaseScan"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></a></li>
+            <li><a href="https://basescan.org/address/0x901969555E3495D79a04c6F44B97968cd0a4B466" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="OG Badge — BaseScan" aria-label="OG Badge on BaseScan"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></a></li>
+            <li><a href="https://basescan.org/address/0x6fc798704Ff94F925Cc7b01B45E5333d2629C42D" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="10 Win Badge — BaseScan" aria-label="10 Win Badge on BaseScan"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></a></li>
+            <li><a href="https://basescan.org/address/0xa93EEE6d23dB560c22BDCC63e37EebbC0d60B4b6" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="100 Win Badge — BaseScan" aria-label="100 Win Badge on BaseScan"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></a></li>
+            <li><a href="https://basescan.org/address/0x546b1Fa45dbBBCB646D5e19518Ca6427100e7194" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="1000 Win Badge — BaseScan" aria-label="1000 Win Badge on BaseScan"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></a></li>
+            <li><a href="https://basescan.org/address/0x34e1838d8C150f38ABD0b2E5d91aa76A653ed03D" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="Old Daily Mint — BaseScan" aria-label="Old Daily Mint on BaseScan"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></a></li>
+        </ul>
     </div>
 
   </div>
@@ -2025,7 +2104,7 @@
       await syncUserProfile();
       scheduleRefreshBadgeOnchainBalances();
       if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY && !pendingMint) {
-          initGame(true);
+          if (!tryRestoreActiveRound()) await initGame(true);
       } else {
           checkGameStateAndRender();
       }
@@ -2356,6 +2435,11 @@
   let badgeWalletProbed = false;
   let badgeOnchainRefreshT = 0;
   let badgeOnchainBn = { og: null, m10: null, m100: null, m1000: null };
+  let activeRoundSaveT = 0;
+
+  function activeRoundLocalStorageKey() {
+      return "ptg_activeRound_s" + LEADERBOARD_SEASON + "_" + myUserId;
+  }
 
   function mintCalendarStorageKey() {
       return "ptg_mintCal_s" + LEADERBOARD_SEASON + "_" + myUserId;
@@ -2469,11 +2553,170 @@
       if (msgEl) msgEl.textContent = "";
   }
 
+  /** Z Firebase po sync — jednorazowe odtworzenie rundy po odświeżeniu. */
+  let profileActiveRound = null;
+  /** Kolejność strzałów (A–Z) do odtworzenia stanu klawiatury. */
+  let guessSequence = [];
+
   let currentCategory = "", secret = "", revealed = [], mistakes = 0, moves = 0, gameOver = false;
   let chartData = []; 
   let currentPrice = 1000; 
 
   const ctx = document.getElementById('chart').getContext('2d');
+
+  function persistActiveRoundLocalSnapshot(obj) {
+      try {
+          if (!myUserId || myUserId === "guest") return;
+          localStorage.setItem(activeRoundLocalStorageKey(), JSON.stringify(obj));
+      } catch (_) {}
+  }
+
+  function clearActiveRoundLocalSnapshot() {
+      try {
+          localStorage.removeItem(activeRoundLocalStorageKey());
+      } catch (_) {}
+  }
+
+  function readActiveRoundLocalSnapshot() {
+      try {
+          const raw = localStorage.getItem(activeRoundLocalStorageKey());
+          const o = raw ? JSON.parse(raw) : null;
+          return o && typeof o === "object" && !Array.isArray(o) ? o : null;
+      } catch (_) {
+          return null;
+      }
+  }
+
+  function validateActiveRoundShape(round) {
+      if (!round || typeof round !== "object") return false;
+      if (round.date !== localDateKey()) return false;
+      const g = Number(round.gamesAtRoundStart);
+      if (!Number.isFinite(g) || g !== gamesPlayedTodayCount) return false;
+      const cat = round.category;
+      if (typeof cat !== "string" || !cat) return false;
+      const catKeys = getPlayableCategoryKeys();
+      if (!catKeys.includes(cat)) return false;
+      const sec = typeof round.secret === "string" ? round.secret.toUpperCase() : "";
+      if (!sec || !CATEGORIES[cat]?.some((p) => p.toUpperCase() === sec)) return false;
+      const rev = typeof round.revealedStr === "string" ? round.revealedStr : "";
+      if (rev.length !== sec.length) return false;
+      const mistakesN = Number(round.mistakes) || 0;
+      if (mistakesN < 0 || mistakesN >= MAX_MISTAKES) return false;
+      for (let i = 0; i < sec.length; i++) {
+          if (sec[i] === " ") {
+              if (rev[i] !== " ") return false;
+          } else {
+              const c = rev[i];
+              if (c !== "_" && (c < "A" || c > "Z")) return false;
+              if (c !== "_" && c !== sec[i]) return false;
+          }
+      }
+      return true;
+  }
+
+  function applyKeyboardFromGuessSequence() {
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((L) => {
+          const btn = document.getElementById(`key-${L}`);
+          if (!btn) return;
+          btn.disabled = false;
+          btn.classList.remove("hit", "miss");
+      });
+      for (const ch of guessSequence) {
+          const l = String(ch).toUpperCase();
+          if (!/^[A-Z]$/.test(l)) continue;
+          const btn = document.getElementById(`key-${l}`);
+          if (!btn) continue;
+          btn.disabled = true;
+          if (secret.includes(l)) btn.classList.add("hit");
+          else btn.classList.add("miss");
+      }
+  }
+
+  function tryRestoreActiveRound() {
+      if (!isLoggedIn()) return false;
+      if (pendingMint || gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) return false;
+      const serverR = profileActiveRound;
+      profileActiveRound = null;
+      const localR = readActiveRoundLocalSnapshot();
+      let round = null;
+      if (validateActiveRoundShape(serverR)) round = serverR;
+      else if (validateActiveRoundShape(localR)) round = localR;
+      else {
+          if (serverR || localR) clearActiveRoundLocalSnapshot();
+          return false;
+      }
+      currentCategory = round.category;
+      secret = round.secret.toUpperCase();
+      revealed = Array.from(round.revealedStr);
+      mistakes = Number(round.mistakes) || 0;
+      gameOver = false;
+      guessSequence =
+          typeof round.guessSeq === "string"
+              ? round.guessSeq
+                    .split("")
+                    .filter((c) => /^[A-Za-z]$/.test(c))
+                    .map((c) => c.toUpperCase())
+              : [];
+      chartData = [];
+      currentPrice = 1000;
+      preloadChartHistory();
+      for (const l of guessSequence) {
+          simulateMarketMove(secret.includes(l) ? "bullish" : "bearish");
+      }
+      document.getElementById("categoryDisplay").textContent = "Category: " + currentCategory;
+      document.getElementById("status").innerHTML = "";
+      document.getElementById("tries").textContent = String(mistakes);
+      syncMistakesPillState(mistakes);
+      checkGameStateAndRender();
+      renderWord();
+      renderKeyboard();
+      applyKeyboardFromGuessSequence();
+      drawCandleChart();
+      updateDailyUI();
+      return true;
+  }
+
+  async function clearActiveRoundPersistence() {
+      clearActiveRoundLocalSnapshot();
+      if (!db || !isLoggedIn() || !myUserId || myUserId === "guest") return;
+      try {
+          await update(playerDocRef(myUserId), { activeRound: null });
+      } catch (e) {
+          console.warn("clearActiveRound", e);
+      }
+  }
+
+  function schedulePersistActiveRound() {
+      if (!isLoggedIn() || gameOver || pendingMint || gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) return;
+      if (activeRoundSaveT) clearTimeout(activeRoundSaveT);
+      activeRoundSaveT = setTimeout(() => {
+          activeRoundSaveT = 0;
+          void persistActiveRoundNow();
+      }, 100);
+  }
+
+  async function persistActiveRoundNow() {
+      if (!isLoggedIn() || gameOver || pendingMint || gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) return;
+      if (!currentCategory || !secret || !revealed.length) return;
+      const revealedStr = revealed.join("");
+      if (revealedStr.length !== secret.length) return;
+      const payload = {
+          date: localDateKey(),
+          category: currentCategory,
+          secret,
+          revealedStr,
+          mistakes,
+          gamesAtRoundStart: gamesPlayedTodayCount,
+          guessSeq: guessSequence.join(""),
+      };
+      persistActiveRoundLocalSnapshot(payload);
+      if (!db || !myUserId || myUserId === "guest") return;
+      try {
+          await update(playerDocRef(myUserId), { activeRound: payload });
+      } catch (e) {
+          console.warn("persistActiveRound", e);
+      }
+  }
 
   async function startApp() {
       /* Farcaster Mini App: signals splash removal. Base App: no-op / safe to ignore. */
@@ -2500,7 +2743,7 @@
               setAuthGateVisible(false);
               await syncUserProfile();
               if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY && !pendingMint) {
-                  initGame(true);
+                  if (!tryRestoreActiveRound()) await initGame(true);
               } else {
                   checkGameStateAndRender();
               }
@@ -2585,10 +2828,18 @@
                   pendingMint = false;
                   update(userRef, { gamesPlayedToday: 0, pendingMint: false });
               }
+              profileActiveRound =
+                  data.activeRound && typeof data.activeRound === "object" && !Array.isArray(data.activeRound)
+                      ? data.activeRound
+                      : null;
           } else {
               mintCalendarDays = loadMintCalendarFromStorage();
+              profileActiveRound = null;
           }
-      } catch(e) { console.error("Sync Error", e); }
+      } catch(e) {
+          console.error("Sync Error", e);
+          profileActiveRound = null;
+      }
       userProfileUnsubscribe = onValue(userRef, (snap) => {
           if (!snap.exists()) return;
           const data = snap.val();
@@ -2613,7 +2864,7 @@
       pill.classList.toggle("is-hot", n > 0);
   }
 
-  function initGame(newCat = true) {
+  async function initGame(newCat = true) {
     if (!isLoggedIn()) {
         checkGameStateAndRender();
         return;
@@ -2627,6 +2878,11 @@
         return;
     }
     
+    if (activeRoundSaveT) {
+        clearTimeout(activeRoundSaveT);
+        activeRoundSaveT = 0;
+    }
+    guessSequence = [];
     const catKeys = getPlayableCategoryKeys();
     if (catKeys.length === 0) return;
     if (
@@ -2658,6 +2914,7 @@
     
     checkGameStateAndRender();
     renderWord(); renderKeyboard(); drawCandleChart(); updateDailyUI();
+    await persistActiveRoundNow();
   }
 
   // --- UI STATE MANAGER (Fix for vanishing buttons) ---
@@ -2698,6 +2955,8 @@
       } else {
           // STATE: Playable (0/3, 1/3, 2/3)
           newGameBtn.style.display = 'block';
+          newGameBtn.textContent = 'New Category';
+          newGameBtn.setAttribute('aria-label', 'Draw a new category and phrase');
           recoverBtn.style.display = 'none';
           timer.style.display = 'none';
           if(!gameOver) {
@@ -2880,7 +3139,10 @@
     if (!isLoggedIn()) return;
     if (gameOver) return;
     if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) return;
-    const btn = document.getElementById(`key-${l}`); if(btn && btn.disabled) return; if(btn) btn.disabled = true;
+    const btn = document.getElementById(`key-${l}`);
+    if (btn && btn.disabled) return;
+    guessSequence.push(l);
+    if (btn) btn.disabled = true;
     let hit = false;
     for(let i=0; i<secret.length; i++) { if(secret[i] === l) { revealed[i] = l; hit = true; } }
     
@@ -2896,6 +3158,7 @@
     syncMistakesPillState(mistakes);
     simulateMarketMove(hit ? 'bullish' : 'bearish');
     renderWord(); drawCandleChart(); checkEnd();
+    schedulePersistActiveRound();
   }
 
   var __ptgConfettiClearT = null;
@@ -2991,7 +3254,9 @@
   function checkEnd() {
     if(!revealed.includes("_")) {
       // --- WIN ---
-      gameOver = true; document.getElementById('status').innerHTML = "<span class='won'>VICTORY!</span>";
+      gameOver = true;
+      void clearActiveRoundPersistence();
+      document.getElementById('status').innerHTML = "<span class='won'>VICTORY!</span>";
       generateHugeCandle('up'); drawCandleChart();
       runConfettiBurst({ particleCount: 80, spread: 65, origin: { y: 0.6 }, ticks: 120 });
       
@@ -3033,7 +3298,9 @@
     
     } else if (mistakes >= MAX_MISTAKES) {
       // --- LOSS ---
-      gameOver = true; document.getElementById('status').innerHTML = "<span class='dead'>LIQUIDATED!</span>";
+      gameOver = true;
+      void clearActiveRoundPersistence();
+      document.getElementById('status').innerHTML = "<span class='dead'>LIQUIDATED!</span>";
       generateHugeCandle('down'); drawCandleChart();
       
       // SHOW LOSS MODAL WITH ANSWER
@@ -3911,7 +4178,7 @@
           `<a href="https://basescan.org/tx/${txHash}" target="_blank" rel="noopener noreferrer">View on BaseScan</a>`;
       document.getElementById("victoryModal").classList.remove("show");
       if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY) {
-          initGame(true);
+          void initGame(true);
       } else {
           checkGameStateAndRender();
       }
@@ -3983,12 +4250,18 @@
   
   window.closeLossModal = function() {
       document.getElementById('lossModal').classList.remove('show');
-      // If games < 3, immediately start new game. Else show timer.
-      if(gamesPlayedTodayCount < MAX_GAMES_PER_DAY) initGame(true);
-      else checkGameStateAndRender();
+      if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) {
+          checkGameStateAndRender();
+          return;
+      }
+      void (async () => {
+          await syncUserProfile();
+          if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY) void initGame(false);
+          else checkGameStateAndRender();
+      })();
   }
 
-  document.getElementById('newCategoryBtn').onclick = () => initGame(true);
+  document.getElementById('newCategoryBtn').onclick = () => void initGame(true);
   document.getElementById('connectWalletBtn')?.addEventListener('click', () => connectWalletForPlay());
   document.getElementById('leaderboardBtn').onclick = showLeaderboard;
   document.getElementById('closeLeaderboard').onclick = () => document.getElementById('leaderboardOverlay').classList.remove('show');
