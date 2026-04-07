@@ -2153,10 +2153,15 @@
   }
 
   async function finishLoginAfterIdentity() {
+      heroBadgeFxSuppressUntil = Date.now() + 3500;
       setAuthGateVisible(false);
       refreshOgBadge();
       await syncUserProfile();
       scheduleRefreshBadgeOnchainBalances();
+      setTimeout(
+          () => updateHeroBadgeMintUi(),
+          Math.max(0, heroBadgeFxSuppressUntil - Date.now() + 100)
+      );
       if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY && !pendingMint) {
           if (!tryRestoreActiveRound()) await initGame(true);
       } else {
@@ -2528,8 +2533,8 @@
   let badgeOnchainRefreshT = 0;
   let badgeOnchainBn = { og: null, m10: null, m100: null, m1000: null };
   let activeRoundSaveT = 0;
-  /** Skip hero badge unlock / glow animations until profile + balances finish hydrating */
-  let heroBadgeFxSuppressUntil = 0;
+  /** Until startApp (or post-login) sets a real deadline, hide mintable chrome (0 would mean “always on”). */
+  let heroBadgeFxSuppressUntil = Number.POSITIVE_INFINITY;
 
   function activeRoundLocalStorageKey() {
       return "ptg_activeRound_s" + LEADERBOARD_SEASON + "_" + myUserId;
