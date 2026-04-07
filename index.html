@@ -1056,38 +1056,40 @@
         box-sizing: border-box;
         min-width: 0;
     }
-    /* Hero: 4 kółka — same PNG w kółku, bez ramek/inset (inset = „łuk” na badge) */
+    /* Hero: 4 „coiny” jak na mocku — cienki metaliczny pierścień, bez inset; ~wysokość linii tytułu */
     .hero-stack .hero-badge-row {
-        --hero-badge-side: clamp(52px, 13vw, 76px);
+        --hero-badge-side: clamp(56px, 5vw + 32px, 80px);
         flex-wrap: nowrap;
         justify-content: flex-start;
         align-items: center;
-        gap: clamp(10px, 2.6vw, 15px);
+        gap: clamp(14px, 4.5vw, 26px);
         overflow: visible;
         width: 100%;
-        max-width: 100%;
+        max-width: min(100%, 380px);
         min-width: 0;
-        margin: 0;
+        margin: 2px 0 0;
         padding: 0;
     }
-    .score-milestone,
-    .hero-og-slot {
-        width: var(--hero-badge-side, clamp(52px, 13vw, 76px));
-        height: var(--hero-badge-side, clamp(52px, 13vw, 76px));
-        min-width: var(--hero-badge-side, clamp(52px, 13vw, 76px));
-        min-height: var(--hero-badge-side, clamp(52px, 13vw, 76px));
+    .hero-stack .hero-badge-row .score-milestone,
+    .hero-stack .hero-badge-row .hero-og-slot {
+        width: var(--hero-badge-side);
+        height: var(--hero-badge-side);
+        min-width: var(--hero-badge-side);
+        min-height: var(--hero-badge-side);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
         flex-shrink: 0;
-        border: none;
-        overflow: visible;
+        overflow: hidden;
         padding: 0;
-        transition: filter 0.28s ease, opacity 0.28s ease;
-        background: transparent;
-        box-shadow: none;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease, opacity 0.25s ease;
+        background: rgba(10, 11, 16, 0.35);
+        border: 1px solid rgba(148, 163, 184, 0.42);
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.1),
+            0 3px 14px rgba(0, 0, 0, 0.4);
     }
     .milestone-badge-img {
         width: 100%;
@@ -1100,21 +1102,25 @@
         -webkit-user-drag: none;
         pointer-events: none;
     }
-    .score-milestone.score-milestone--locked .milestone-badge-img {
-        filter: grayscale(1) brightness(0.32);
-        opacity: 0.4;
+    .hero-stack .hero-badge-row .score-milestone.score-milestone--locked .milestone-badge-img {
+        filter: grayscale(1) brightness(0.28);
+        opacity: 0.38;
     }
-    .score-milestone.score-milestone--unlocked .milestone-badge-img {
-        filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.4));
+    .hero-stack .hero-badge-row .score-milestone.score-milestone--unlocked .milestone-badge-img {
+        filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45));
         opacity: 1;
     }
-    .score-milestone.score-milestone--unlocked {
-        background: transparent;
-        box-shadow: none;
+    .hero-stack .hero-badge-row .score-milestone.score-milestone--unlocked {
+        border-color: rgba(90, 98, 115, 0.72);
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.06),
+            0 3px 12px rgba(0, 0, 0, 0.38);
     }
-    .score-milestone.score-milestone--locked {
-        background: transparent;
-        box-shadow: none;
+    .hero-stack .hero-badge-row .score-milestone.score-milestone--locked {
+        border-color: rgba(48, 52, 62, 0.9);
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.04),
+            0 2px 10px rgba(0, 0, 0, 0.5);
     }
     .rewards-strip > div {
         display: flex;
@@ -1133,7 +1139,8 @@
     .hero-stack h1 {
         margin: 0;
         line-height: 1.08;
-        filter: drop-shadow(0 2px 18px rgba(56, 189, 248, 0.22));
+        font-size: clamp(24px, 4.5vw, 28px);
+        filter: drop-shadow(0 2px 20px rgba(56, 189, 248, 0.28)) drop-shadow(0 0 28px rgba(59, 130, 246, 0.12));
     }
     .hero-badge-row {
         display: flex;
@@ -1145,17 +1152,27 @@
     .hero-stack .lead {
         margin-top: 0;
     }
-    /* OG: bez tła slotu — tylko poświata na grafice gdy aktywny */
-    .hero-og-slot:not(:has(.og-badge--dim)) {
-        background: transparent;
-        box-shadow: none;
+    /* OG aktywny: jasna obwódka + cyjan u dołu (mock); zgaszony = jak zablokowany milestone */
+    .hero-stack .hero-badge-row .hero-og-slot:not(:has(.og-badge--dim)) {
+        border-color: rgba(186, 230, 253, 0.55);
+        background: rgba(15, 40, 85, 0.25);
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.16),
+            0 4px 18px rgba(37, 99, 235, 0.22),
+            0 8px 28px rgba(34, 211, 238, 0.12);
     }
-    .hero-og-slot:not(:has(.og-badge--dim)) .og-badge {
-        filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.55)) drop-shadow(0 0 22px rgba(56, 189, 248, 0.28));
+    .hero-stack .hero-badge-row .hero-og-slot:not(:has(.og-badge--dim)) .og-badge {
+        filter:
+            drop-shadow(0 6px 14px rgba(34, 211, 238, 0.55))
+            drop-shadow(0 10px 22px rgba(37, 99, 235, 0.25))
+            drop-shadow(0 -2px 8px rgba(59, 130, 246, 0.15));
     }
-    .hero-og-slot:has(.og-badge--dim) {
-        background: transparent;
-        box-shadow: none;
+    .hero-stack .hero-badge-row .hero-og-slot:has(.og-badge--dim) {
+        border-color: rgba(48, 52, 62, 0.9);
+        background: rgba(10, 11, 16, 0.35);
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.04),
+            0 2px 10px rgba(0, 0, 0, 0.5);
     }
     .hero-og-slot .og-badge {
         width: 100%;
@@ -1225,7 +1242,6 @@
     }
     .hero-badge-row .badge-slot--mintable {
         animation: none;
-        box-shadow: none;
     }
     @keyframes badge-mintable-img-glow {
         0%, 100% {
@@ -1548,16 +1564,16 @@
               <h1>Phrase To Guess</h1>
               <div class="hero-badge-row" role="group" aria-label="NFT badges">
                 <button type="button" class="hero-og-slot" id="ogBadgeMintBtn" disabled aria-label="OG badge mint" title="OG badge">
-                  <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="64" height="64" alt="OG badge" decoding="async" />
+                  <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="80" height="80" alt="OG badge" decoding="async" />
                 </button>
                 <button type="button" class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" data-badge-kind="10" disabled title="Unlock at 10 points">
-                  <img class="milestone-badge-img" src="/badge-10.png" width="64" height="64" alt="10 win badge" decoding="async" />
+                  <img class="milestone-badge-img" src="/badge-10.png" width="80" height="80" alt="10 win badge" decoding="async" />
                 </button>
                 <button type="button" class="score-milestone score-milestone--100 score-milestone--locked" id="scoreMilestone100" data-badge-kind="100" disabled title="Unlock at 100 points">
-                  <img class="milestone-badge-img" src="/badge-100.png" width="64" height="64" alt="100 win badge" decoding="async" />
+                  <img class="milestone-badge-img" src="/badge-100.png" width="80" height="80" alt="100 win badge" decoding="async" />
                 </button>
                 <button type="button" class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" data-badge-kind="1000" disabled title="Unlock at 1000 points">
-                  <img class="milestone-badge-img" src="/badge-1000.png" width="64" height="64" alt="1000 win badge" decoding="async" />
+                  <img class="milestone-badge-img" src="/badge-1000.png" width="80" height="80" alt="1000 win badge" decoding="async" />
                 </button>
               </div>
               <p id="badgeMintFeedback" class="badge-mint-feedback" role="status" aria-live="polite"></p>
