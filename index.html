@@ -2971,7 +2971,7 @@
       pill.classList.toggle("is-hot", n > 0);
   }
 
-  /** Trwa runda z co najmniej jednym strzałem — kategoria i pool zablokowane do końca gry. */
+  /** Po pierwszej literze — szara pigułka kategorii (wizualnie „zamrożona”). */
   function isPhraseRoundLocked() {
       return (
           isLoggedIn() &&
@@ -2982,23 +2982,57 @@
       );
   }
 
+  /** Trwa nierozstrzygnięta fraza — blokada poolu (gwiazdka) i „New Category” do końca rundy. */
+  function isActiveIncompleteRound() {
+      if (!isLoggedIn() || gameOver || pendingMint) return false;
+      if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) return false;
+      if (!secret || typeof secret !== "string" || !secret.length) return false;
+      if (!currentCategory) return false;
+      if (!revealed || !revealed.length) return false;
+      return revealed.includes("_");
+  }
+
+  /** Gdy nie ma świeżej gry (np. 3/3), nie zostawiaj „Category: Loading…”. */
+  function refreshCategoryDisplayText() {
+      const el = document.getElementById("categoryDisplay");
+      if (!el) return;
+      if (currentCategory) {
+          el.textContent = "Category: " + currentCategory;
+          return;
+      }
+      if (!isLoggedIn()) {
+          el.textContent = "Category: —";
+          return;
+      }
+      if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) {
+          el.textContent = "Daily limit reached";
+          return;
+      }
+      if (pendingMint) {
+          el.textContent = "Category: —";
+          return;
+      }
+      el.textContent = "Category: —";
+  }
+
   function syncRoundLockUI() {
-      const locked = isPhraseRoundLocked();
+      const catGrey = isPhraseRoundLocked();
+      const poolLocked = isActiveIncompleteRound();
       const cat = document.getElementById("categoryDisplay");
       if (cat) {
-          cat.classList.toggle("is-round-locked", locked);
-          cat.title = locked ? "Category is fixed for this round — finish the game." : "";
+          cat.classList.toggle("is-round-locked", catGrey);
+          cat.title = catGrey ? "Category is fixed for this round — finish the game." : "";
       }
       const toggle = document.getElementById("categoryFilterToggle");
       if (toggle) {
-          toggle.disabled = locked;
-          toggle.style.opacity = locked ? "0.45" : "";
-          toggle.style.pointerEvents = locked ? "none" : "";
-          toggle.title = locked
+          toggle.disabled = poolLocked;
+          toggle.style.opacity = poolLocked ? "0.45" : "";
+          toggle.style.pointerEvents = poolLocked ? "none" : "";
+          toggle.title = poolLocked
               ? "Finish this round before changing the category pool"
               : "Category pool";
       }
-      if (locked) {
+      if (poolLocked) {
           const panel = document.getElementById("categoryFilterPanel");
           if (panel) panel.setAttribute("hidden", "");
           if (toggle) toggle.setAttribute("aria-expanded", "false");
@@ -3015,6 +3049,7 @@
     gameOver = false;
     
     if(pendingMint || gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) {
+        refreshCategoryDisplayText();
         checkGameStateAndRender();
         return;
     }
@@ -3025,7 +3060,10 @@
     }
     guessSequence = [];
     const catKeys = getPlayableCategoryKeys();
-    if (catKeys.length === 0) return;
+    if (catKeys.length === 0) {
+        refreshCategoryDisplayText();
+        return;
+    }
     if (
         newCat ||
         !currentCategory ||
@@ -3035,7 +3073,10 @@
         currentCategory = catKeys[Math.floor(Math.random() * catKeys.length)];
     }
     const catArray = CATEGORIES[currentCategory];
-    if (!catArray || catArray.length === 0) return;
+    if (!catArray || catArray.length === 0) {
+        refreshCategoryDisplayText();
+        return;
+    }
     secret = catArray[Math.floor(Math.random()*catArray.length)].toUpperCase();
     revealed = Array.from(secret).map(ch => (ch === " " ? " " : "_"));
     mistakes = 0; chartData = []; currentPrice = 1000; preloadChartHistory(); 
@@ -3077,6 +3118,7 @@
               keyboardEl.style.pointerEvents = 'none';
               keyboardEl.style.opacity = '0.35';
           }
+          refreshCategoryDisplayText();
           syncRoundLockUI();
           return;
       }
@@ -3099,15 +3141,15 @@
           document.getElementById('keyboard').style.pointerEvents = 'none';
           document.getElementById('keyboard').style.opacity = '0.3';
       } else {
-          // STATE: Playable (0/3, 1/3, 2/3) — przycisk zawsze widoczny; zablokowany w trakcie rundy
-          const roundLocked = isPhraseRoundLocked();
+          // STATE: Playable (0/3, 1/3, 2/3) — przycisk zawsze widoczny; zablokowany na całą nierozstrzygniętą rundę
+          const roundLocked = isActiveIncompleteRound();
           newGameBtn.style.display = 'block';
           newGameBtn.disabled = roundLocked;
           newGameBtn.textContent = 'New Category';
           newGameBtn.setAttribute(
               'aria-label',
               roundLocked
-                  ? 'Finish this round — new category after the game ends'
+                  ? 'Finish this round — new category is available after win or loss'
                   : 'Draw a new category and phrase'
           );
           recoverBtn.style.display = 'none';
@@ -3117,6 +3159,7 @@
              document.getElementById('keyboard').style.opacity = '1';
           }
       }
+      refreshCategoryDisplayText();
       syncRoundLockUI();
   }
   
@@ -4478,7 +4521,7 @@
   }
   if (categoryFilterToggle && categoryFilterPanel) {
       categoryFilterToggle.addEventListener("click", () => {
-          if (isPhraseRoundLocked()) return;
+          if (isActiveIncompleteRound()) return;
           const open = categoryFilterPanel.hasAttribute("hidden");
           if (open) {
               closeCalendarPanelUI();
