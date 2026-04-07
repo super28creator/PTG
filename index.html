@@ -186,13 +186,18 @@
         position: absolute;
         top: clamp(12px, 3.6vw, 22px);
         right: clamp(12px, 3.6vw, 22px);
-        z-index: 5;
+        /* Nad nagłówkiem karty (późniejszy w DOM potrafi przykrywać klik w przeglądarce) */
+        z-index: 40;
         display: flex;
         flex-direction: column;
         align-items: flex-end;
         gap: 10px;
+        pointer-events: none;
         /* % względem karty — w Farcaster/Base 100vw potrafi rozszerzać layout */
         max-width: min(220px, calc(100% - 16px));
+    }
+    .card--main-game .cal-floating-tools > * {
+        pointer-events: auto;
     }
     .cal-floating-tools__icons {
         display: flex;
@@ -879,6 +884,8 @@
     .card-header {
         margin-bottom: 6px;
         min-width: 0;
+        position: relative;
+        z-index: 0;
     }
     .card-header-main {
         flex: 1 1 100%;
@@ -1537,6 +1544,10 @@
       font-size: 12px;
       font-weight: 600;
       color: #fbbf24;
+    }
+    .category-filter-panel--readonly .category-filter-list {
+      opacity: 0.72;
+      pointer-events: none;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -2701,6 +2712,10 @@
           row.appendChild(span);
           list.appendChild(row);
       });
+      const panel = document.getElementById("categoryFilterPanel");
+      if (panel && !panel.hasAttribute("hidden")) {
+          syncCategoryPanelInteractivity();
+      }
   }
 
   function initCategoryFilterPanel() {
@@ -2716,6 +2731,11 @@
   function onCategoryFilterCheckboxChange(ev) {
       const cb = ev.target;
       if (!cb || cb.type !== "checkbox") return;
+      if (isActiveIncompleteRound()) {
+          renderCategoryFilterCheckboxes();
+          syncCategoryPanelInteractivity();
+          return;
+      }
       const list = document.getElementById("categoryFilterList");
       const msgEl = document.getElementById("categoryFilterMsg");
       if (!list) return;
@@ -3114,6 +3134,32 @@
       el.textContent = "Frazy tylko z: " + show + more;
   }
 
+  /** Panel otwarty: zablokuj checkboxy na czas nierozstrzygniętej rundy (gwiazdka zawsze klikalna). */
+  function syncCategoryPanelInteractivity() {
+      const panel = document.getElementById("categoryFilterPanel");
+      const msgEl = document.getElementById("categoryFilterMsg");
+      if (!panel) return;
+      if (panel.hasAttribute("hidden")) {
+          panel.classList.remove("category-filter-panel--readonly");
+          return;
+      }
+      const locked = isActiveIncompleteRound();
+      panel.classList.toggle("category-filter-panel--readonly", locked);
+      const list = document.getElementById("categoryFilterList");
+      if (list) {
+          list.querySelectorAll("input[type=checkbox]").forEach((inp) => {
+              inp.disabled = locked;
+          });
+      }
+      if (!msgEl) return;
+      if (locked) {
+          msgEl.textContent =
+              "Trwa runda — zmiana zaznaczeń możliwa po wygranej lub przegranej.";
+      } else if (/Trwa runda —/.test(msgEl.textContent)) {
+          msgEl.textContent = "";
+      }
+  }
+
   function syncRoundLockUI() {
       const catGrey = isPhraseRoundLocked();
       const poolLocked = isActiveIncompleteRound();
@@ -3124,18 +3170,14 @@
       }
       const toggle = document.getElementById("categoryFilterToggle");
       if (toggle) {
-          toggle.disabled = poolLocked;
-          toggle.style.opacity = poolLocked ? "0.45" : "";
-          toggle.style.pointerEvents = poolLocked ? "none" : "";
+          toggle.disabled = false;
+          toggle.style.opacity = "";
+          toggle.style.pointerEvents = "";
           toggle.title = poolLocked
-              ? "Dokończ rundę, potem zmienisz pulę kategorii"
+              ? "Pula kategorii (podgląd — edycja po rundzie)"
               : "Pula kategorii (min. 4)";
       }
-      if (poolLocked) {
-          const panel = document.getElementById("categoryFilterPanel");
-          if (panel) panel.setAttribute("hidden", "");
-          if (toggle) toggle.setAttribute("aria-expanded", "false");
-      }
+      syncCategoryPanelInteractivity();
   }
 
   async function initGame(newCat = true) {
@@ -4620,7 +4662,6 @@
   }
   if (categoryFilterToggle && categoryFilterPanel) {
       categoryFilterToggle.addEventListener("click", () => {
-          if (isActiveIncompleteRound()) return;
           const open = categoryFilterPanel.hasAttribute("hidden");
           if (open) {
               closeCalendarPanelUI();
@@ -4628,6 +4669,7 @@
               categoryFilterToggle.setAttribute("aria-expanded", "true");
               const minEl = document.getElementById("categoryMinLabel");
               if (minEl) minEl.textContent = String(minCategoryPickRequired());
+              syncCategoryPanelInteractivity();
           } else {
               closeCategoryFilterPanelUI();
           }
