@@ -2360,23 +2360,15 @@
           ogBtn.classList.remove("badge-slot--mintable", "badge-onchain--held");
           const ogHeld = badgeHeld("og");
           if (ogHeld) ogBtn.classList.add("badge-onchain--held");
-          const canTryOg =
-              isOgPlayer &&
-              badgeWalletProbed &&
-              !ogHeld &&
-              !badgeMintInFlight;
+          const canTryOg = isOgPlayer && !ogHeld && !badgeMintInFlight;
           if (canTryOg && showMintableChrome) ogBtn.classList.add("badge-slot--mintable");
-          ogBtn.disabled =
-              !isOgPlayer ||
-              ogHeld ||
-              badgeMintInFlight ||
-              !badgeWalletProbed;
+          ogBtn.disabled = !isOgPlayer || ogHeld || badgeMintInFlight;
           if (!isOgPlayer) {
               ogBtn.title = "OG badge NFT — Season 1 players only";
           } else if (ogHeld) {
               ogBtn.title = "OG badge minted on Base";
           } else if (!badgeWalletProbed) {
-              ogBtn.title = "Connect your Base wallet to mint the OG badge (~$0.10)";
+              ogBtn.title = "Tap to connect your Base wallet and mint the OG badge";
           } else {
               ogBtn.title = "Tap to mint OG badge on Base (price set on contract)";
           }
@@ -2393,19 +2385,15 @@
           const unlocked = s >= need;
           const held = badgeHeld(key);
           if (held) el.classList.add("badge-onchain--held");
-          const canMint =
-              unlocked &&
-              badgeWalletProbed &&
-              !held &&
-              !badgeMintInFlight;
+          const canMint = unlocked && !held && !badgeMintInFlight;
           if (canMint && showMintableChrome) el.classList.add("badge-slot--mintable");
-          el.disabled = !unlocked || held || badgeMintInFlight || !badgeWalletProbed;
+          el.disabled = !unlocked || held || badgeMintInFlight;
           if (!unlocked) {
               el.title = "Unlock at " + need + " points, then mint on Base";
           } else if (held) {
               el.title = need + " win badge — minted";
           } else if (!badgeWalletProbed) {
-              el.title = "Connect wallet to mint your " + need + " win badge (~$0.10)";
+              el.title = "Tap to connect wallet and mint your " + need + " win badge on Base";
           } else {
               el.title = "Tap to mint " + need + " win badge (price on contract)";
           }
@@ -4549,8 +4537,16 @@
       }
   }
   window.addEventListener("pagehide", flushActiveRoundBeforeLeave);
+  window.addEventListener("pageshow", function (ev) {
+      if (ev.persisted) {
+          badgeMintInFlight = false;
+          scheduleRefreshBadgeOnchainBalances();
+          updateHeroBadgeMintUi();
+      }
+  });
   document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") flushActiveRoundBeforeLeave();
+      else if (document.visibilityState === "visible") scheduleRefreshBadgeOnchainBalances();
   });
   window.addEventListener("unhandledrejection", function (ev) {
       var modal = document.getElementById("victoryModal");
