@@ -610,6 +610,105 @@
     }
     .social-row { display: flex; gap: 12px; flex-wrap: wrap; }
     .social-row + .social-row { margin-top: 12px; }
+    .social-row--single {
+        display: block;
+    }
+    .social-row--single .social-btn {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    /* 6 kontraktów BaseScan — kompaktowe kwadraty w jednym rzędzie */
+    .contract-links-row {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: clamp(6px, 2vw, 10px);
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+        max-width: 100%;
+    }
+    .contract-links-row > li {
+        margin: 0;
+        padding: 0;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .contract-link-chip {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        max-width: clamp(40px, 13.5vw, 52px);
+        aspect-ratio: 1;
+        margin: 0 auto;
+        box-sizing: border-box;
+        border-radius: 12px;
+        overflow: hidden;
+        text-decoration: none;
+        background: linear-gradient(
+            118deg,
+            rgba(20, 35, 110, 0.88) 0%,
+            rgba(35, 55, 150, 0.85) 38%,
+            rgba(45, 85, 195, 0.78) 70%,
+            rgba(60, 138, 255, 0.32) 100%
+        );
+        border: 1px solid rgba(60, 138, 255, 0.28);
+        box-shadow:
+            0 1px 0 rgba(0, 0, 0, 0.12) inset,
+            0 4px 14px rgba(0, 25, 120, 0.28);
+        transition: transform 0.2s var(--ease-base), border-color 0.2s, box-shadow 0.2s;
+    }
+    .contract-link-chip:hover {
+        border-color: rgba(100, 170, 255, 0.42);
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.06) inset,
+            0 6px 18px rgba(0, 40, 160, 0.38);
+        transform: translateY(-1px);
+    }
+    .contract-link-chip:focus-visible {
+        outline: 2px solid var(--cerulean);
+        outline-offset: 2px;
+    }
+    .contract-link-chip__inset {
+        width: 56%;
+        height: 56%;
+        max-width: 28px;
+        max-height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(60, 138, 255, 0.14);
+        border: 1px solid rgba(100, 165, 255, 0.22);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+    }
+    .contract-link-chip__inset svg.social-icon--basescan {
+        width: 58%;
+        height: 58%;
+        max-width: 16px;
+        max-height: 16px;
+        fill: none;
+    }
+    .contract-link-chip__inset .basescan-ring {
+        fill: rgba(168, 198, 232, 0.42);
+    }
+    .contract-link-chip__inset g.basescan-bars {
+        fill: rgba(232, 240, 255, 0.96);
+    }
+    .contract-link-chip:hover .contract-link-chip__inset .basescan-ring {
+        fill: rgba(195, 218, 248, 0.55);
+    }
+    .contract-link-chip:hover .contract-link-chip__inset g.basescan-bars {
+        fill: rgba(248, 252, 255, 1);
+    }
+    @media (max-width: 380px) {
+        .contract-links-row {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+    }
 
     /* --- MODALS --- */
     .modal-overlay { 
@@ -966,10 +1065,12 @@
         font-variant-numeric: tabular-nums;
         line-height: 1;
         flex-shrink: 0;
-        border: 2px solid rgba(255, 255, 255, 0.14);
+        border: none;
         overflow: hidden;
-        padding: 0 1px;
-        transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+        transition: box-shadow 0.25s ease, filter 0.25s ease;
     }
     .score-milestone__n {
         display: block;
@@ -981,11 +1082,10 @@
         letter-spacing: 0.02em;
         line-height: 0.92;
     }
-    /* Zablokowane: wyłącznie szarość, bez koloru „apteczki” */
+    /* Zablokowane: bez ramki/tła — tylko przyciemniona grafika */
     .score-milestone.score-milestone--locked {
-        background: linear-gradient(165deg, #3d4049 0%, #2e3038 48%, #25262d 100%);
-        border-color: rgba(255, 255, 255, 0.09);
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+        background: transparent;
+        box-shadow: none;
         opacity: 1;
         filter: none;
     }
@@ -1004,29 +1104,20 @@
         font-size: clamp(7.75px, 2.2vw, 9.25px);
         letter-spacing: -0.055em;
     }
-    /* Odblokowane — barwy prestiżowe */
-    .score-milestone--10.score-milestone--unlocked {
+    /* Odblokowane — ta sama skala co OG (PNG z przezroczystym marginesem) */
+    .score-milestone--10.score-milestone--unlocked,
+    .score-milestone--100.score-milestone--unlocked,
+    .score-milestone--1000.score-milestone--unlocked {
         background: transparent;
-        border-color: rgba(251, 113, 133, 0.55);
         box-shadow: none;
     }
     .score-milestone--10.score-milestone--unlocked .score-milestone__n {
         color: #ffe4e6;
         text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
     }
-    .score-milestone--100.score-milestone--unlocked {
-        background: transparent;
-        border-color: rgba(241, 245, 249, 0.9);
-        box-shadow: none;
-    }
     .score-milestone--100.score-milestone--unlocked .score-milestone__n {
         color: #0f172a;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.22);
-    }
-    .score-milestone--1000.score-milestone--unlocked {
-        background: transparent;
-        border-color: rgba(234, 211, 150, 0.85);
-        box-shadow: none;
     }
     .score-milestone--1000.score-milestone--unlocked .score-milestone__n {
         color: #1a1208;
@@ -1035,10 +1126,13 @@
     .milestone-badge-img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        max-width: none;
+        object-fit: contain;
         object-position: center;
         display: block;
         border-radius: 50%;
+        transform: scale(1.48);
+        transform-origin: center center;
         pointer-events: none;
         user-select: none;
         -webkit-user-drag: none;
@@ -1182,6 +1276,9 @@
         background-size: 9px 9px;
         pointer-events: none;
         z-index: 2;
+    }
+    .hero-badge-row .badge-onchain--held::after {
+        display: none;
     }
     .badge-mint-feedback {
         margin: 6px 0 0;
@@ -1573,23 +1670,7 @@
                 </span>
             </a>
         </div>
-        <div class="social-row">
-            <a href="https://basescan.org/address/0x9f9343A6833190EE0c816f71D72CE450b1ee8530" target="_blank" rel="noopener noreferrer" class="social-btn" title="PhraseToGuess NFT contract on Base">
-                <span class="social-btn__body">
-                  <span class="social-icon-sq" aria-hidden="true">
-                    <svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">
-                      <path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/>
-                      <g class="basescan-bars">
-                        <rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/>
-                        <rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/>
-                        <rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/>
-                        <rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/>
-                      </g>
-                    </svg>
-                  </span>
-                  <span class="social-btn__text">BaseScan</span>
-                </span>
-            </a>
+        <div class="social-row social-row--single">
             <a href="https://social-connect28.vercel.app/" target="_blank" rel="noopener noreferrer" class="social-btn" title="Super Creator — founder hub">
                 <span class="social-btn__body">
                   <span class="social-icon-sq" aria-hidden="true"><svg class="social-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>
@@ -1597,6 +1678,14 @@
                 </span>
             </a>
         </div>
+        <ul class="contract-links-row" aria-label="Smart contracts on Base">
+            <li><a href="https://basescan.org/address/0x9f9343A6833190EE0c816f71D72CE450b1ee8530" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="Daily Mint — BaseScan" aria-label="Daily Mint on BaseScan"><span class="contract-link-chip__inset" aria-hidden="true"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></span></a></li>
+            <li><a href="https://basescan.org/address/0x901969555E3495D79a04c6F44B97968cd0a4B466" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="OG Badge — BaseScan" aria-label="OG Badge on BaseScan"><span class="contract-link-chip__inset" aria-hidden="true"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></span></a></li>
+            <li><a href="https://basescan.org/address/0x6fc798704Ff94F925Cc7b01B45E5333d2629C42D" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="10 Win Badge — BaseScan" aria-label="10 Win Badge on BaseScan"><span class="contract-link-chip__inset" aria-hidden="true"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></span></a></li>
+            <li><a href="https://basescan.org/address/0xa93EEE6d23dB560c22BDCC63e37EebbC0d60B4b6" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="100 Win Badge — BaseScan" aria-label="100 Win Badge on BaseScan"><span class="contract-link-chip__inset" aria-hidden="true"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></span></a></li>
+            <li><a href="https://basescan.org/address/0x546b1Fa45dbBBCB646D5e19518Ca6427100e7194" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="1000 Win Badge — BaseScan" aria-label="1000 Win Badge on BaseScan"><span class="contract-link-chip__inset" aria-hidden="true"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></span></a></li>
+            <li><a href="https://basescan.org/address/0x34e1838d8C150f38ABD0b2E5d91aa76A653ed03D" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="Old Daily Mint — BaseScan" aria-label="Old Daily Mint on BaseScan"><span class="contract-link-chip__inset" aria-hidden="true"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></span></a></li>
+        </ul>
     </div>
 
   </div>
