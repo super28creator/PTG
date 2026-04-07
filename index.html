@@ -507,6 +507,15 @@
         border-top: 1px solid rgba(60, 138, 255, 0.18);
         padding-top: 20px;
     }
+    /* Samodzielna karta (bez sekcji nad social) — bez „pustki” pod górną krawędzią */
+    .card--community {
+        padding-top: clamp(12px, 3vw, 18px);
+    }
+    .card--community .social-section {
+        margin-top: 0;
+        border-top: none;
+        padding-top: 0;
+    }
     .social-section-label {
         margin: 0 0 12px;
         font-weight: 700;
@@ -1686,7 +1695,7 @@
     <div id="keyboard" class="keyboard"></div>
   </div>
 
-  <div class="card">
+  <div class="card card--community">
     <div class="social-section">
         <p class="social-section-label">JOIN COMMUNITY</p>
         <div class="social-row">
