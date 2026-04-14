@@ -849,6 +849,7 @@
     .leaderboard-table { width: 100%; border-collapse: collapse; color: #fff; }
     .leaderboard-table th { text-align: left; color: var(--text-muted); font-size: 12px; padding-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
     .leaderboard-table td { padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 15px; }
+    .leaderboard-table .lb-name-cell { word-break: break-word; overflow-wrap: anywhere; }
     .rank-badge { 
         width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; 
         border-radius: 6px; font-weight: 800; font-size: 12px; 
@@ -2052,10 +2053,17 @@
       }
   }
 
+  /** Stary format anonimowy — nie zapisujemy ani nie traktujemy jako prawdziwego nicku. */
+  function isPlayerAnonPlaceholderName(s) {
+      if (!s || typeof s !== "string") return false;
+      return /^Player\s*#\s*[0-9A-F]{2,8}$/i.test(s.trim());
+  }
+
   function isBetterDisplayName(name) {
       if (!name || typeof name !== "string") return false;
       const t = name.trim();
       if (t.length < 2) return false;
+      if (isPlayerAnonPlaceholderName(t)) return false;
       if (/^0x[a-fA-F0-9]{40}$/.test(t)) return false;
       if (/^0x[a-fA-F0-9]{1,12}\.{3}[a-fA-F0-9]{2,8}$/i.test(t)) return false;
       if (/^0x[a-fA-F0-9]{4,12}\u2026[a-fA-F0-9]{4,10}$/i.test(t)) return false;
@@ -5721,11 +5729,15 @@
       return false;
   }
 
-  /** Czytelny alias dla portfela bez nazwy (zamiast surowego 0x…). */
+  /** Pełny adres (checksum), gdy nie ma ENS / Basename / Farcaster — zamiast „Player #…”. */
   function walletAnonLabelFromAddress(address) {
-      const a = String(address || "").toLowerCase();
-      if (!/^0x[a-f0-9]{40}$/.test(a)) return "Player";
-      return "Player #" + a.slice(-4).toUpperCase();
+      const a = String(address || "").trim();
+      if (!/^0x[a-fA-F0-9]{40}$/i.test(a)) return "Player";
+      try {
+          return ethers.utils.getAddress(a);
+      } catch (_) {
+          return a.toLowerCase();
+      }
   }
 
   /** Nick z RTDB albo skrócony adres / id gracza (bez „undefined”). */
@@ -5733,7 +5745,15 @@
       const raw = playerObj && playerObj.name;
       if (typeof raw === "string") {
           const t = raw.trim();
-          if (t && t !== "undefined" && t !== "null" && !isWalletSquashedDisplayName(t)) return t;
+          if (
+              t &&
+              t !== "undefined" &&
+              t !== "null" &&
+              !isWalletSquashedDisplayName(t) &&
+              !isPlayerAnonPlaceholderName(t)
+          ) {
+              return t;
+          }
       }
       const id = String(playerId || "").trim();
       if (/^0x[a-fA-F0-9]{40}$/.test(id)) {
@@ -5741,6 +5761,18 @@
       }
       if (id.length > 0) return id.length > 24 ? id.slice(0, 14) + "…" : id;
       return "Player";
+  }
+
+  /** Wiersze leaderboardu: próbujemy API tylko gdy mamy adres i nie ma sensownej nazwy w RTDB. */
+  function leaderboardNeedsBasenameLookup(playerId, playerObj) {
+      const id = String(playerId || "").trim();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(id)) return false;
+      const raw = playerObj && playerObj.name;
+      if (typeof raw === "string") {
+          const t = raw.trim();
+          if (t && t !== "undefined" && t !== "null" && isBetterDisplayName(t)) return false;
+      }
+      return true;
   }
 
   async function enrichLeaderboardNameCells(rows) {
