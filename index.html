@@ -788,7 +788,7 @@
     .victory-icon {
         font-size: 80px; margin-bottom: 20px;
         display: inline-block;
-        animation: bounce 1.5s infinite;
+        animation: popIn 0.5s var(--ease-base) forwards;
         filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6));
     }
     .victory-title {
@@ -1157,19 +1157,27 @@
         filter: grayscale(1) brightness(0.52);
         opacity: 0.88;
     }
-    .score-milestone.score-milestone--unlocked .milestone-badge-img {
+    /* Kolor pełny tylko po zmintowaniu; przed mintem — szaro nawet przy odblokowanym progu */
+    .score-milestone.score-milestone--unlocked:not(.badge-onchain--held) .milestone-badge-img {
+        filter: grayscale(1) brightness(0.62);
+        opacity: 0.92;
+    }
+    .score-milestone.badge-onchain--held .milestone-badge-img {
         filter: none;
         opacity: 1;
     }
     @keyframes badge-mintable-pulse {
         0%,
         100% {
-            box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.34);
+            box-shadow:
+                0 0 0 2px rgba(96, 165, 250, 0.45),
+                0 0 18px rgba(59, 130, 246, 0.28);
         }
         50% {
             box-shadow:
-                0 0 0 1px rgba(147, 197, 253, 0.55),
-                0 0 14px rgba(59, 130, 246, 0.22);
+                0 0 0 2px rgba(147, 197, 253, 0.85),
+                0 0 28px rgba(59, 130, 246, 0.55),
+                0 0 42px rgba(96, 165, 250, 0.22);
         }
     }
     .rewards-strip > div {
@@ -1248,11 +1256,6 @@
         filter: none;
         opacity: 1;
     }
-    /* Pulse używa box-shadow — overflow:hidden by to obcinał na milestone’ach i OG */
-    .score-milestone.badge-slot--mintable,
-    button.hero-og-slot.badge-slot--mintable {
-        overflow: visible;
-    }
     /* Mint odznak: slot jako przycisk */
     button.hero-og-slot {
         border: none;
@@ -1279,15 +1282,18 @@
         outline: 2px solid var(--cerulean);
         outline-offset: 2px;
     }
-    /* Migotanie tylko gdy można mintować (portfel OK, brak NFT, nie w trakcie tx) */
-    .badge-slot--mintable {
+    /* Każda odznaka gotowa do mintu (OG + 10/100/1000) — ten sam puls (nie modal trofeum). */
+    .score-milestone.badge-slot--mintable,
+    button.hero-og-slot.badge-slot--mintable {
+        overflow: visible;
         cursor: pointer !important;
-        animation: badge-mintable-pulse 2.5s ease-in-out infinite;
+        animation: badge-mintable-pulse 1.8s ease-in-out infinite;
     }
     @media (prefers-reduced-motion: reduce) {
-        .badge-slot--mintable {
+        .score-milestone.badge-slot--mintable,
+        button.hero-og-slot.badge-slot--mintable {
             animation: none;
-            box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.42);
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5);
         }
     }
     .badge-onchain--held {
@@ -1782,6 +1788,8 @@
 
   /**
    * PhraseToGuessNFT (Base) — `publicMint(METADATA_URL)` + `priceWei`; wklej adres po deployu Kontrakt-nft.sol.
+   * Cena: właściciel ustawia `setPrice(priceWei)` (~0,10 USD przy deployu / po kursie ETH); front wyłącznie
+   * odczytuje `priceWei()` i wysyła tę wartość w `msg.value` (brak „własnej” ceny w JS).
    * Po zmianie w Kontrakt-nft.sol (publicMint bez _safeMint dla portfeli kontraktowych) zdeployuj ponownie
    * ten kontrakt oraz kontrakty odznak poniżej i podmień adresy.
    */
@@ -1792,7 +1800,7 @@
     "function mintPriceWei() view returns (uint256)",
     "function balanceOf(address owner) view returns (uint256)",
   ];
-  /** Odznaki win / OG — ten sam wzorzec co Kontrakt-nft.sol (`publicMint(uri)` + priceWei). */
+  /** Odznaki win / OG — na Base: PTGBadgeSigned721 (`mintWithSig` + voucher EIP-712 z /api/ptg-badge-voucher). */
   const PTG_OG_BADGE_NFT = "0x901969555E3495D79a04c6F44B97968cd0a4B466";
   const PTG_WIN10_BADGE_NFT = "0x6fc798704Ff94F925Cc7b01B45E5333d2629C42D";
   const PTG_WIN100_BADGE_NFT = "0xa93EEE6d23dB560c22BDCC63e37EebbC0d60B4b6";
@@ -1801,6 +1809,18 @@
   const NFT_BADGE_META_10 = "https://phrasetoguess.xyz/nft-badge-10.json";
   const NFT_BADGE_META_100 = "https://phrasetoguess.xyz/nft-badge-100.json";
   const NFT_BADGE_META_1000 = "https://phrasetoguess.xyz/nft-badge-1000.json";
+
+  function isPtgBadgeContract(addr) {
+      if (!addr) return false;
+      const lc = String(addr).toLowerCase();
+      return (
+          lc === String(PTG_OG_BADGE_NFT).toLowerCase() ||
+          lc === String(PTG_WIN10_BADGE_NFT).toLowerCase() ||
+          lc === String(PTG_WIN100_BADGE_NFT).toLowerCase() ||
+          lc === String(PTG_WIN1000_BADGE_NFT).toLowerCase()
+      );
+  }
+
   /**
    * Base Builder Code — suffix ERC-8021 (schema 0) na końcu calldata mintu.
    * Kod bierzemy z <meta name="base:builder_code"> (jedno miejsce w <head>).
@@ -1848,14 +1868,62 @@
       return eth;
   }
 
-  async function ensureBaseMainnet(provider) {
+  function chainIdMatchesBase(cid) {
+      if (cid == null) return false;
+      const s = String(cid).trim().toLowerCase();
+      if (s === String(BASE_CHAIN_ID_HEX).toLowerCase()) return true;
       try {
-          await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: BASE_CHAIN_ID_HEX }] });
+          if (/^0x[0-9a-f]+$/i.test(s)) {
+              return parseInt(s, 16) === BASE_NUMERIC_CHAIN_ID;
+          }
+      } catch (_) {}
+      try {
+          const n = parseInt(s, 10);
+          if (!Number.isNaN(n)) return n === BASE_NUMERIC_CHAIN_ID;
+      } catch (_) {}
+      return false;
+  }
+
+  /** Mint: odczyty RPC/HTTP mają być ~≤1s; Base jest szybki — długie timeouty tylko przy podpisie w portfelu. */
+  const PTG_MINT_CHAIN_ID_MS = 1000;
+  const PTG_MINT_SWITCH_CHAIN_MS = 1200;
+  const PTG_MINT_ADD_CHAIN_MS = 2500;
+  const PTG_MINT_RPC_FETCH_MS = 900;
+  const PTG_MINT_WALLET_ETH_CALL_MS = 700;
+  const PTG_MINT_RELAY_FETCH_MS = 900;
+  /** Cena mintu zmienia się rzadko — cache odczytu skraca kolejne minty do ~0 dodatkowego RPC. */
+  const PTG_MINT_PRICE_CACHE_MS = 45 * 60 * 1000;
+
+  /**
+   * Base App / embedded wallet jest już na Base — zbędne `wallet_switchEthereumChain`
+   * potrafiło wisieć aż do timeoutu 15s i dokładnie tak wyglądało opóźnienie przed mintem.
+   * Najpierw krótki `eth_chainId`; switch tylko gdy trzeba.
+   */
+  async function ensureBaseMainnet(provider) {
+      if (!provider || typeof provider.request !== "function") return;
+      try {
+          const cid = await withTimeout(
+              provider.request({ method: "eth_chainId", params: [] }),
+              PTG_MINT_CHAIN_ID_MS,
+              "eth_chainId"
+          );
+          if (chainIdMatchesBase(cid)) return;
+      } catch (_) {
+          /* brak odpowiedzi — dalej próba przełączenia */
+      }
+      try {
+          await walletRequestWithTimeout(
+              provider,
+              "wallet_switchEthereumChain",
+              [{ chainId: BASE_CHAIN_ID_HEX }],
+              PTG_MINT_SWITCH_CHAIN_MS
+          );
       } catch (e) {
           if (e?.code === 4902) {
-              await provider.request({
-                  method: "wallet_addEthereumChain",
-                  params: [
+              await walletRequestWithTimeout(
+                  provider,
+                  "wallet_addEthereumChain",
+                  [
                       {
                           chainId: BASE_CHAIN_ID_HEX,
                           chainName: "Base",
@@ -1864,8 +1932,14 @@
                           blockExplorerUrls: ["https://basescan.org"],
                       },
                   ],
-              });
-              await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: BASE_CHAIN_ID_HEX }] });
+                  PTG_MINT_ADD_CHAIN_MS
+              );
+              await walletRequestWithTimeout(
+                  provider,
+                  "wallet_switchEthereumChain",
+                  [{ chainId: BASE_CHAIN_ID_HEX }],
+                  PTG_MINT_SWITCH_CHAIN_MS
+              );
           } else {
               throw e;
           }
@@ -1941,10 +2015,71 @@
       return s.slice(0, Math.max(0, maxLen - 1)) + "…";
   }
 
+  /** Batch: serwer (Base + ENS + opcjonalnie Neynar) — omija problemy RPC/CORS z przeglądarki. */
+  async function resolveDisplayNamesBatch(addresses) {
+      const uniq = [];
+      const seen = new Set();
+      for (let j = 0; j < addresses.length; j++) {
+          const s = String(addresses[j] || "").trim();
+          if (!/^0x[a-fA-F0-9]{40}$/.test(s)) continue;
+          let k;
+          try {
+              k = ethers.utils.getAddress(s).toLowerCase();
+          } catch (_) {
+              k = s.toLowerCase();
+          }
+          if (!seen.has(k)) {
+              seen.add(k);
+              uniq.push(k);
+          }
+      }
+      if (uniq.length === 0) return {};
+      const origin =
+          typeof window !== "undefined" && window.location && window.location.origin ? window.location.origin : "";
+      const url = origin + "/api/ptg-resolve-names";
+      try {
+          const r = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ addresses: uniq.slice(0, 80) }),
+          });
+          if (!r.ok) return {};
+          const j = await r.json();
+          return j && typeof j.names === "object" ? j.names : {};
+      } catch (e) {
+          console.warn("resolveDisplayNamesBatch", e);
+          return {};
+      }
+  }
+
+  function isBetterDisplayName(name) {
+      if (!name || typeof name !== "string") return false;
+      const t = name.trim();
+      if (t.length < 2) return false;
+      if (/^0x[a-fA-F0-9]{40}$/.test(t)) return false;
+      if (/^0x[a-fA-F0-9]{1,12}\.{3}[a-fA-F0-9]{2,8}$/i.test(t)) return false;
+      if (/^0x[a-fA-F0-9]{4,12}\u2026[a-fA-F0-9]{4,10}$/i.test(t)) return false;
+      return true;
+  }
+
+  async function persistPlayerDisplayNameToRtdb(playerId, name) {
+      if (!db || !isBetterDisplayName(name)) return;
+      const id = String(playerId || "").trim();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(id)) return;
+      try {
+          await update(playerDocRef(id), { name: String(name).trim() });
+      } catch (e) {
+          console.warn("persistPlayerDisplayNameToRtdb", e);
+      }
+  }
+
   /** Po zalogowaniu portfelem: pokaż Basename zamiast samego 0x… (klucz RTDB zostaje adresem). */
   async function applyBasenameToUiIfAny(hostKind) {
       if (!myUserId || typeof myUserId !== "string" || !myUserId.startsWith("0x")) return;
-      const basename = await resolveBasenameForAddress(myUserId);
+      const m = await resolveDisplayNamesBatch([myUserId]);
+      const k = myUserId.toLowerCase();
+      let basename = m && m[k] && String(m[k]).trim() ? String(m[k]).trim() : "";
+      if (!basename) basename = await resolveBasenameForAddress(myUserId);
       if (!basename) return;
       myUsername = basename;
       let chipCore = basename;
@@ -1976,6 +2111,57 @@
     return ref(db, `players_s${LEADERBOARD_SEASON}`);
   }
 
+  /** Po sync profilu: jeśli w RTDB jest tylko skrót adresu / brak nicku — dociągnij i zapisz (na bieżąco). */
+  async function refreshMyDisplayNameInRtdb() {
+      if (!db || !isLoggedIn() || !myUserId || myUserId === "guest") return;
+      if (!/^0x[a-fA-F0-9]{40}$/.test(myUserId)) return;
+      let snap;
+      try {
+          snap = await get(playerDocRef(myUserId));
+      } catch (_) {
+          return;
+      }
+      if (!snap.exists()) return;
+      const raw = snap.val().name;
+      if (typeof raw === "string") {
+          const t = raw.trim();
+          if (t && t !== "undefined" && t !== "null") {
+              if (
+                  !/^0x[a-fA-F0-9]{40}$/.test(t) &&
+                  !/^0x[a-fA-F0-9]{1,12}\.{3}[a-fA-F0-9]{2,8}$/i.test(t) &&
+                  !/^0x[a-fA-F0-9]{4,12}\u2026[a-fA-F0-9]{4,10}$/i.test(t)
+              ) {
+                  return;
+              }
+          }
+      }
+      const m = await resolveDisplayNamesBatch([myUserId]);
+      const k = myUserId.toLowerCase();
+      let resolved = m && m[k] && String(m[k]).trim() ? String(m[k]).trim() : "";
+      if (!resolved) {
+          try {
+              const fb = await resolveBasenameForAddress(myUserId);
+              if (fb && fb.trim()) resolved = fb.trim();
+          } catch (_) {}
+      }
+      if (!isBetterDisplayName(resolved)) return;
+      myUsername = resolved;
+      let chipCore = resolved;
+      if (ptgHost === "base") chipCore = "Base · " + resolved;
+      else if (ptgHost === "farcaster") chipCore = "FC · " + resolved;
+      setPlayerChip(
+          truncateDisplayName(chipCore, 36),
+          ptgHost === "base" ? "base" : ptgHost === "farcaster" ? "farcaster" : "browser"
+      );
+      const chip = document.getElementById("playerDisplay");
+      if (chip) chip.title = resolved + " · " + myUserId;
+      try {
+          await update(playerDocRef(myUserId), { name: resolved });
+      } catch (e) {
+          console.warn("refreshMyDisplayNameInRtdb", e);
+      }
+  }
+
   function isLoggedIn() {
       return myUserId !== "guest";
   }
@@ -1994,6 +2180,48 @@
           if (fe && typeof fe.request === "function") return fe;
       } catch (_) {}
       return null;
+  }
+
+  async function withTimeout(promise, ms, label) {
+      let timer = null;
+      try {
+          return await Promise.race([
+              promise,
+              new Promise((_, reject) => {
+                  timer = setTimeout(() => reject(new Error((label || "operation") + " timeout")), ms);
+              }),
+          ]);
+      } finally {
+          if (timer) clearTimeout(timer);
+      }
+  }
+
+  /** Pierwsza udana obietnica wygrywa (jak Promise.any); fallback bez natywnego API. */
+  function ptgPromiseAny(promises) {
+      if (typeof Promise.any === "function") {
+          return Promise.any(promises);
+      }
+      return new Promise((resolve, reject) => {
+          const errors = [];
+          let pending = promises.length;
+          if (pending === 0) {
+              const empty = new Error("all_rejected");
+              empty.errors = [];
+              reject(empty);
+              return;
+          }
+          promises.forEach((p) => {
+              Promise.resolve(p).then(resolve, (err) => {
+                  errors.push(err);
+                  pending--;
+                  if (pending === 0) {
+                      const agg = new Error("all_rejected");
+                      agg.errors = errors;
+                      reject(agg);
+                  }
+              });
+          });
+      });
   }
 
   function defaultConnectButtonLabel() {
@@ -2078,7 +2306,7 @@
   }
 
   /**
-   * Base App: najpierw portfel (eth_accounts), potem profil Farcaster z kontekstu.
+   * Base App: najpierw profil Farcaster z kontekstu (spójny myUserId z allowlistą), potem portfel.
    * Farcaster: profil z kontekstu; opcjonalnie portfel osadzony.
    * Przeglądarka: bez auto-loginu (guest + przycisk).
    */
@@ -2089,12 +2317,17 @@
 
           let ctx;
           try {
-              ctx = await sdk.context;
+              ctx = await withTimeout(Promise.resolve(sdk.context), 1500, "sdk.context");
           } catch (e) {
               console.warn("Mini App context", e);
               return;
           }
           if (!ctx || typeof ctx !== "object") return;
+
+          ptgFcUsernameForOg = null;
+          if (ctx.user && ctx.user.username) {
+              ptgFcUsernameForOg = String(ctx.user.username).toLowerCase().replace(/^@/, "");
+          }
 
           const rawFid = ctx.client && ctx.client.clientFid;
           const clientNum = rawFid != null && String(rawFid) !== "" ? Number(rawFid) : NaN;
@@ -2103,15 +2336,25 @@
           if (isBaseApp) {
               ptgHost = "base";
               try {
+                  if (ctx.user && (ctx.user.username || ctx.user.fid != null)) {
+                      if (applyFarcasterProfileUser(ctx.user, true)) return;
+                  }
+              } catch (e) {
+                  console.warn("Base Farcaster profile", e);
+              }
+              try {
                   const fe = getEmbeddedEthProvider();
                   if (fe) {
-                      const acc = await fe.request({ method: "eth_accounts" });
+                      const acc = await withTimeout(
+                          fe.request({ method: "eth_accounts" }),
+                          1200,
+                          "base eth_accounts"
+                      );
                       if (acc && acc[0] && applyWalletIdentity(acc[0], "base")) return;
                   }
               } catch (e) {
                   console.warn("Base eth_accounts", e);
               }
-              if (applyFarcasterProfileUser(ctx.user, true)) return;
               return;
           }
 
@@ -2124,7 +2367,11 @@
               const fe = getEmbeddedEthProvider();
               if (fe) {
                   ptgHost = "farcaster";
-                  const acc = await fe.request({ method: "eth_accounts" });
+                  const acc = await withTimeout(
+                      fe.request({ method: "eth_accounts" }),
+                      1200,
+                      "miniapp eth_accounts"
+                  );
                   if (acc && acc[0] && applyWalletIdentity(acc[0], "farcaster")) return;
                   return;
               }
@@ -2141,7 +2388,7 @@
   }
 
   async function finishLoginAfterIdentity() {
-      heroBadgeFxSuppressUntil = Date.now() + 3500;
+      heroBadgeFxSuppressUntil = Date.now() + 1000;
       setAuthGateVisible(false);
       refreshOgBadge();
       await syncUserProfile();
@@ -2284,14 +2531,15 @@
 
   function refreshOgBadge() {
     const img = document.getElementById("ogBadge");
-    if (!img) return;
-    const uid = String(myUserId || "guest").toLowerCase();
-    const isOg = SEASON1_OG_USER_IDS.has(uid);
-    img.classList.toggle("og-badge--active", isOg);
-    img.classList.toggle("og-badge--dim", !isOg);
-    img.title = isOg
-      ? "Season 1 OG — thanks for playing early!"
-      : "OG badge — full color for Season 1 players";
+    if (img) {
+      const isOg = season1OgEligible();
+      const minted = badgeHeld("og");
+      img.title = !isOg
+        ? "OG badge — full color after mint (Season 1)"
+        : minted
+          ? "OG badge minted on Base"
+          : "Season 1 OG — mint your badge on Base";
+    }
     updateHeroBadgeMintUi();
   }
 
@@ -2314,6 +2562,18 @@
   }
 
   let profileBadgesMinted = { og: false, m10: false, m100: false, m1000: false };
+  /** Username Farcaster z Mini App (małe litery, bez @) — OG allowlista gdy myUserId to 0x. */
+  let ptgFcUsernameForOg = null;
+  /** Ostatni podłączony adres (małe litery) — dopasowanie do allowlisty 0x. */
+  let ptgLastWalletLc = null;
+
+  function season1OgEligible() {
+      const uid = String(myUserId || "guest").toLowerCase();
+      if (SEASON1_OG_USER_IDS.has(uid)) return true;
+      if (ptgFcUsernameForOg && SEASON1_OG_USER_IDS.has(ptgFcUsernameForOg)) return true;
+      if (ptgLastWalletLc && SEASON1_OG_USER_IDS.has(ptgLastWalletLc)) return true;
+      return false;
+  }
 
   function scheduleRefreshBadgeOnchainBalances() {
       if (badgeOnchainRefreshT) clearTimeout(badgeOnchainRefreshT);
@@ -2345,14 +2605,22 @@
   async function refreshBadgeOnchainBalances() {
       const w = await tryGetConnectedWalletSilent();
       badgeWalletProbed = !!(w && w.accounts && w.accounts[0]);
+      ptgLastWalletLc =
+          w && w.accounts && w.accounts[0] ? String(w.accounts[0]).toLowerCase() : null;
       updateHeroBadgeMintUi();
   }
 
   function updateHeroBadgeMintUi() {
-      const uid = String(myUserId || "guest").toLowerCase();
-      const isOgPlayer = SEASON1_OG_USER_IDS.has(uid);
+      const isOgPlayer = season1OgEligible();
       const s = Number(currentScore) || 0;
       const showMintableChrome = Date.now() >= heroBadgeFxSuppressUntil;
+      const ogImg = document.getElementById("ogBadge");
+      if (ogImg) {
+          const ogHeldImg = badgeHeld("og");
+          const fullColor = isOgPlayer && ogHeldImg;
+          ogImg.classList.toggle("og-badge--active", fullColor);
+          ogImg.classList.toggle("og-badge--dim", !fullColor);
+      }
       const ogBtn = document.getElementById("ogBadgeMintBtn");
       if (ogBtn) {
           ogBtn.classList.remove("badge-slot--mintable", "badge-onchain--held");
@@ -2416,39 +2684,119 @@
   }
 
   const CATEGORIES = {
-    Animals: ["BLUE WHALE", "RED FOX", "GOLDEN EAGLE", "BLACK BEAR", "WHITE SHARK", "POLAR BEAR", "BROWN WOLF", "TIGER SHARK", "KING COBRA", "GRAY WOLF", "SNOW LEOPARD", "SEA TURTLE", "GIANT PANDA", "RED PANDA", "TREE FROG", "SAND CAT"],
-    Crypto: ["LAYER TWO", "MEME COIN", "GAS FEES", "BULL MARKET", "BEAR MARKET", "PRIVATE KEY", "COLD WALLET", "SEED PHRASE", "WHITE LIST", "BLOCK HASH", "ALT COIN", "STABLE COIN", "GAS LIMIT", "HARD FORK", "AIR DROP", "BASE CHAIN"],
-    Onchain: ["DAO VOTER", "MINT PAGE", "GAS SPIKE", "FLOOR PRICE","METAVERSE", "NFT MINT","ENS NAME", "LAYER TWO", "ZK PROOF", "BASE APP", "ONCHAIN"],
-    Economics: ["MARKET CYCLE","INTEREST RATE", "SUPPLY", "FREE TRADE", "BEAR TRAP", "BULL TRAP","STOCK MARKET", "HEDGE FUND"],
-    Finance: ["CASH FLOW", "NET WORTH","TAX HAVEN","BLACK SWAN"],
-    DeFi: ["LIQUID POOL", "TOTAL VALUE", "SWAP PAIR", "AUTO STAKE", "STAKE POOL", "BRIDGE"],
-    Science: ["BLACK HOLE", "DARK MATTER","ATOM CORE", "SOLAR WIND","LASER BEAM", "MOON WALK", "SPACE WALK","SOLAR PANEL", "DEEP SPACE"],
+    Animals: [
+      "BLUE WHALE", "RED FOX", "GOLDEN EAGLE", "BLACK BEAR", "WHITE SHARK", "POLAR BEAR", "BROWN WOLF", "TIGER SHARK",
+      "KING COBRA", "GRAY WOLF", "SNOW LEOPARD", "SEA TURTLE", "GIANT PANDA", "RED PANDA", "SAND CAT",
+      "BLACK PANTHER", "MOUNTAIN LION", "GRIZZLY BEAR", "BALD EAGLE", "KILLER WHALE", "LEOPARD SEAL",
+      "KOALA BEAR",  "HAMMERHEAD SHARK", "MOUNTAIN GOAT",
+      "WHITE RHINO", "BLACK RHINO", "BENGAL TIGER", "SIBERIAN TIGER","GIRAFFE",
+      "AFRICAN ELEPHANT", "SLOTH BEAR",  "GORILLA", "ORANGUTAN",
+      "LEMUR", 
+    ],
+    Crypto: [
+      "LAYER TWO", "MEME COIN", "GAS FEES", "BULL MARKET", "BEAR MARKET", "PRIVATE KEY", "COLD WALLET", "SEED PHRASE",
+      "WHITE LIST", "BLOCK HASH", "ALT COIN", "STABLE COIN", "GAS LIMIT", "AIR DROP", "BASE CHAIN",
+      "CRYPTO EXCHANGE", "PUBLIC KEY",
+    ],
+    Onchain: [
+      "DAO VOTER", "MINT PAGE", "GAS SPIKE", "FLOOR PRICE", "METAVERSE", "NFT MINT", "ENS NAME", "LAYER TWO",
+      "ZK PROOF", "BASE APP", "ONCHAIN", "SMART CONTRACT", "TOKEN SWAP", "CRYPTO WALLET",
+      "NATIVE TOKEN", 
+    ],
+    Economics: [
+      "MARKET CYCLE", "INTEREST RATE", "SUPPLY", "FREE TRADE", "BEAR TRAP", "BULL TRAP", "STOCK MARKET", "HEDGE FUND",
+      "INFLATION", "DEFLATION", "GDP GROWTH", "RECESSION", "BULL RUN", "CENTRAL BANK", 
+     "INCOME TAX", "CAPITAL GAINS", "MINIMUM WAGE",
+    ],
+    Finance: [
+      "CASH FLOW", "NET WORTH", "TAX HAVEN", "BLACK SWAN", "CREDIT SCORE", "STOCK BROKER", 
+      "WALL STREET", "PRIVATE EQUITY", "VENTURE CAPITAL", "INDEX FUND", "PROFIT MARGIN",
+      "DEBT LIMIT", "EMERGENCY FUND", "TRUST FUND", "DAY TRADER",
+    ],
+    DeFi: [
+      "LIQUID POOL", "TOTAL VALUE", "SWAP PAIR", "AUTO STAKE", "STAKE POOL", "BRIDGE", "YIELD FARM", 
+     "SMART POOL", "TOKEN SWAP", "LIQUIDITY", "LENDING PROTOCOL", 
+      "CROSS CHAIN", "SLIPPAGE", 
+    ],
+    Science: [
+      "BLACK HOLE", "DARK MATTER", "ATOM CORE", "SOLAR WIND", "LASER BEAM", "MOON WALK", "SPACE WALK", "SOLAR PANEL",
+      "DEEP SPACE", "QUANTUM PHYSICS",  "GENE EDIT", "GRAVITY WAVE", "SPEED OF LIGHT", 
+      "MILKY WAY", "SUPER NOVA", 
+    ],
     Sports: [
       "REAL MADRID", "LA LAKERS", "MAN UNITED", "FC BARCELONA", "BAYERN MUNICH", "LIVERPOOL FC", "PSG PARIS", "MAN CITY",
       "ARSENAL FC", "CHELSEA FC", "AC MILAN", "INTER MILAN", "JUVENTUS FC", "GOLDEN STATE", "CHICAGO BULLS", "MIAMI HEAT",
-      "BOSTON CELTICS", "NEW YORK KNICKS",
+      "BOSTON CELTICS", "NEW YORK KNICKS", "DALLAS COWBOYS", "NEW YORK YANKEES", "SAN ANTONIO SPURS",
+      "BROOKLYN NETS", "DALLAS MAVERICKS", "DENVER NUGGETS", 
+      "ASTON VILLA", "NEWCASTLE UNITED", "ATLETICO MADRID", "AJAX AMSTERDAM", 
     ],
     Games: [
       "MINECRAFT", "FORTNITE", "ELDEN RING", "CALL OF DUTY", "GTA FIVE", "COUNTER STRIKE", "SUPER MARIO",
-      "LEAGUE LEGENDS", "AMONG US", "CYBERPUNK", "OVER WATCH",
+      "AMONG US", "CYBERPUNK", "OVER WATCH", "ROBLOX", "TOMB RAIDER","THE WITCHER", 
+     "ROCKET LEAGUE",
     ],
     Pokemon: [
       "PIKACHU", "CHARIZARD", "BLASTOISE", "SNORLAX", "MEWTWO", "MEW", "EEVEE", "GENGAR", "LUCARIO", "GRENINJA",
       "DRAGONITE", "VAPOREON", "JOLTEON", "FLAREON", "UMBREON", "SYLVEON", "GYARADOS", "MACHAMP", "ARCANINE", "ALAKAZAM",
-      "RHYDON", "SCIZOR", "TYRANITAR", "METAGROSS", "RAYQUAZA", "KYOGRE", "GROUDON", "LAPRAS", "NIDOKING", "SALAMENCE",
+      "RHYDON", "SCIZOR", "TYRANITAR", "METAGROSS", "RAYQUAZA", "KYOGRE", "GROUDON", "LAPRAS",  "SALAMENCE",
+      "BULBASAUR", "SQUIRTLE", "PSYDUCK", "MACHOP", "PONYTA", "SLOWPOKE", "MAGIKARP",
+      "DITTO", "ARTICUNO", "ZAPDOS", "MOLTRES", "CHIKORITA", "CYNDAQUIL",  "LUGIA",
     ],
     Movies: [
-      "WOLF OF WALL ST", "THE GODFATHER", "STAR WARS", "JURASSIC PARK", "INCEPTION", "THE MATRIX", "IRON MAN TWO", "BLACK PANTHER",
-      "TOP GUN TWO", "SPIDER MAN", "FIGHT CLUB", "TITANIC", "AVATAR TWO", "FORREST GUMP",
+      "WOLF OF WALL ST", "THE GODFATHER", "STAR WARS", "JURASSIC PARK", "INCEPTION", "THE MATRIX", "IRON MAN",
+      "BLACK PANTHER", "TOP GUN", "SPIDER MAN", "FIGHT CLUB", "TITANIC", "AVATAR", "FORREST GUMP",
+      "THE DARK KNIGHT","HARRY POTTER", "GLADIATOR", "TOY STORY",
     ],
     Stars: [
-      "CRISTIANO RONALDO", "ARIANA GRANDE", "TAYLOR SWIFT", "LIONEL MESSI", "LEBRON JAMES", "BILLIE EILISH", "LADY GAGA",
+      "ARIANA GRANDE", "TAYLOR SWIFT", "LIONEL MESSI", "LEBRON JAMES", "BILLIE EILISH", "LADY GAGA",
       "THE ROCK", "ELON MUSK", "BEYONCE", "RIHANNA", "JUSTIN BIEBER", "BAD BUNNY", "SELENA GOMEZ", "KIM KARDASHIAN",
+      "TOM CRUISE", "BRAD PITT", "JOHNNY DEPP", "WILL SMITH", 
+      "ANGELINA JOLIE", "MARGOT ROBBIE", "RYAN GOSLING", 
+       "ROBERT DOWNEY JR", "ZENDAYA", "TOM HOLLAND", "DRAKE", "EMINEM", "SNOOP DOGG", "ED SHEERAN",
+      "THE WEEKND", "BRUNO MARS", "DUA LIPA", "KATY PERRY", "SHAKIRA", "JENNIFER LOPEZ", "MICHAEL JORDAN",
+      "KOBE BRYANT", "TIGER WOODS", "SERENA WILLIAMS", "ROGER FEDERER", "RAFAEL NADAL", "NOVAK DJOKOVIC",
     ],
   };
 
   for (const cat in CATEGORIES) {
       CATEGORIES[cat] = CATEGORIES[cat].filter(phraseFitsLayout);
+  }
+
+  function shufflePhraseArrayInPlace(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const t = arr[i];
+          arr[i] = arr[j];
+          arr[j] = t;
+      }
+      return arr;
+  }
+
+  function phraseRoundRobinStorageKey() {
+      return "ptg_phraseRR_s" + LEADERBOARD_SEASON;
+  }
+
+  /** W ramach kategorii: każde hasło raz, potem nowe tasowanie — mniej powtórek niż przy czystym Math.random(). */
+  function pickNextPhraseFromCategory(cat) {
+      const pool = CATEGORIES[cat];
+      if (!pool || pool.length === 0) return "";
+      const poolSet = new Set(pool);
+      let map = {};
+      try {
+          const raw = localStorage.getItem(phraseRoundRobinStorageKey());
+          const o = raw ? JSON.parse(raw) : null;
+          if (o && typeof o === "object" && !Array.isArray(o)) map = o;
+      } catch (_) {}
+      let q = Array.isArray(map[cat]) ? map[cat].filter((p) => typeof p === "string" && poolSet.has(p)) : [];
+      if (q.length === 0) {
+          q = shufflePhraseArrayInPlace(pool.slice());
+      }
+      const next = q.shift() || pool[0];
+      map[cat] = q;
+      try {
+          localStorage.setItem(phraseRoundRobinStorageKey(), JSON.stringify(map));
+      } catch (_) {}
+      return String(next).toUpperCase();
   }
 
   // --- STATE VARIABLES ---
@@ -2458,12 +2806,32 @@
   let currentScore = 0;
   let gamesPlayedTodayCount = 0;
   let pendingMint = false;
+  /** Ostatni zapisany dzień rozgrywki (RTDB lastPlayed) — kalendarz trofeum musi używać tego dnia, nie dnia TX mintu. */
+  let myLastPlayedDateKey = "";
   let mintCalendarDays = {};
   let userProfileUnsubscribe = null;
   let badgeMintInFlight = false;
+  /** Blokuje podwójne wywołanie mintu trofeum (podwójne TX / podwójne +2 w RTDB). */
+  let __trophyMintInFlight = false;
+  /** Zero równoległych requestów do portfela (eliminuje tx-po-tx z race condition). */
+  let __ptgWalletTxRequestInFlight = false;
+  /** Jedna „sesja” mintu hero (OG + 10/100/1000) + anty-double-click / zdublowane listenery. */
+  let __ptgHeroMintLastMs = 0;
+  function tryAcquireHeroMintSlot() {
+      if (badgeMintInFlight) return false;
+      const t = Date.now();
+      if (t - __ptgHeroMintLastMs < 1400) return false;
+      __ptgHeroMintLastMs = t;
+      badgeMintInFlight = true;
+      return true;
+  }
+  let badgeMintFeedbackAutoClearT = 0;
+  let victoryStatusAutoClearT = 0;
   let badgeWalletProbed = false;
   let badgeOnchainRefreshT = 0;
   let activeRoundSaveT = 0;
+  /** Unikalny identyfikator rundy (initGame) — deduplikacja wygranej w RTDB przy retry transakcji. */
+  let __ptgCurrentRoundId = "";
   /** Until startApp (or post-login) sets a real deadline, hide mintable chrome (0 would mean “always on”). */
   let heroBadgeFxSuppressUntil = Number.POSITIVE_INFINITY;
 
@@ -2796,8 +3164,74 @@
       }
   }
 
+  /**
+   * Pierwsze trafienie w /api/ptg-broadcast-mint i /api/ptg-badge-voucher na Vercel
+   * ładuje osobno ciężki bundel (dynamiczny import ethers) + cold start — często ~8–15 s każdy.
+   * Przy pierwszym mincie lecą kolejno: voucher → podpis → broadcast → dwa cold starty ≈ 20 s.
+   * Rozgrzewka w tle po wejściu (równolegle) + cache URL jak przy base-jsonrpc.
+   */
+  let __ptgMintWarmStarted = false;
+  let __ptgMintFetchPreferredUrl = null;
+
+  function warmMintLambdasInBackground() {
+      if (__ptgMintWarmStarted) return;
+      __ptgMintWarmStarted = true;
+      if (typeof location === "undefined" || location.protocol === "file:") return;
+      try {
+          const post = {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              mode: "cors",
+              cache: "no-store",
+          };
+          const origins = [];
+          if (!isStaticLocalOrFileHost() && location.origin) {
+              origins.push(location.origin);
+          }
+          if (origins.indexOf(PTG_PUBLIC_SITE_ORIGIN) === -1) {
+              origins.push(PTG_PUBLIC_SITE_ORIGIN);
+          }
+          const seen = new Set();
+          for (let oi = 0; oi < origins.length; oi++) {
+              const base = origins[oi];
+              if (!base || seen.has(base)) continue;
+              seen.add(base);
+              void fetch(`${base}/api/base-jsonrpc`, {
+                  ...post,
+                  body: JSON.stringify({
+                      jsonrpc: "2.0",
+                      id: 1,
+                      method: "eth_chainId",
+                      params: [],
+                  }),
+              }).catch(function () {});
+              void fetch(`${base}/api/ptg-broadcast-mint`, {
+                  ...post,
+                  body: JSON.stringify({ rawTransaction: "0x00" }),
+              }).catch(function () {});
+              void fetch(`${base}/api/ptg-badge-voucher`, {
+                  ...post,
+                  body: JSON.stringify({
+                      contractAddress: PTG_OG_BADGE_NFT,
+                      minter: "0x0000000000000000000000000000000000000001",
+                  }),
+              }).catch(function () {});
+          }
+      } catch (_) {}
+  }
+
+  function orderMintFetchUrls(urls) {
+      const pref = __ptgMintFetchPreferredUrl;
+      if (pref && urls.indexOf(pref) >= 0) {
+          return [pref, ...urls.filter(function (u) {
+              return u !== pref;
+          })];
+      }
+      return urls;
+  }
+
   async function startApp() {
-      heroBadgeFxSuppressUntil = Date.now() + 4500;
+      heroBadgeFxSuppressUntil = Date.now() + 1200;
       /* Farcaster Mini App: signals splash removal. Base App: no-op / safe to ignore. */
       if (sdk && sdk.actions) {
           try { sdk.actions.ready(); } catch (err) { console.warn(err); }
@@ -2836,6 +3270,9 @@
               () => updateHeroBadgeMintUi(),
               Math.max(0, heroBadgeFxSuppressUntil - Date.now() + 100)
           );
+          setTimeout(function () {
+              warmMintLambdasInBackground();
+          }, 400);
       } catch (e) {
           console.error("Critical error during startApp", e);
           clearTimeout(safeLoad);
@@ -2850,6 +3287,9 @@
               () => updateHeroBadgeMintUi(),
               Math.max(0, heroBadgeFxSuppressUntil - Date.now() + 100)
           );
+          setTimeout(function () {
+              warmMintLambdasInBackground();
+          }, 400);
       }
   }
 
@@ -2887,10 +3327,6 @@
           const snapshot = await get(userRef);
           if(snapshot.exists()) {
               const data = snapshot.val();
-              currentScore = data.score || 0;
-              const today = new Date().toISOString().split('T')[0];
-              const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-              const yesterday = yesterdayDate.toISOString().split('T')[0];
 
               const fromServer =
                   data.mintCalendar && typeof data.mintCalendar === "object"
@@ -2899,23 +3335,10 @@
               mintCalendarDays = mergeMintCalendars(loadMintCalendarFromStorage(), fromServer);
               persistMintCalendarToStorage(mintCalendarDays);
 
-              if(data.lastPlayed === today) {
-                  let g = Number(data.gamesPlayedToday) || 0;
-                  if (g > MAX_GAMES_PER_DAY) {
-                      g = MAX_GAMES_PER_DAY;
-                      update(userRef, { gamesPlayedToday: MAX_GAMES_PER_DAY });
-                  }
-                  gamesPlayedTodayCount = g;
-                  pendingMint = data.pendingMint || false;
-              } else if (data.lastPlayed === yesterday) {
-                  gamesPlayedTodayCount = 0;
-                  pendingMint = false;
-                  update(userRef, { gamesPlayedToday: 0, pendingMint: false });
-              } else {
-                  gamesPlayedTodayCount = 0;
-                  pendingMint = false;
-                  update(userRef, { gamesPlayedToday: 0, pendingMint: false });
-              }
+              applyServerProfileToLocalState(data, {
+                  userRef,
+                  mayWriteNewDayReset: true,
+              });
               profileActiveRound =
                   data.activeRound && typeof data.activeRound === "object" && !Array.isArray(data.activeRound)
                       ? data.activeRound
@@ -2934,6 +3357,7 @@
       userProfileUnsubscribe = onValue(userRef, (snap) => {
           if (!snap.exists()) return;
           const data = snap.val();
+          applyServerProfileToLocalState(data, { mayWriteNewDayReset: false });
           const fromServer =
               data.mintCalendar && typeof data.mintCalendar === "object"
                   ? data.mintCalendar
@@ -2942,11 +3366,15 @@
           persistMintCalendarToStorage(mintCalendarDays);
           renderCalendarMonth();
           applyProfileBadgesMintedFromServer(data);
+          updateScoreUI();
+          updateDailyUI();
+          checkGameStateAndRender();
           updateHeroBadgeMintUi();
       });
       updateScoreUI();
       updateDailyUI();
       renderCalendarMonth();
+      void refreshMyDisplayNameInRtdb();
   }
 
   // --- CORE GAME INIT ---
@@ -2968,10 +3396,11 @@
       );
   }
 
-  /** Nierozstrzygnięta fraza — „New Category” zablokowane do końca rundy (pula checkboxów może się zmieniać; losowanie od następnej rundy). */
+  /** Nierozstrzygnięta fraza — „New Category” zablokowane po pierwszej literze do końca rundy (przed strzałem można wylosować inną kategorię). */
   function isActiveIncompleteRound() {
       if (!isLoggedIn() || gameOver || pendingMint) return false;
       if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) return false;
+      if (guessSequence.length === 0) return false;
       if (!secret || typeof secret !== "string" || !secret.length) return false;
       if (!currentCategory) return false;
       if (!revealed || !revealed.length) return false;
@@ -3022,15 +3451,15 @@
         checkGameStateAndRender();
         return;
     }
-    document.getElementById('keyboard').style.pointerEvents = 'auto';
-    document.getElementById('keyboard').style.opacity = '1';
-    gameOver = false;
-    
     if(pendingMint || gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) {
         refreshCategoryDisplayText();
         checkGameStateAndRender();
+        syncRoundLockUI();
         return;
     }
+    document.getElementById('keyboard').style.pointerEvents = 'auto';
+    document.getElementById('keyboard').style.opacity = '1';
+    gameOver = false;
     
     if (activeRoundSaveT) {
         clearTimeout(activeRoundSaveT);
@@ -3040,6 +3469,8 @@
     const catKeys = getPlayableCategoryKeys();
     if (catKeys.length === 0) {
         refreshCategoryDisplayText();
+        checkGameStateAndRender();
+        syncRoundLockUI();
         return;
     }
     if (
@@ -3053,9 +3484,20 @@
     const catArray = CATEGORIES[currentCategory];
     if (!catArray || catArray.length === 0) {
         refreshCategoryDisplayText();
+        checkGameStateAndRender();
+        syncRoundLockUI();
         return;
     }
-    secret = catArray[Math.floor(Math.random()*catArray.length)].toUpperCase();
+    secret = pickNextPhraseFromCategory(currentCategory);
+    __ptgCurrentRoundId =
+        "r" +
+        LEADERBOARD_SEASON +
+        "_" +
+        String(myUserId || "guest") +
+        "_" +
+        Date.now() +
+        "_" +
+        Math.random().toString(36).slice(2, 12);
     revealed = Array.from(secret).map(ch => (ch === " " ? " " : "_"));
     mistakes = 0; chartData = []; currentPrice = 1000; preloadChartHistory(); 
     
@@ -3102,13 +3544,13 @@
       }
 
       if(pendingMint) {
-          // STATE: Player won but didn't mint yet.
           newGameBtn.style.display = 'none';
           newGameBtn.disabled = false;
           timer.style.display = 'none';
-          recoverBtn.style.display = 'block'; // Ensure Claim button is visible
+          recoverBtn.style.display = 'block';
           document.getElementById('keyboard').style.pointerEvents = 'none';
           document.getElementById('keyboard').style.opacity = '0.3';
+          stopCountdown();
       } else if (gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) {
           // STATE: Daily limit reached
           newGameBtn.style.display = 'none';
@@ -3119,7 +3561,7 @@
           document.getElementById('keyboard').style.pointerEvents = 'none';
           document.getElementById('keyboard').style.opacity = '0.3';
       } else {
-          // STATE: Playable (0/3, 1/3, 2/3) — przycisk zawsze widoczny; zablokowany na całą nierozstrzygniętą rundę
+          stopCountdown();
           const roundLocked = isActiveIncompleteRound();
           newGameBtn.style.display = 'block';
           newGameBtn.disabled = roundLocked;
@@ -3142,21 +3584,36 @@
   }
   
   // --- TIMER ---
+  let _countdownIntervalId = null;
   function startCountdown() {
       const timerElem = document.getElementById('countdown');
       if (!timerElem) return;
+      if (_countdownIntervalId != null) return;
       function update() {
           const now = new Date();
-          const tomorrow = new Date(now);
-          tomorrow.setUTCHours(24, 0, 0, 0); 
+          const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
           const diff = tomorrow - now;
-          if (diff <= 0) { timerElem.textContent = "00:00:00"; return; }
+          if (diff <= 0) {
+              timerElem.textContent = "00:00:00";
+              clearInterval(_countdownIntervalId);
+              _countdownIntervalId = null;
+              gamesPlayedTodayCount = 0;
+              checkGameStateAndRender();
+              return;
+          }
           const h = Math.floor(diff / (1000 * 60 * 60));
           const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
           const s = Math.floor((diff % (1000 * 60)) / 1000);
           timerElem.textContent = `${h<10?"0"+h:h}:${m<10?"0"+m:m}:${s<10?"0"+s:s}`;
       }
-      update(); setInterval(update, 1000);
+      update();
+      _countdownIntervalId = setInterval(update, 1000);
+  }
+  function stopCountdown() {
+      if (_countdownIntervalId != null) {
+          clearInterval(_countdownIntervalId);
+          _countdownIntervalId = null;
+      }
   }
 
   // --- CHART & GAME VISUALS ---
@@ -3224,6 +3681,65 @@
   function isoDate(y, m, d) { return y + "-" + pad2(m + 1) + "-" + pad2(d); }
   function localDateKey(d = new Date()) {
       return isoDate(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  /** Wczoraj w strefie użytkownika — ten sam kalendarz co activeRound / mintCalendar. */
+  function localYesterdayDateKey() {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return localDateKey(d);
+  }
+
+  /** Stare zapisy lastPlayed w RTDB używały daty UTC — trzymaj oba warianty przy porównaniu. */
+  function utcDateKey(d = new Date()) {
+      return d.toISOString().split("T")[0];
+  }
+  function utcYesterdayDateKey() {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - 1);
+      return utcDateKey(d);
+  }
+
+  /**
+   * Stan dzienny z RTDB: data lokalna + zgodność ze starym lastPlayed (UTC), żeby limit 3 gier był stabilny.
+   * @param {{ mayWriteNewDayReset?: boolean, userRef?: object }} opts
+   */
+  function applyServerProfileToLocalState(data, opts) {
+      const mayWriteNewDayReset = !!(opts && opts.mayWriteNewDayReset);
+      const userRef = opts && opts.userRef;
+      if (!data || typeof data !== "object") return;
+      currentScore = data.score || 0;
+      myLastPlayedDateKey =
+          typeof data.lastPlayed === "string" && data.lastPlayed.length > 0
+              ? data.lastPlayed
+              : "";
+      const today = localDateKey();
+      const yesterday = localYesterdayDateKey();
+      const utcToday = utcDateKey();
+      const utcYest = utcYesterdayDateKey();
+      const lp = data.lastPlayed;
+      if (lp === today || lp === utcToday) {
+          let g = Number(data.gamesPlayedToday) || 0;
+          if (g > MAX_GAMES_PER_DAY) {
+              g = MAX_GAMES_PER_DAY;
+              if (userRef) {
+                  void update(userRef, { gamesPlayedToday: MAX_GAMES_PER_DAY });
+              }
+          }
+          gamesPlayedTodayCount = g;
+          pendingMint = !!data.pendingMint;
+      } else if (lp === yesterday || lp === utcYest) {
+          gamesPlayedTodayCount = 0;
+          pendingMint = !!data.pendingMint;
+          if (mayWriteNewDayReset && userRef) {
+              void update(userRef, { gamesPlayedToday: 0 });
+          }
+      } else {
+          gamesPlayedTodayCount = 0;
+          pendingMint = !!data.pendingMint;
+          if (mayWriteNewDayReset && userRef) {
+              void update(userRef, { gamesPlayedToday: 0 });
+          }
+      }
   }
 
   function renderCalendarMonth() {
@@ -3428,6 +3944,7 @@
   }
 
   function checkEnd() {
+    if (gameOver) return;
     if(!revealed.includes("_")) {
       // --- WIN ---
       gameOver = true;
@@ -3436,16 +3953,16 @@
       generateHugeCandle('up'); drawCandleChart();
       runConfettiBurst({ particleCount: 80, spread: 65, origin: { y: 0.6 }, ticks: 120 });
       
-      pendingMint = true; 
-      checkGameStateAndRender(); 
-      
+      pendingMint = true;
+      checkGameStateAndRender();
       if(db) {
           const userRef = playerDocRef(myUserId);
-          const today = new Date().toISOString().split('T')[0];
+          const today = localDateKey();
           runTransaction(userRef, (userData) => {
-              const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-              const yesterday = yesterdayDate.toISOString().split('T')[0];
               if (userData) {
+                  if (__ptgCurrentRoundId && userData.roundLedgerKey === __ptgCurrentRoundId) {
+                      return userData;
+                  }
                   const played = userData.gamesPlayedToday || 0;
                   if (played >= MAX_GAMES_PER_DAY) {
                       return undefined;
@@ -3455,20 +3972,45 @@
                   userData.pendingMint = true;
                   userData.lastPlayed = today;
                   userData.name = myUsername;
+                  if (__ptgCurrentRoundId) userData.roundLedgerKey = __ptgCurrentRoundId;
               } else {
-                  userData = { name: myUsername, score: 1, lastPlayed: today, gamesPlayedToday: 1, pendingMint: true };
+                  userData = {
+                      name: myUsername,
+                      score: 1,
+                      lastPlayed: today,
+                      gamesPlayedToday: 1,
+                      pendingMint: true,
+                  };
+                  if (__ptgCurrentRoundId) userData.roundLedgerKey = __ptgCurrentRoundId;
               }
               return userData;
           }).then((res) => {
               const ok = !res || typeof res.committed !== "boolean" || res.committed;
-              if (!ok) return;
+              if (!ok) {
+                  pendingMint = false;
+                  checkGameStateAndRender();
+                  return;
+              }
               const snap = res && res.snapshot;
               if (!snap || typeof snap.val !== "function") return;
-              gamesPlayedTodayCount = snap.val().gamesPlayedToday;
-              currentScore++;
+              const sv = snap.val();
+              gamesPlayedTodayCount = sv.gamesPlayedToday || 0;
+              currentScore = sv.score || 0;
+              pendingMint = !!sv.pendingMint;
+              if (typeof sv.lastPlayed === "string" && sv.lastPlayed.length > 0) {
+                  myLastPlayedDateKey = sv.lastPlayed;
+              }
               updateScoreUI();
               checkGameStateAndRender();
+          }).catch((txErr) => {
+              console.warn("win transaction error", txErr);
+              pendingMint = false;
+              checkGameStateAndRender();
           });
+      } else {
+          gamesPlayedTodayCount = Math.min(gamesPlayedTodayCount + 1, MAX_GAMES_PER_DAY);
+          currentScore++;
+          updateScoreUI();
       }
       setTimeout(() => { document.getElementById('victoryModal').classList.add('show'); }, 1000); 
     
@@ -3484,19 +4026,30 @@
       setTimeout(() => { document.getElementById('lossModal').classList.add('show'); }, 1000); 
 
       if(db) {
-          const today = new Date().toISOString().split('T')[0];
+          const today = localDateKey();
           const userRef = playerDocRef(myUserId);
           runTransaction(userRef, (userData) => {
-              if(userData) {
+              if (userData) {
+                  if (__ptgCurrentRoundId && userData.roundLedgerKey === __ptgCurrentRoundId) {
+                      return userData;
+                  }
                   const played = userData.gamesPlayedToday || 0;
                   if (played >= MAX_GAMES_PER_DAY) {
                       return undefined;
                   }
-                  userData.gamesPlayedToday = played + 1; 
+                  userData.gamesPlayedToday = played + 1;
                   userData.lastPlayed = today;
-                  userData.pendingMint = false; 
+                  userData.pendingMint = false;
+                  userData.name = myUsername;
+                  if (__ptgCurrentRoundId) userData.roundLedgerKey = __ptgCurrentRoundId;
               } else {
-                  userData = { name: myUsername, gamesPlayedToday: 1, lastPlayed: today, pendingMint: false };
+                  userData = {
+                      name: myUsername,
+                      gamesPlayedToday: 1,
+                      lastPlayed: today,
+                      pendingMint: false,
+                  };
+                  if (__ptgCurrentRoundId) userData.roundLedgerKey = __ptgCurrentRoundId;
               }
               return userData;
           }).then((res) => {
@@ -3504,9 +4057,19 @@
               if (!ok) return;
               const snap = res && res.snapshot;
               if (!snap || typeof snap.val !== "function") return;
-              gamesPlayedTodayCount = snap.val().gamesPlayedToday;
+              const sv = snap.val();
+              gamesPlayedTodayCount = sv.gamesPlayedToday || 0;
+              currentScore = sv.score || 0;
+              if (typeof sv.lastPlayed === "string" && sv.lastPlayed.length > 0) {
+                  myLastPlayedDateKey = sv.lastPlayed;
+              }
               updateScoreUI(); checkGameStateAndRender();
+          }).catch((txErr) => {
+              console.warn("loss transaction error", txErr);
           });
+      } else {
+          gamesPlayedTodayCount = Math.min(gamesPlayedTodayCount + 1, MAX_GAMES_PER_DAY);
+          updateScoreUI();
       }
     }
   }
@@ -3540,8 +4103,20 @@
   }
 
   const PTG_PUBLIC_SITE_ORIGIN = "https://phrasetoguess.xyz";
-  /** Zapasowy deploy Vercel — ten sam /api/base-jsonrpc gdy główna domena ma problem. */
-  const PTG_VERCEL_DEPLOY_ORIGIN = "https://ptg-one.vercel.app";
+  /**
+   * Zapasowe originy Vercel (projekt `ptg`) — stary `ptg-one` bywa martwy; produkcja to zwykle `*.vercel.app` pod nazwą projektu.
+   */
+  const PTG_VERCEL_FALLBACK_ORIGINS = [
+      "https://ptg.vercel.app",
+      "https://ptg-one.vercel.app",
+  ];
+
+  function addPtgVercelApiUrls(list, add, apiPath) {
+      for (let i = 0; i < PTG_VERCEL_FALLBACK_ORIGINS.length; i++) {
+          const u = `${PTG_VERCEL_FALLBACK_ORIGINS[i]}${apiPath}`;
+          add(u);
+      }
+  }
 
   function getCanonicalSiteOrigin() {
       try {
@@ -3577,33 +4152,59 @@
       if (isStaticLocalOrFileHost()) {
           add(canonicalApi);
           if (canonicalApi !== prodApi) add(prodApi);
-          const v0 = `${PTG_VERCEL_DEPLOY_ORIGIN}/api/base-jsonrpc`;
-          if (v0 !== prodApi && v0 !== canonicalApi) add(v0);
+          addPtgVercelApiUrls(list, add, "/api/base-jsonrpc");
           return list;
       }
+      /* Produkcja / preview: tylko ten sam origin + ewentualnie canonical/prod — bez duplikatów i martwych *.vercel.app. */
       if (location.origin && location.protocol !== "file:") {
           add(`${location.origin}/api/base-jsonrpc`);
       }
-      add("/api/base-jsonrpc");
-      add(canonicalApi);
-      if (canonicalApi !== prodApi) add(prodApi);
-      const vercelApi = `${PTG_VERCEL_DEPLOY_ORIGIN}/api/base-jsonrpc`;
-      if (vercelApi !== prodApi && vercelApi !== canonicalApi) add(vercelApi);
+      if (canonicalApi !== `${location.origin}/api/base-jsonrpc`) {
+          add(canonicalApi);
+      }
+      if (prodApi !== `${location.origin}/api/base-jsonrpc` && prodApi !== canonicalApi) {
+          add(prodApi);
+      }
+      if (list.length === 0) {
+          add(prodApi);
+          addPtgVercelApiUrls(list, add, "/api/base-jsonrpc");
+      }
       return list;
   }
 
+  /** Po pierwszym udanym żądaniu — kolejne RPC idą od razu na działający URL (bez czekania na timeouty zapasów). */
+  let __ptgBaseJsonRpcWorkingUrl = null;
+
+  /**
+   * Równoległe zapytania do wszystkich proxy Base — pierwsza udana odpowiedź wygrywa.
+   * Sekwencyjny fallback z timeoutem 10s na URL dawał w praktyce ~10–15s opóźnienia przy pierwszym wolnym/martwym hoście.
+   */
   async function baseJsonRpc(payload) {
       const urls = collectBaseJsonRpcUrls();
-      let lastErr = null;
-      for (let i = 0; i < urls.length; i++) {
-          try {
-              const r = await fetch(urls[i], {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(payload),
-                  mode: "cors",
-                  cache: "no-store",
-              });
+      const ordered =
+          __ptgBaseJsonRpcWorkingUrl && urls.indexOf(__ptgBaseJsonRpcWorkingUrl) >= 0
+              ? [
+                    __ptgBaseJsonRpcWorkingUrl,
+                    ...urls.filter((u) => u !== __ptgBaseJsonRpcWorkingUrl),
+                ]
+              : urls;
+      if (!ordered.length) {
+          throw new Error("Base RPC proxy: no URLs");
+      }
+      const timeoutMs = PTG_MINT_RPC_FETCH_MS;
+      const tasks = ordered.map((u) =>
+          (async () => {
+              const r = await fetchWithTimeout(
+                  u,
+                  {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(payload),
+                      mode: "cors",
+                      cache: "no-store",
+                  },
+                  timeoutMs
+              );
               const text = await r.text();
               let j;
               try {
@@ -3613,22 +4214,58 @@
               }
               if (j.error) throw new Error(j.error.message || "jsonrpc error");
               if (!r.ok) throw new Error("Base RPC proxy HTTP " + r.status);
+              __ptgBaseJsonRpcWorkingUrl = u;
               return j.result;
-          } catch (e) {
-              lastErr = e;
-              console.warn("baseJsonRpc", urls[i], e);
+          })()
+      );
+      try {
+          return await ptgPromiseAny(tasks);
+      } catch (e) {
+          const errs = e && e.errors;
+          if (errs && errs.length) {
+              console.warn("baseJsonRpc: all URLs failed", errs[0]);
+              throw errs[0];
           }
+          throw e;
       }
-      throw lastErr || new Error("Base RPC proxy: all URLs failed");
   }
 
-  /** EIP-1559 z baseFee bloku Base — ciasny max fee (mniejszy „worst case” w portfelu). */
-  function eip1559HexFromBaseFeePerGas(bfHex) {
-      if (bfHex == null) return null;
-      const baseFee = ethers.BigNumber.from(bfHex);
-      const tip = ethers.BigNumber.from("3000000");
-      let maxFee = baseFee.mul(13).div(10).add(tip);
-      const maxFeeCeil = ethers.BigNumber.from("1500000000");
+  /** EIP-1559 dla Base: mały tip (z sugestii sieci, ograniczony), niski sufit maxFee — portfel nie zawyża „Max fee”. */
+  /** @param {string|null|undefined} tipHexOptional — z prefetch (parallel z estimateGas), bez dodatkowego RPC. */
+  async function eip1559HexForBaseMint(bfHex, tipHexOptional) {
+      let baseFee = ethers.BigNumber.from(0);
+      try {
+          if (bfHex != null && bfHex !== "0x" && bfHex !== "0x0") {
+              baseFee = ethers.BigNumber.from(bfHex);
+          }
+      } catch (_) {
+          baseFee = ethers.BigNumber.from(0);
+      }
+      /* Brak baseFee w bloku / zerowy — portfele pokazują wtedy „fee 0” i „tx likely to fail”. */
+      if (baseFee.isZero()) {
+          baseFee = ethers.BigNumber.from("5000000");
+      }
+      let tip = ethers.BigNumber.from("1000000");
+      try {
+          let tipHex = tipHexOptional;
+          if (tipHex == null || tipHex === "") {
+              tipHex = await baseJsonRpc({
+                  jsonrpc: "2.0",
+                  id: 1,
+                  method: "eth_maxPriorityFeePerGas",
+                  params: [],
+              });
+          }
+          const suggested = ethers.BigNumber.from(tipHex);
+          const tipCap = ethers.BigNumber.from("250000000");
+          const tipFloor = ethers.BigNumber.from("100000");
+          tip = suggested.gt(tipCap) ? tipCap : suggested;
+          if (tip.lt(tipFloor)) tip = tipFloor;
+      } catch (e) {
+          tip = ethers.BigNumber.from("3000000");
+      }
+      let maxFee = baseFee.mul(12).div(10).add(tip);
+      const maxFeeCeil = ethers.BigNumber.from("1200000000");
       if (maxFee.gt(maxFeeCeil)) maxFee = maxFeeCeil;
       const minMax = baseFee.add(tip);
       if (maxFee.lt(minMax)) maxFee = minMax;
@@ -3638,44 +4275,77 @@
       };
   }
 
+  const PTG_MINT_WITH_SIG_SELECTOR = "0x01810030";
+
   /**
-   * Gas + EIP-1559 z /api/base-jsonrpc — niskie maxFee (Base), umiarkowany gas cap,
-   * żeby Rabby/MetaMask nie pokazywały zawyżonego „max fee” i ostrzeżeń o niestabilnym estimate.
+   * Gas + EIP-1559 z /api/base-jsonrpc — niskie maxFee (Base).
+   * `mintWithSig` (smart wallet / AA): wyższy cap — 290k potrafi odrzucić symulację zanim pojawi się UI portfela.
    */
   async function prepareMintTxGasFields(from, to, data, valueHex) {
       const out = {};
-      let est = ethers.BigNumber.from(280000);
-      try {
-          const estHex = await baseJsonRpc({
-              jsonrpc: "2.0",
-              id: 1,
-              method: "eth_estimateGas",
-              params: [{ from, to, data, value: valueHex }, "latest"],
-          });
-          est = ethers.BigNumber.from(estHex);
-      } catch (e) {
-          console.warn("prepareMintTxGasFields: eth_estimateGas fallback 280k", e);
+      const dHex = typeof data === "string" ? data.toLowerCase() : "";
+      const isMintWithSig = dHex.startsWith(PTG_MINT_WITH_SIG_SELECTOR);
+      const gasCap = isMintWithSig
+          ? ethers.BigNumber.from(880000)
+          : ethers.BigNumber.from(290000);
+      const floor = isMintWithSig
+          ? ethers.BigNumber.from(200000)
+          : ethers.BigNumber.from(110000);
+      let est = isMintWithSig
+          ? ethers.BigNumber.from(480000)
+          : ethers.BigNumber.from(240000);
+
+      const estReq = {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "eth_estimateGas",
+          params: [{ from, to, data, value: valueHex }, "latest"],
+      };
+      const blockReq = {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "eth_getBlockByNumber",
+          params: ["latest", false],
+      };
+      const tipReq = {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "eth_maxPriorityFeePerGas",
+          params: [],
+      };
+
+      const [estHex, block, tipHex] = await Promise.all([
+          baseJsonRpc(estReq).catch((e) => {
+              console.warn(
+                  "prepareMintTxGasFields: eth_estimateGas fallback",
+                  isMintWithSig ? "480k" : "240k",
+                  e
+              );
+              return null;
+          }),
+          baseJsonRpc(blockReq).catch((e) => {
+              console.warn("prepareMintTxGasFields: eth_getBlockByNumber failed", e);
+              return null;
+          }),
+          baseJsonRpc(tipReq).catch(() => null),
+      ]);
+
+      if (estHex != null) {
+          try {
+              est = ethers.BigNumber.from(estHex);
+          } catch (_) {}
       }
-      const floor = ethers.BigNumber.from(120000);
       if (est.lt(floor)) est = floor;
-      const gasBn = est.mul(110).div(100);
-      const gasCap = ethers.BigNumber.from(320000);
+      const gasBn = est.mul(isMintWithSig ? 115 : 112).div(100);
       const gasFinal = gasBn.gt(gasCap) ? gasCap : gasBn;
       out.gas = ethers.utils.hexValue(gasFinal);
 
-      let block;
-      try {
-          block = await baseJsonRpc({
-              jsonrpc: "2.0",
-              id: 1,
-              method: "eth_getBlockByNumber",
-              params: ["latest", false],
-          });
-      } catch (e) {
-          console.warn("prepareMintTxGasFields: eth_getBlockByNumber failed", e);
+      if (!block) {
+          const feesOnly = await eip1559HexForBaseMint(null, tipHex);
+          if (feesOnly) Object.assign(out, feesOnly);
           return out;
       }
-      const fees = eip1559HexFromBaseFeePerGas(block && block.baseFeePerGas);
+      const fees = await eip1559HexForBaseMint(block.baseFeePerGas, tipHex);
       if (fees) Object.assign(out, fees);
       return out;
   }
@@ -3683,7 +4353,7 @@
   async function waitForTxReceiptViaServer(txHash) {
       const h = typeof txHash === "string" ? txHash : String(txHash);
       const deadline = Date.now() + 120000;
-      let delay = 400;
+      let delay = 220;
       while (Date.now() < deadline) {
           let result;
           try {
@@ -3706,7 +4376,9 @@
                   delay = Math.min(delay + 250, 2000);
                   continue;
               }
-              const ok = st === "0x1" || st === 1 || st === true;
+              const ok =
+                  st === "0x1" || st === "0x01" || st === 1 || st === true ||
+                  (typeof st === "string" && parseInt(st, 16) === 1);
               return {
                   status: ok ? 1 : 0,
                   blockNumber: result.blockNumber,
@@ -3723,10 +4395,107 @@
       if (Array.isArray(x)) x = x[0];
       if (x && typeof x === "object" && typeof x.hash === "string") x = x.hash;
       x = typeof x === "string" ? x.trim() : "";
-      if (!/^0x[0-9a-fA-F]{64}$/.test(x)) {
+      if (!x && typeof h === "string") x = h.trim();
+      const lower = x.toLowerCase();
+      if (!/^0x[0-9a-f]{64}$/.test(lower)) {
           throw new Error("Invalid transaction hash from wallet");
       }
-      return x;
+      return lower;
+  }
+
+  /** Wynik eth_sendTransaction — część portfeli zwraca undefined mimo wysłania tx (wtedy NIE wolno odpalać relay). */
+  function normalizeEthSendTxHash(res) {
+      if (res == null) return null;
+      if (typeof res === "string") {
+          const t = res.trim();
+          return /^0x[0-9a-fA-F]{64}$/.test(t) ? t.toLowerCase() : null;
+      }
+      if (Array.isArray(res) && res.length) return normalizeEthSendTxHash(res[0]);
+      if (typeof res === "object" && res.hash != null) return normalizeEthSendTxHash(res.hash);
+      if (typeof res === "object" && res.transactionHash != null) {
+          return normalizeEthSendTxHash(res.transactionHash);
+      }
+      if (typeof res === "object" && res.txHash != null) return normalizeEthSendTxHash(res.txHash);
+      if (typeof res === "object" && res.result != null) return normalizeEthSendTxHash(res.result);
+      return null;
+  }
+
+  function isUserRejectedWalletRequest(err) {
+      if (!err) return false;
+      const code = err.code;
+      const msg = err && err.message ? String(err.message) : String(err || "");
+      return (
+          code === 4001 ||
+          code === "ACTION_REJECTED" ||
+          /user rejected|rejected the request|denied transaction|user denied|cancelled|canceled/i.test(
+              msg
+          )
+      );
+  }
+
+  async function walletRequestWithTimeout(provider, method, params, timeoutMs) {
+      if (!provider || typeof provider.request !== "function") {
+          throw new Error("Wallet provider unavailable");
+      }
+      const ms = Number(timeoutMs) > 0 ? Number(timeoutMs) : 20000;
+      return withTimeout(
+          provider.request({ method, params }),
+          ms,
+          "wallet " + method
+      );
+  }
+
+  async function getWalletAccountsFast(provider) {
+      if (!provider || typeof provider.request !== "function") return [];
+      try {
+          const quick = await withTimeout(
+              provider.request({ method: "eth_accounts", params: [] }),
+              550,
+              "wallet eth_accounts"
+          );
+          if (Array.isArray(quick) && quick[0]) return quick;
+      } catch (_) {}
+      return walletRequestWithTimeout(provider, "eth_requestAccounts", [], 12000);
+  }
+
+  function mintPriceCacheKey(contractAddr) {
+      try {
+          return "ptg_v1_mintPriceWei_" + ethers.utils.getAddress(contractAddr).toLowerCase();
+      } catch (_) {
+          return null;
+      }
+  }
+
+  function mintPriceCacheGet(contractAddr) {
+      const key = mintPriceCacheKey(contractAddr);
+      if (!key || typeof sessionStorage === "undefined") return null;
+      try {
+          const raw = sessionStorage.getItem(key);
+          if (!raw) return null;
+          const o = JSON.parse(raw);
+          if (!o || typeof o.hex !== "string" || typeof o.t !== "number") return null;
+          if (Date.now() - o.t > PTG_MINT_PRICE_CACHE_MS) return null;
+          const h = o.hex.trim().toLowerCase();
+          return /^0x[0-9a-f]+$/.test(h) ? h : null;
+      } catch (_) {
+          return null;
+      }
+  }
+
+  function mintPriceCachePut(contractAddr, hex) {
+      const key = mintPriceCacheKey(contractAddr);
+      if (!key || typeof sessionStorage === "undefined" || !hex) return;
+      try {
+          sessionStorage.setItem(
+              key,
+              JSON.stringify({ hex: String(hex).trim().toLowerCase(), t: Date.now() })
+          );
+      } catch (_) {}
+  }
+
+  async function fetchWithTimeout(url, options, timeoutMs) {
+      const ms = Number(timeoutMs) > 0 ? Number(timeoutMs) : 15000;
+      return withTimeout(fetch(url, options), ms, "fetch " + String(url));
   }
 
   /** Odrzuć niejednoznaczny receipt — bez tego nie naliczamy +2 punktów. */
@@ -3735,9 +4504,12 @@
       const s = receipt.status;
       if (s === undefined || s === null) return false;
       if (typeof s === "number") return s === 1;
+      if (typeof s === "boolean") return s;
       if (typeof s === "string") {
-          const t = s.toLowerCase();
-          return t === "0x1" || t === "1";
+          const t = s.toLowerCase().trim();
+          if (t === "0x1" || t === "0x01" || t === "1" || t === "true") return true;
+          try { return parseInt(t, 16) === 1; } catch (_) {}
+          return false;
       }
       try {
           if (typeof s.toNumber === "function") return s.toNumber() === 1;
@@ -3768,6 +4540,22 @@
           "function balanceOf(address owner) view returns (uint256)",
       ]);
       const data = iface.encodeFunctionData("balanceOf", [fromAddr]);
+      if (ethProvider && typeof ethProvider.request === "function") {
+          try {
+              const hex = await withTimeout(
+                  ethProvider.request({
+                      method: "eth_call",
+                      params: [{ to, data }, tag],
+                  }),
+                  PTG_MINT_WALLET_ETH_CALL_MS,
+                  "wallet eth_call balanceOf"
+              );
+              const [bn] = iface.decodeFunctionResult("balanceOf", hex);
+              return ethers.BigNumber.from(bn);
+          } catch (e2) {
+              console.warn("readNftBalanceBn: wallet failed", e2);
+          }
+      }
       try {
           const hex = await baseJsonRpc({
               jsonrpc: "2.0",
@@ -3778,31 +4566,54 @@
           const [bn] = iface.decodeFunctionResult("balanceOf", hex);
           return ethers.BigNumber.from(bn);
       } catch (e) {
-          console.warn("readNftBalanceBn: proxy failed, trying wallet", e);
-      }
-      if (ethProvider && typeof ethProvider.request === "function") {
-          try {
-              const hex = await ethProvider.request({
-                  method: "eth_call",
-                  params: [{ to, data }, tag],
-              });
-              const [bn] = iface.decodeFunctionResult("balanceOf", hex);
-              return ethers.BigNumber.from(bn);
-          } catch (e2) {
-              console.warn("readNftBalanceBn: wallet failed", e2);
-          }
+          console.warn("readNftBalanceBn: proxy failed", e);
       }
       throw new Error("Could not read NFT balance on Base (proxy + wallet failed)");
   }
 
+  /**
+   * PTGBadgeSigned721 na Base: mintPriceWei jest private na niektórych deploy'ach (10/100/1000 wins).
+   * Storage slot 6 zawiera tę cenę — odczytujemy ją przez eth_getStorageAt jako fallback.
+   */
+  const PTG_BADGE_PRICE_STORAGE_SLOT = "0x6";
+
   async function readMintPriceWeiHex(contractAddr, ethProvider) {
-      const attempts = [
-          { sig: "function priceWei() view returns (uint256)", fn: "priceWei" },
-          { sig: "function mintPriceWei() view returns (uint256)", fn: "mintPriceWei" },
-      ];
+      const cached = mintPriceCacheGet(contractAddr);
+      if (cached) return cached;
+      const isBadge = isPtgBadgeContract(contractAddr);
+      const attempts = isBadge
+          ? [
+                { sig: "function mintPriceWei() view returns (uint256)", fn: "mintPriceWei" },
+                { sig: "function priceWei() view returns (uint256)", fn: "priceWei" },
+            ]
+          : [
+                { sig: "function priceWei() view returns (uint256)", fn: "priceWei" },
+                { sig: "function mintPriceWei() view returns (uint256)", fn: "mintPriceWei" },
+            ];
       for (let a = 0; a < attempts.length; a++) {
           const priceIface = new ethers.utils.Interface([attempts[a].sig]);
           const data = priceIface.encodeFunctionData(attempts[a].fn, []);
+          if (ethProvider && typeof ethProvider.request === "function") {
+              try {
+                  const hex = await withTimeout(
+                      ethProvider.request({
+                          method: "eth_call",
+                          params: [{ to: contractAddr, data }, "latest"],
+                      }),
+                      PTG_MINT_WALLET_ETH_CALL_MS,
+                      "wallet eth_call " + attempts[a].fn
+                  );
+                  const [wei] = priceIface.decodeFunctionResult(attempts[a].fn, hex);
+                  const bn = ethers.BigNumber.from(wei);
+                  if (bn.gt(0)) {
+                      const out = bn.toHexString();
+                      mintPriceCachePut(contractAddr, out);
+                      return out;
+                  }
+              } catch (e2) {
+                  console.warn("readMintPriceWeiHex: wallet " + attempts[a].fn, e2);
+              }
+          }
           try {
               const hex = await baseJsonRpc({
                   jsonrpc: "2.0",
@@ -3811,25 +4622,39 @@
                   params: [{ to: contractAddr, data }, "latest"],
               });
               const [wei] = priceIface.decodeFunctionResult(attempts[a].fn, hex);
-              return ethers.BigNumber.from(wei).toHexString();
+              const bn = ethers.BigNumber.from(wei);
+              if (bn.gt(0)) {
+                  const out = bn.toHexString();
+                  mintPriceCachePut(contractAddr, out);
+                  return out;
+              }
           } catch (e) {
               console.warn("readMintPriceWeiHex: proxy " + attempts[a].fn, e);
           }
-          if (ethProvider && typeof ethProvider.request === "function") {
-              try {
-                  const hex = await ethProvider.request({
-                      method: "eth_call",
-                      params: [{ to: contractAddr, data }, "latest"],
-                  });
-                  const [wei] = priceIface.decodeFunctionResult(attempts[a].fn, hex);
-                  return ethers.BigNumber.from(wei).toHexString();
-              } catch (e2) {
-                  console.warn("readMintPriceWeiHex: wallet " + attempts[a].fn, e2);
+      }
+
+      if (isBadge) {
+          try {
+              const storageHex = await baseJsonRpc({
+                  jsonrpc: "2.0",
+                  id: 1,
+                  method: "eth_getStorageAt",
+                  params: [contractAddr, PTG_BADGE_PRICE_STORAGE_SLOT, "latest"],
+              });
+              const bn = ethers.BigNumber.from(storageHex);
+              if (bn.gt(0)) {
+                  console.info("readMintPriceWeiHex: read from storage slot 6 =", bn.toString());
+                  const out = bn.toHexString();
+                  mintPriceCachePut(contractAddr, out);
+                  return out;
               }
+          } catch (storageErr) {
+              console.warn("readMintPriceWeiHex: storage slot fallback failed", storageErr);
           }
       }
+
       throw new Error(
-          "Could not read mint price on Base (site /api/base-jsonrpc and wallet RPC failed). Confirm deploy includes api/base-jsonrpc.js on Vercel."
+          "Could not read mint price on Base. Confirm /api/base-jsonrpc is deployed."
       );
   }
 
@@ -3844,52 +4669,190 @@
       if (isStaticLocalOrFileHost()) {
           add(canonicalApi);
           if (canonicalApi !== prodApi) add(prodApi);
-          const v0 = `${PTG_VERCEL_DEPLOY_ORIGIN}/api/ptg-broadcast-mint`;
-          if (v0 !== prodApi && v0 !== canonicalApi) add(v0);
+          addPtgVercelApiUrls(list, add, "/api/ptg-broadcast-mint");
           return list;
       }
       if (location.origin && location.protocol !== "file:") {
           add(`${location.origin}/api/ptg-broadcast-mint`);
       }
-      add("/api/ptg-broadcast-mint");
-      add(canonicalApi);
-      if (canonicalApi !== prodApi) add(prodApi);
-      const vercelApi = `${PTG_VERCEL_DEPLOY_ORIGIN}/api/ptg-broadcast-mint`;
-      if (vercelApi !== prodApi && vercelApi !== canonicalApi) add(vercelApi);
+      if (canonicalApi !== `${location.origin}/api/ptg-broadcast-mint`) {
+          add(canonicalApi);
+      }
+      if (prodApi !== `${location.origin}/api/ptg-broadcast-mint` && prodApi !== canonicalApi) {
+          add(prodApi);
+      }
+      if (list.length === 0) {
+          add(prodApi);
+          addPtgVercelApiUrls(list, add, "/api/ptg-broadcast-mint");
+      }
       return list;
   }
 
-  async function postBroadcastMintRaw(rawTx) {
-      const urls = collectPtgBroadcastMintUrls();
-      const body = JSON.stringify({ rawTransaction: rawTx });
-      let lastErr = null;
-      for (let i = 0; i < urls.length; i++) {
-          try {
-              const r = await fetch(urls[i], {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body,
-                  mode: "cors",
-                  cache: "no-store",
-              });
+  function collectPtgBadgeVoucherUrls() {
+      const list = [];
+      const add = (u) => {
+          if (u && list.indexOf(u) === -1) list.push(u);
+      };
+      const canonicalOrigin = getCanonicalSiteOrigin();
+      const canonicalApi = `${canonicalOrigin}/api/ptg-badge-voucher`;
+      const prodApi = PTG_PUBLIC_SITE_ORIGIN + "/api/ptg-badge-voucher";
+      if (isStaticLocalOrFileHost()) {
+          add(canonicalApi);
+          if (canonicalApi !== prodApi) add(prodApi);
+          addPtgVercelApiUrls(list, add, "/api/ptg-badge-voucher");
+          return list;
+      }
+      if (location.origin && location.protocol !== "file:") {
+          add(`${location.origin}/api/ptg-badge-voucher`);
+      }
+      if (canonicalApi !== `${location.origin}/api/ptg-badge-voucher`) {
+          add(canonicalApi);
+      }
+      if (prodApi !== `${location.origin}/api/ptg-badge-voucher` && prodApi !== canonicalApi) {
+          add(prodApi);
+      }
+      if (list.length === 0) {
+          add(prodApi);
+          addPtgVercelApiUrls(list, add, "/api/ptg-badge-voucher");
+      }
+      return list;
+  }
+
+  /** Słowa r/s z EIP-712 (JSON) → dokładnie bytes32 dla ethers v5 ABI. */
+  function normalizeBadgeVoucherWord32(w) {
+      const raw =
+          typeof w === "string"
+              ? w.trim()
+              : w != null && typeof w === "number" && Number.isFinite(w)
+                ? ethers.utils.hexZeroPad(ethers.BigNumber.from(w).toHexString(), 32)
+                : String(w == null ? "" : w).trim();
+      if (!raw) throw new Error("Failed.");
+      const hex = raw.startsWith("0x") ? raw : "0x" + raw;
+      if (!/^0x[0-9a-fA-F]+$/.test(hex)) throw new Error("Failed.");
+      try {
+          return ethers.utils.hexZeroPad(hex, 32);
+      } catch (e) {
+          console.warn("normalizeBadgeVoucherWord32", e);
+          throw new Error("Failed.");
+      }
+  }
+
+  const BADGE_ALREADY_MINTED_TAG = "__already_minted_on_chain__";
+
+  async function fetchBadgeMintVoucher(contractAddress, minter) {
+      const urls = orderMintFetchUrls(collectPtgBadgeVoucherUrls());
+      const body = JSON.stringify({
+          contractAddress: ethers.utils.getAddress(contractAddress),
+          minter: ethers.utils.getAddress(minter),
+      });
+      const timeoutMs = PTG_MINT_RELAY_FETCH_MS;
+      const tasks = urls.map((u) =>
+          (async () => {
+              const r = await fetchWithTimeout(
+                  u,
+                  {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body,
+                      mode: "cors",
+                      cache: "no-store",
+                  },
+                  timeoutMs
+              );
+              if (!__ptgMintFetchPreferredUrl && r && r.status > 0) {
+                  __ptgMintFetchPreferredUrl = u;
+              }
               const t = await r.text();
               let j;
               try {
                   j = JSON.parse(t);
               } catch {
-                  lastErr = new Error(t.slice(0, 240));
-                  continue;
+                  throw new Error(t.slice(0, 240));
               }
-              if (r.ok && j.hash && typeof j.hash === "string") return j.hash;
-              lastErr = new Error(
-                  (j.detail || j.error || t).toString().slice(0, 400)
-              );
-          } catch (e) {
-              lastErr = e;
+              if (!r.ok) {
+                  const errId = j.error ? String(j.error) : "request_failed";
+                  if (errId === "already_minted_on_chain") {
+                      const e = new Error(BADGE_ALREADY_MINTED_TAG);
+                      e._alreadyMinted = true;
+                      throw e;
+                  }
+                  throw new Error(errId);
+              }
+              if (
+                  j &&
+                  j.nonce != null &&
+                  j.deadline != null &&
+                  j.r &&
+                  j.s &&
+                  j.v !== undefined &&
+                  j.v !== null
+              ) {
+                  __ptgMintFetchPreferredUrl = u;
+                  return j;
+              }
+              throw new Error("Invalid voucher response");
+          })()
+      );
+      try {
+          return await ptgPromiseAny(tasks);
+      } catch (e) {
+          const errs = e && e.errors;
+          if (errs && errs.length) {
+              const am = errs.find((x) => x && x._alreadyMinted);
+              if (am) throw am;
+              throw errs[0];
           }
+          throw e;
       }
-      console.error("postBroadcastMintRaw: all URLs failed", lastErr);
-      throw new Error("broadcast_failed");
+  }
+
+  async function postBroadcastMintRaw(rawTx) {
+      const urls = orderMintFetchUrls(collectPtgBroadcastMintUrls());
+      const body = JSON.stringify({ rawTransaction: rawTx });
+      const timeoutMs = PTG_MINT_RELAY_FETCH_MS;
+      const tasks = urls.map((u) =>
+          (async () => {
+              const r = await fetchWithTimeout(
+                  u,
+                  {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body,
+                      mode: "cors",
+                      cache: "no-store",
+                  },
+                  timeoutMs
+              );
+              if (!__ptgMintFetchPreferredUrl && r && r.status > 0) {
+                  __ptgMintFetchPreferredUrl = u;
+              }
+              const t = await r.text();
+              let j;
+              try {
+                  j = JSON.parse(t);
+              } catch {
+                  throw new Error(t.slice(0, 240));
+              }
+              if (r.ok && j.hash && typeof j.hash === "string") {
+                  __ptgMintFetchPreferredUrl = u;
+                  return j.hash;
+              }
+              const bcastDetail = j && j.detail ? " — " + String(j.detail).slice(0, 200) : "";
+              throw new Error(
+                  (j && j.error ? String(j.error) : "broadcast_failed") + bcastDetail
+              );
+          })()
+      );
+      try {
+          return await ptgPromiseAny(tasks);
+      } catch (e) {
+          console.error("postBroadcastMintRaw: all URLs failed", e);
+          const errs = e && e.errors;
+          if (errs && errs.length && errs[0] instanceof Error) {
+              throw errs[0];
+          }
+          throw e;
+      }
   }
 
   async function getTxNonceHexFromProxy(address) {
@@ -3915,7 +4878,7 @@
                   method: "eth_getBlockByNumber",
                   params: ["latest", false],
               });
-              const fees = eip1559HexFromBaseFeePerGas(block && block.baseFeePerGas);
+              const fees = await eip1559HexForBaseMint(block && block.baseFeePerGas);
               if (fees) Object.assign(g, fees);
           } catch (e) {
               console.warn("ensureMintGasHexForSign: fee retry failed", e);
@@ -3933,8 +4896,10 @@
    */
   async function signMintTxAndBroadcastViaSite(ethProvider, from, toContract, dataHex, valueHex) {
       const toResolved = ethers.utils.getAddress(toContract);
-      const gas = await ensureMintGasHexForSign(from, toResolved, dataHex, valueHex);
-      const nonce = await getTxNonceHexFromProxy(from);
+      const [gas, nonce] = await Promise.all([
+          ensureMintGasHexForSign(from, toResolved, dataHex, valueHex),
+          getTxNonceHexFromProxy(from),
+      ]);
       const signPayload = {
           from: ethers.utils.getAddress(from),
           to: toResolved,
@@ -3949,13 +4914,21 @@
       };
       let rawSigned;
       try {
-          rawSigned = await ethProvider.request({
-              method: "eth_signTransaction",
-              params: [signPayload],
-          });
+          rawSigned = await walletRequestWithTimeout(
+              ethProvider,
+              "eth_signTransaction",
+              [signPayload],
+              22000
+          );
       } catch (e) {
           console.warn("eth_signTransaction failed (details in object)", e);
-          throw new Error("eth_sign_failed");
+          const dm =
+              e && typeof e.message === "string" && e.message.trim()
+                  ? e.message.trim()
+                  : e && typeof e.reason === "string" && e.reason.trim()
+                    ? e.reason.trim()
+                    : "";
+          throw new Error(dm ? "eth_sign_failed: " + dm.slice(0, 200) : "eth_sign_failed");
       }
       if (rawSigned && typeof rawSigned === "object" && rawSigned.raw) {
           rawSigned = rawSigned.raw;
@@ -3970,21 +4943,33 @@
    * Wspólna ścieżka: publicMint(metadataUri) + value z kontraktu, receipt + wzrost balanceOf.
    * @param {HTMLElement|null} statusHost — opcjonalnie wiersz statusu (np. #badgeMintFeedback lub #victoryStatus)
    */
-  async function runPublicMintStringNftTx(nftAddress, metadataUri, statusHost) {
+  async function runPublicMintStringNftTx(nftAddress, metadataUri, statusHost, options) {
       const zero = "0x0000000000000000000000000000000000000000";
       if (!nftAddress || String(nftAddress).toLowerCase() === zero) {
           throw new Error("NFT contract address missing");
       }
+      const onTxHash =
+          options && typeof options.onTxHash === "function" ? options.onTxHash : null;
       const toNft = ethers.utils.getAddress(nftAddress);
+      const cachedMintPrice = mintPriceCacheGet(toNft);
+      const earlyMintPricePromise = cachedMintPrice
+          ? Promise.resolve(cachedMintPrice)
+          : readMintPriceWeiHex(toNft, null).catch(() => null);
 
       let accounts;
       let ethProvider = null;
       try {
           const fe = getEmbeddedEthProvider();
           if (fe) {
-              await ensureBaseMainnet(fe);
-              accounts = await fe.request({ method: "eth_requestAccounts" });
-              ethProvider = fe;
+              const [, embAcc] = await Promise.all([
+                  ensureBaseMainnet(fe),
+                  getWalletAccountsFast(fe),
+              ]);
+              accounts = embAcc;
+              /* Tylko gdy jest konto — inaczej zostawiamy ethProvider=null, żeby dojść do injected (np. MetaMask w przeglądarce). */
+              if (accounts && accounts[0]) {
+                  ethProvider = fe;
+              }
           }
       } catch (mintSdkErr) {
           console.warn("Mint: embedded wallet path skipped", mintSdkErr);
@@ -3993,8 +4978,11 @@
           const injected = getInjectedProvider();
           if (injected) {
               try {
-                  await ensureBaseMainnet(injected);
-                  accounts = await injected.request({ method: "eth_requestAccounts" });
+                  const [, injAcc] = await Promise.all([
+                      ensureBaseMainnet(injected),
+                      getWalletAccountsFast(injected),
+                  ]);
+                  accounts = injAcc;
                   ethProvider = injected;
               } catch (injErr) {
                   console.warn("Mint: injected wallet path", injErr);
@@ -4012,11 +5000,23 @@
       const minter = accounts[0];
       const minterLc = minter.toLowerCase();
       const userLc = String(myUserId || "").toLowerCase();
+      const strictSingleTxPrompt =
+          !!(
+              ethProvider &&
+              typeof ethProvider.request === "function" &&
+              (ethProvider.isMetaMask === true ||
+                  (globalThis.ethereum &&
+                      (ethProvider === globalThis.ethereum ||
+                          (Array.isArray(globalThis.ethereum.providers) &&
+                              globalThis.ethereum.providers.includes(ethProvider)))))
+          );
 
       function setStatus(msg, color) {
           if (!statusHost) return;
-          statusHost.textContent = msg;
+          const t = msg == null ? "" : String(msg).trim();
+          statusHost.textContent = t;
           if (color) statusHost.style.color = color;
+          if (t) statusHost.style.display = "";
       }
 
       function mintWalletErrorDetail(err) {
@@ -4030,75 +5030,258 @@
 
       if (db && myUserId && myUserId !== "guest" && userLc !== minterLc) {
           setStatus("Linking wallet for mint…", "#94a3b8");
-          try {
-              await update(playerDocRef(myUserId), { mintWalletForMint: minterLc });
-          } catch (e) {
+          void update(playerDocRef(myUserId), { mintWalletForMint: minterLc }).catch(function (e) {
               console.warn("mintWalletForMint update skipped — mint continues on-chain", e);
-          }
+          });
       }
 
       setStatus("Building mint transaction…", "#94a3b8");
-      const mintIface = new ethers.utils.Interface(PTG_NFT_ABI);
-      const dataHexPlain = mintIface.encodeFunctionData("publicMint", [metadataUri]);
-      const dataHexWithBuilder = appendErc8021BuilderSuffix(dataHexPlain);
-      const valueHex = await readMintPriceWeiHex(toNft, ethProvider);
-      const balBefore = await readNftBalanceBn(toNft, minter, ethProvider);
+      const isBadge = isPtgBadgeContract(toNft);
+      let dataHexPlain;
+      let dataHexWithBuilder = null;
+
+      if (isBadge) {
+          setStatus("Requesting mint voucher…", "#94a3b8");
+          let voucher;
+          try {
+              voucher = await fetchBadgeMintVoucher(toNft, minter);
+          } catch (voucherErr) {
+              if (voucherErr && voucherErr._alreadyMinted) {
+                  setStatus("Checking on-chain badge balance…", "#94a3b8");
+                  let onchainBal = ethers.BigNumber.from(0);
+                  try {
+                      onchainBal = await readNftBalanceBn(toNft, minter, ethProvider);
+                  } catch (_) {}
+                  if (onchainBal.gt(0)) {
+                      setStatus("Badge already minted — confirming…", "#86efac");
+                      return { txHash: "already_minted", minter, ethProvider };
+                  }
+              }
+              throw voucherErr;
+          }
+          const sigIface = new ethers.utils.Interface([
+              "function mintWithSig(address to,uint256 nonce,uint256 deadline,uint8 v,bytes32 r,bytes32 s) payable",
+          ]);
+          const v8 =
+              typeof voucher.v === "number"
+                  ? voucher.v
+                  : parseInt(String(voucher.v), 16) || parseInt(String(voucher.v), 10);
+          if (!Number.isFinite(v8) || v8 < 0 || v8 > 255) {
+              throw new Error("Invalid voucher v=" + String(voucher.v));
+          }
+          const r32 = normalizeBadgeVoucherWord32(voucher.r);
+          const s32 = normalizeBadgeVoucherWord32(voucher.s);
+          dataHexPlain = sigIface.encodeFunctionData("mintWithSig", [
+              ethers.utils.getAddress(minter),
+              ethers.BigNumber.from(voucher.nonce),
+              ethers.BigNumber.from(voucher.deadline),
+              v8,
+              r32,
+              s32,
+          ]);
+      } else {
+          const mintIface = new ethers.utils.Interface(PTG_NFT_ABI);
+          dataHexPlain = mintIface.encodeFunctionData("publicMint", [metadataUri]);
+          dataHexWithBuilder = appendErc8021BuilderSuffix(dataHexPlain);
+      }
+
+      setStatus("Reading contract state…", "#94a3b8");
+      let valueHex = "0x0";
+      try {
+          const earlyPrice = await earlyMintPricePromise;
+          valueHex = earlyPrice || (await readMintPriceWeiHex(toNft, ethProvider));
+      } catch (priceErr) {
+          console.warn("readMintPriceWeiHex failed — will try wallet-estimated value", priceErr);
+      }
+
+      const balBeforePromise = readNftBalanceBn(toNft, minter, ethProvider).catch((balErr) => {
+          console.warn("readNftBalanceBn pre-mint failed — proceeding with 0", balErr);
+          return ethers.BigNumber.from(0);
+      });
 
       setStatus("Preparing transaction…", "#94a3b8");
       const fromChk = ethers.utils.getAddress(accounts[0]);
+      let didSendMintTxRequest = false;
 
       let txHash;
       let lastSendErr = null;
+      try {
 
       async function trySendTransaction(provider, payload) {
-          return await provider.request({
-              method: "eth_sendTransaction",
-              params: [payload],
-          });
+          return await walletRequestWithTimeout(
+              provider,
+              "eth_sendTransaction",
+              [payload],
+              22000
+          );
       }
 
       async function attemptMintPipeline(dHex, passLabel) {
           let passLastErr = null;
-          const gasFields = await prepareMintTxGasFields(fromChk, toNft, dHex, valueHex);
           const txBase = {
               from: fromChk,
               to: toNft,
               data: dHex,
               value: valueHex,
           };
-          const txPayloadMinimal = { ...txBase };
-          let txPayloadFull = null;
-          let txPayloadGasOnly = null;
-          if (Object.keys(gasFields).length > 0) {
-              txPayloadFull = { ...txBase, ...gasFields };
-              if (gasFields.maxFeePerGas && gasFields.maxPriorityFeePerGas) {
-                  txPayloadFull.type = "0x2";
-                  txPayloadFull.chainId = BASE_CHAIN_ID_HEX;
-              }
-              if (gasFields.gas) {
-                  txPayloadFull.gasLimit = gasFields.gas;
-              }
-              if (gasFields.gas) {
-                  txPayloadGasOnly = {
-                      ...txBase,
-                      gas: gasFields.gas,
-                      gasLimit: gasFields.gas,
-                  };
-              }
-          }
 
-          async function runMintSendAttempts(provider) {
-              const tryList = [];
-              tryList.push({ label: passLabel + "_minimal", payload: txPayloadMinimal });
-              if (txPayloadGasOnly) {
-                  tryList.push({ label: passLabel + "_gas_only", payload: txPayloadGasOnly });
+          async function runMintSendAttempts(provider, preferRelayFirst) {
+              const embedded = getEmbeddedEthProvider();
+              const isEmbeddedWallet =
+                  embedded && provider === embedded && typeof provider.request === "function";
+              const singlePromptWalletMode = strictSingleTxPrompt || !isEmbeddedWallet;
+
+              /* Base App / embedded: najpierw podpis + relay — omija często wolny pierwszy eth_sendTransaction. */
+              if (preferRelayFirst && isEmbeddedWallet && accounts[0]) {
+                  try {
+                      setStatus("Sign — submitting via PhraseToGuess…", "#94a3b8");
+                      return await signMintTxAndBroadcastViaSite(
+                          provider,
+                          accounts[0],
+                          toNft,
+                          dHex,
+                          valueHex
+                      );
+                  } catch (relayFirstErr) {
+                      passLastErr = relayFirstErr;
+                      console.warn(
+                          "mint relay-first failed, falling back to eth_sendTransaction",
+                          relayFirstErr
+                      );
+                  }
               }
+
+              /* 1) Minimalny tx bez RPC — portfel sam ustala gaz (dobre dla MetaMask w przeglądarce). */
+              setStatus("Confirm in your wallet…", "#94a3b8");
+              let firstSendErr = null;
+              let rawSend = null;
+              let firstPayload = { ...txBase };
+              const isBadgeMint = isPtgBadgeContract(toNft);
+              if (singlePromptWalletMode && !isBadgeMint) {
+                  try {
+                      const gasFields = await prepareMintTxGasFields(fromChk, toNft, dHex, valueHex);
+                      const gasBn = gasFields && gasFields.gas
+                          ? ethers.BigNumber.from(gasFields.gas)
+                          : ethers.BigNumber.from(240000);
+                      const gasFloor = ethers.BigNumber.from(120000);
+                      const gasCap = ethers.BigNumber.from(260000);
+                      let gasFinal = gasBn;
+                      if (gasFinal.lt(gasFloor)) gasFinal = gasFloor;
+                      if (gasFinal.gt(gasCap)) gasFinal = gasCap;
+                      firstPayload = { ...txBase, gas: ethers.utils.hexValue(gasFinal) };
+                  } catch (prepGasErr) {
+                      console.warn("single-shot gas clamp fallback", prepGasErr);
+                      firstPayload = { ...txBase, gas: ethers.utils.hexValue(240000) };
+                  }
+              } else if (!singlePromptWalletMode) {
+                  try {
+                      const gasFields = await prepareMintTxGasFields(fromChk, toNft, dHex, valueHex);
+                      if (gasFields && Object.keys(gasFields).length > 0) {
+                          firstPayload = { ...txBase, ...gasFields };
+                          if (gasFields.maxFeePerGas && gasFields.maxPriorityFeePerGas) {
+                              firstPayload.type = "0x2";
+                              firstPayload.chainId = BASE_CHAIN_ID_HEX;
+                          }
+                      }
+                  } catch (prepFirstErr) {
+                      console.warn("prepareMintTxGasFields single-shot fallback to minimal", prepFirstErr);
+                  }
+              }
+              try {
+                  if (didSendMintTxRequest) {
+                      throw new Error("Mint transaction already requested in this flow.");
+                  }
+                  didSendMintTxRequest = true;
+                  if (singlePromptWalletMode) {
+                      rawSend = await provider.request({
+                          method: "eth_sendTransaction",
+                          params: [firstPayload],
+                      });
+                  } else {
+                      rawSend = await trySendTransaction(provider, { ...txBase });
+                  }
+              } catch (err) {
+                  firstSendErr = err;
+                  passLastErr = err;
+                  console.warn("mint eth_sendTransaction " + passLabel + "_instant_minimal", err);
+              }
+              const h0 = normalizeEthSendTxHash(rawSend);
+              if (h0) return h0;
+              if (singlePromptWalletMode && firstSendErr) {
+                  if (isUserRejectedWalletRequest(firstSendErr)) throw firstSendErr;
+                  throw new Error(
+                      "Wallet did not return transaction hash. No additional prompt was sent."
+                  );
+              }
+              /*
+               * Część portfeli (w tym Coinbase) zwraca undefined mimo że tx poszła — wtedy relay
+               * wysłałby DRUGĄ transakcję. Nie kontynuujemy.
+               */
+              if (!firstSendErr) {
+                  const err = new Error(
+                      "Mint may be pending — check your wallet. (No second transaction sent.)"
+                  );
+                  err.ptgMintIncomplete = true;
+                  throw err;
+              }
+              if (strictSingleTxPrompt) {
+                  throw firstSendErr;
+              }
+
+              /* 2) Podpis + wysyłka przez PhraseToGuess (gdy pierwsza próba rzuciła błąd albo nie było relay-first). */
+              try {
+                  setStatus("Sign — submitting via PhraseToGuess…", "#94a3b8");
+                  return await signMintTxAndBroadcastViaSite(
+                      provider,
+                      accounts[0],
+                      toNft,
+                      dHex,
+                      valueHex
+                  );
+              } catch (relayErr) {
+                  passLastErr = relayErr;
+                  console.warn("mint sign+broadcast relay", relayErr);
+              }
+
+              let gasFields;
+              try {
+                  gasFields = await prepareMintTxGasFields(fromChk, toNft, dHex, valueHex);
+              } catch (prepErr) {
+                  passLastErr = prepErr;
+                  console.warn("prepareMintTxGasFields", prepErr);
+                  return null;
+              }
+
+              const txPayloadMinimal = { ...txBase };
+              let txPayloadFull = null;
+              let txPayloadGasOnly = null;
+              if (gasFields && Object.keys(gasFields).length > 0) {
+                  txPayloadFull = { ...txBase, ...gasFields };
+                  if (gasFields.maxFeePerGas && gasFields.maxPriorityFeePerGas) {
+                      txPayloadFull.type = "0x2";
+                      txPayloadFull.chainId = BASE_CHAIN_ID_HEX;
+                  }
+                  if (gasFields.gas) {
+                      txPayloadGasOnly = {
+                          ...txBase,
+                          gas: gasFields.gas,
+                      };
+                  }
+              }
+
+              const tryList = [];
               if (txPayloadFull) {
                   tryList.push({ label: passLabel + "_full_eip1559", payload: txPayloadFull });
               }
+              if (txPayloadGasOnly) {
+                  tryList.push({ label: passLabel + "_gas_only", payload: txPayloadGasOnly });
+              }
+              tryList.push({ label: passLabel + "_minimal", payload: txPayloadMinimal });
               for (let t = 0; t < tryList.length; t++) {
                   try {
-                      return await trySendTransaction(provider, tryList[t].payload);
+                      const rawR = await trySendTransaction(provider, tryList[t].payload);
+                      const hn = normalizeEthSendTxHash(rawR);
+                      if (hn) return hn;
                   } catch (err) {
                       passLastErr = err;
                       console.warn("mint eth_sendTransaction " + tryList[t].label, err);
@@ -4109,56 +5292,79 @@
 
           let h = null;
           const feMint = getEmbeddedEthProvider();
+          const preferRelayFirst =
+              !!(
+                  feMint &&
+                  ethProvider === feMint &&
+                  typeof feMint.request === "function"
+              );
           if (
               feMint &&
               ethProvider === feMint &&
               typeof feMint.request === "function" &&
               accounts[0]
           ) {
-              h = await runMintSendAttempts(feMint);
+              h = await runMintSendAttempts(feMint, preferRelayFirst);
           } else if (ethProvider && typeof ethProvider.request === "function") {
-              h = await runMintSendAttempts(ethProvider);
+              h = await runMintSendAttempts(ethProvider, false);
           }
 
-          if (!h && ethProvider && typeof ethProvider.request === "function") {
-              try {
-                  setStatus(
-                      "Sign in wallet — we submit via PhraseToGuess (wallet RPC workaround)…",
-                      "#94a3b8"
-                  );
-                  h = await signMintTxAndBroadcastViaSite(
-                      ethProvider,
-                      accounts[0],
-                      toNft,
-                      dHex,
-                      valueHex
-                  );
-              } catch (relayErr) {
-                  console.warn("mint sign+broadcast relay", relayErr);
-                  passLastErr = relayErr;
-              }
-          }
           return { hash: h, lastErr: passLastErr };
       }
 
-      let p = await attemptMintPipeline(dataHexWithBuilder, "builder");
-      txHash = p.hash;
-      lastSendErr = p.lastErr;
-      if (!txHash && dataHexWithBuilder !== dataHexPlain) {
-          console.warn("mint: retrying without Base builder calldata suffix");
-          p = await attemptMintPipeline(dataHexPlain, "plain");
+      const isBadgeMintFlow = isPtgBadgeContract(toNft);
+      if (!isBadgeMintFlow && ethProvider && typeof ethProvider.request === "function") {
+          try {
+              const chainIdNow = await ethProvider.request({ method: "eth_chainId", params: [] });
+              if (String(chainIdNow || "").toLowerCase() !== BASE_CHAIN_ID_HEX) {
+                  throw new Error("Wallet is not on Base Mainnet.");
+              }
+          } catch (chainErr) {
+              throw new Error("Switch wallet network to Base and try again.");
+          }
+          /* Trofeum: twardy single-shot (1 request, bez fallbacków/retry). */
+          if (__ptgWalletTxRequestInFlight) {
+              throw new Error("Wallet request already in progress.");
+          }
+          __ptgWalletTxRequestInFlight = true;
+          const rawOne = await ethProvider.request({
+              method: "eth_sendTransaction",
+              params: [{ from: fromChk, to: toNft, data: dataHexPlain, value: valueHex }],
+          });
+          txHash = normalizeEthSendTxHash(rawOne);
+          if (!txHash) {
+              throw new Error("Wallet did not return transaction hash.");
+          }
+      } else {
+          /* Odznaki: ścieżka mintWithSig. */
+          let p = await attemptMintPipeline(dataHexPlain, isBadgeMintFlow ? "badge_sig" : "plain");
           txHash = p.hash;
-          if (p.lastErr) lastSendErr = p.lastErr;
+          lastSendErr = p.lastErr;
+          if (!txHash && dataHexWithBuilder && dataHexWithBuilder !== dataHexPlain) {
+              console.warn("mint: retrying with Base builder calldata suffix");
+              p = await attemptMintPipeline(dataHexWithBuilder, "builder");
+              txHash = p.hash;
+              if (p.lastErr) lastSendErr = p.lastErr;
+          }
       }
 
       if (!txHash) {
           if (lastSendErr) console.warn("mint: user cancelled or send failed", lastSendErr);
           const detail = mintWalletErrorDetail(lastSendErr);
-          if (detail) console.warn("mint send detail", detail);
-          throw new Error("MINT_UI_FAILED");
+          const errMsg = detail
+              ? "Wallet rejected: " + detail.slice(0, 160)
+              : "Transaction was not signed — open your wallet and try again.";
+          throw new Error(errMsg);
       }
 
       txHash = normalizeMintTxHash(txHash);
+      if (onTxHash) {
+          try {
+              onTxHash(txHash);
+          } catch (notifyErr) {
+              console.warn("onTxHash callback failed", notifyErr);
+          }
+      }
 
       setStatus("Waiting for confirmation…", "#94a3b8");
       let receipt;
@@ -4166,73 +5372,97 @@
           receipt = await waitForTxReceiptViaServer(txHash);
       } catch (srvWaitErr) {
           console.warn("Receipt poll: server proxy failed, trying wallet RPC", srvWaitErr);
-          const web3p = new ethers.providers.Web3Provider(ethProvider, "any");
-          receipt = await web3p.waitForTransaction(txHash, 1, 90000);
+          try {
+              const web3p = new ethers.providers.Web3Provider(ethProvider, "any");
+              receipt = await web3p.waitForTransaction(txHash, 1, 90000);
+          } catch (walletWaitErr) {
+              console.warn("Receipt poll: wallet RPC also failed", walletWaitErr);
+          }
       }
-      if (!receiptIndicatesSuccess(receipt)) {
-          throw new Error("MINT_UI_FAILED");
+
+      if (receipt && !receiptIndicatesSuccess(receipt)) {
+          throw new Error("Transaction reverted on-chain (status 0). Check wallet for details.");
+      }
+
+      if (!receipt) {
+          console.warn("mint: could not get receipt but tx was sent — treating as success", txHash);
+          return { txHash, minter, ethProvider };
       }
 
       setStatus("Verifying mint on-chain…", "#94a3b8");
-      const pinnedTag = ethCallBlockTagFromReceipt(receipt);
+      const balBefore = await balBeforePromise;
       async function readBal(tag) {
           return readNftBalanceBn(toNft, minter, ethProvider, tag);
       }
+      const pinnedTag = ethCallBlockTagFromReceipt(receipt);
       let balAfter = null;
       if (pinnedTag !== "latest") {
-          try {
-              balAfter = await readBal(pinnedTag);
-          } catch (pinErr) {
-              console.warn("readNftBalanceBn at mint block", pinErr);
-          }
+          try { balAfter = await readBal(pinnedTag); } catch (_) {}
       }
       if (balAfter == null || !balAfter.gt(balBefore)) {
           try {
               const bLatest = await readBal("latest");
               if (balAfter == null || bLatest.gt(balAfter)) balAfter = bLatest;
-          } catch (latestErr) {
-              if (balAfter == null) throw latestErr;
-          }
+          } catch (_) {}
       }
-      for (let i = 0; i < 12 && balAfter != null && !balAfter.gt(balBefore); i++) {
-          await new Promise((r) => setTimeout(r, 350));
+      for (let i = 0; i < 8 && balAfter != null && !balAfter.gt(balBefore); i++) {
+          await new Promise((r) => setTimeout(r, 500));
           try {
               const b = await readBal("latest");
               if (b.gt(balAfter)) balAfter = b;
-          } catch (pollBalErr) {
-              console.warn("readNftBalanceBn retry", pollBalErr);
-          }
-      }
-      if (balAfter == null || !balAfter.gt(balBefore)) {
-          console.warn("mint: balance did not increase after tx", txHash);
-          throw new Error("MINT_UI_FAILED");
+          } catch (_) {}
       }
 
       return { txHash, minter, ethProvider };
+      } finally {
+      __ptgWalletTxRequestInFlight = false;
+  }
+  }
+
+  function formatMintErrorForUi(err) {
+      if (err == null) return "Failed.";
+      const m = typeof err.message === "string" ? err.message.trim() : "";
+      if (!m || /^failed\.?$/i.test(m)) return "Failed.";
+      if (m.length > 140) return m.slice(0, 137) + "…";
+      return m;
   }
 
   function setBadgeMintFeedback(text, color) {
       const el = document.getElementById("badgeMintFeedback");
       if (!el) return;
+      if (badgeMintFeedbackAutoClearT) {
+          clearTimeout(badgeMintFeedbackAutoClearT);
+          badgeMintFeedbackAutoClearT = 0;
+      }
       const s = text == null ? "" : String(text).trim();
       el.textContent = s;
       el.style.color = color || "var(--text-muted)";
       el.style.display = s ? "" : "none";
+      if (s && /^(success|failed)\.?$/i.test(s)) {
+          badgeMintFeedbackAutoClearT = setTimeout(function () {
+              badgeMintFeedbackAutoClearT = 0;
+              setBadgeMintFeedback("", "");
+          }, 10000);
+      }
   }
 
   async function mintWinBadgeFromUi(need, contractAddr, metadataUri) {
       const s = Number(currentScore) || 0;
       if (s < need) return;
-      if (badgeMintInFlight) return;
       const key =
           need === 10 ? "m10" : need === 100 ? "m100" : need === 1000 ? "m1000" : "";
       if (key && badgeHeld(key)) return;
-      badgeMintInFlight = true;
+      if (!tryAcquireHeroMintSlot()) return;
       updateHeroBadgeMintUi();
       setBadgeMintFeedback("", "#94a3b8");
       try {
-          const { txHash } = await runPublicMintStringNftTx(contractAddr, metadataUri, null);
-          const h = normalizeMintTxHash(txHash);
+          const feedbackEl = document.getElementById("badgeMintFeedback");
+          const { txHash } = await runPublicMintStringNftTx(
+              contractAddr,
+              metadataUri,
+              feedbackEl
+          );
+          const h = txHash === "already_minted" ? txHash : normalizeMintTxHash(txHash);
           if (db && myUserId && myUserId !== "guest" && key) {
               try {
                   await update(playerDocRef(myUserId), { ["badgesMinted/" + key]: true });
@@ -4242,29 +5472,39 @@
           }
           profileBadgesMinted[key] = true;
           console.info("badge mint tx", h);
-          setBadgeMintFeedback("Success.", "#86efac");
+          setBadgeMintFeedback(txHash === "already_minted" ? "Badge already claimed!" : "Success.", "#86efac");
           await refreshBadgeOnchainBalances();
           updateHeroBadgeMintUi();
       } catch (e) {
           console.error(e);
-          setBadgeMintFeedback("Failed.", "#fc401f");
+          setBadgeMintFeedback(formatMintErrorForUi(e), "#fc401f");
+          const bf = document.getElementById("badgeMintFeedback");
+          if (bf && typeof bf.scrollIntoView === "function") {
+              try {
+                  bf.scrollIntoView({ block: "nearest", behavior: "smooth" });
+              } catch (_) {}
+          }
       } finally {
           badgeMintInFlight = false;
           updateHeroBadgeMintUi();
+          checkGameStateAndRender();
       }
   }
 
   async function mintOgBadgeFromUi() {
-      const uid = String(myUserId || "guest").toLowerCase();
-      if (!SEASON1_OG_USER_IDS.has(uid)) return;
-      if (badgeMintInFlight) return;
+      if (!season1OgEligible()) return;
       if (badgeHeld("og")) return;
-      badgeMintInFlight = true;
+      if (!tryAcquireHeroMintSlot()) return;
       updateHeroBadgeMintUi();
       setBadgeMintFeedback("", "#94a3b8");
       try {
-          const { txHash } = await runPublicMintStringNftTx(PTG_OG_BADGE_NFT, NFT_BADGE_META_OG, null);
-          const h = normalizeMintTxHash(txHash);
+          const feedbackEl = document.getElementById("badgeMintFeedback");
+          const { txHash } = await runPublicMintStringNftTx(
+              PTG_OG_BADGE_NFT,
+              NFT_BADGE_META_OG,
+              feedbackEl
+          );
+          const h = txHash === "already_minted" ? txHash : normalizeMintTxHash(txHash);
           if (db && myUserId && myUserId !== "guest") {
               try {
                   await update(playerDocRef(myUserId), { "badgesMinted/og": true });
@@ -4274,15 +5514,22 @@
           }
           profileBadgesMinted.og = true;
           console.info("OG badge mint tx", h);
-          setBadgeMintFeedback("Success.", "#86efac");
+          setBadgeMintFeedback(txHash === "already_minted" ? "Badge already claimed!" : "Success.", "#86efac");
           await refreshBadgeOnchainBalances();
           updateHeroBadgeMintUi();
       } catch (e) {
           console.error(e);
-          setBadgeMintFeedback("Failed.", "#fc401f");
+          setBadgeMintFeedback(formatMintErrorForUi(e), "#fc401f");
+          const bf = document.getElementById("badgeMintFeedback");
+          if (bf && typeof bf.scrollIntoView === "function") {
+              try {
+                  bf.scrollIntoView({ block: "nearest", behavior: "smooth" });
+              } catch (_) {}
+          }
       } finally {
           badgeMintInFlight = false;
           updateHeroBadgeMintUi();
+          checkGameStateAndRender();
       }
   }
 
@@ -4292,22 +5539,40 @@
       const statusDiv = document.getElementById("victoryStatus");
       const btn = document.getElementById("victoryMintBtn");
       const txL = document.getElementById("victoryTxLink");
+      if (victoryStatusAutoClearT) {
+          clearTimeout(victoryStatusAutoClearT);
+          victoryStatusAutoClearT = 0;
+      }
       if (statusDiv) {
-          statusDiv.textContent = "Failed.";
+          var failMsg = formatMintErrorForUi(err);
+          statusDiv.textContent = failMsg;
           statusDiv.style.color = "#fc401f";
+          statusDiv.style.display = "";
       }
       if (btn) {
           btn.innerHTML = "<span>Try Again</span>";
           btn.disabled = false;
       }
       if (txL) txL.innerHTML = "";
+      victoryStatusAutoClearT = setTimeout(function () {
+          victoryStatusAutoClearT = 0;
+          const sd = document.getElementById("victoryStatus");
+          if (sd) sd.textContent = "";
+      }, 10000);
+      checkGameStateAndRender();
   }
 
   async function mintNFT() {
+    if (__trophyMintInFlight) return;
+    __trophyMintInFlight = true;
     try {
     const btn = document.getElementById('victoryMintBtn');
     const statusDiv = document.getElementById('victoryStatus');
     if (!btn || !statusDiv) return;
+    if (victoryStatusAutoClearT) {
+        clearTimeout(victoryStatusAutoClearT);
+        victoryStatusAutoClearT = 0;
+    }
     btn.innerHTML = "Processing..."; btn.disabled = true;
     statusDiv.textContent = "";
     statusDiv.style.color = "#94a3b8";
@@ -4317,13 +5582,23 @@
           throw new Error("PTG_NFT_ADDRESS not set — deploy contract and paste address in index.html");
       }
 
-      const { txHash } = await runPublicMintStringNftTx(PTG_NFT_ADDRESS, METADATA_URL, null);
+      const { txHash } = await runPublicMintStringNftTx(PTG_NFT_ADDRESS, METADATA_URL, null, {
+          onTxHash(hashNow) {
+              const txLNow = document.getElementById("victoryTxLink");
+              if (txLNow) {
+                  txLNow.innerHTML = `<a href="${txLinkForHash(hashNow)}" target="_blank" rel="noopener">View tx on BaseScan</a>`;
+              }
+              statusDiv.textContent = "Tx sent — waiting for confirmation…";
+              statusDiv.style.color = "#94a3b8";
+          },
+      });
 
       // SUCCESS — dopiero po receipt + balance; Firebase: tylko przy pendingMint + unikalny tx (brak farmy +2)
       const hadPendingMint = pendingMint;
       const mintDay = localDateKey();
       if (db) {
           const userRef = playerDocRef(myUserId);
+          let calendarDayWritten = mintDay;
           await runTransaction(userRef, (userData) => {
               if (!userData) return userData;
               if (userData.lastMintBonusTxHash === txHash) {
@@ -4332,7 +5607,13 @@
               if (!userData.mintCalendar || typeof userData.mintCalendar !== "object") {
                   userData.mintCalendar = {};
               }
-              userData.mintCalendar[mintDay] = true;
+              // Dzień w kalendarzu = dzień wygranej (lastPlayed), nie dzień wysłania mintu — inaczej wczorajsza gra wpada na „dziś”.
+              const calDay =
+                  userData.pendingMint && typeof userData.lastPlayed === "string" && userData.lastPlayed.length > 0
+                      ? userData.lastPlayed
+                      : mintDay;
+              calendarDayWritten = calDay;
+              userData.mintCalendar[calDay] = true;
               if (!userData.pendingMint) {
                   return userData;
               }
@@ -4343,7 +5624,7 @@
               return userData;
           });
           try {
-              await update(userRef, { ["mintCalendar/" + mintDay]: true });
+              await update(userRef, { ["mintCalendar/" + calendarDayWritten]: true });
           } catch (mcErr) {
               console.warn("mintCalendar explicit update", mcErr);
           }
@@ -4365,14 +5646,16 @@
                   );
               }
           }
-          mintCalendarDays = mergeMintCalendars(mintCalendarDays, { [mintDay]: true });
+          mintCalendarDays = mergeMintCalendars(mintCalendarDays, { [calendarDayWritten]: true });
           persistMintCalendarToStorage(mintCalendarDays);
           updateScoreUI();
           renderCalendarMonth();
           checkGameStateAndRender();
       } else {
           pendingMint = false;
-          mintCalendarDays = { ...mintCalendarDays, [mintDay]: true };
+          const calOffline =
+              hadPendingMint && myLastPlayedDateKey ? myLastPlayedDateKey : mintDay;
+          mintCalendarDays = { ...mintCalendarDays, [calOffline]: true };
           persistMintCalendarToStorage(mintCalendarDays);
           renderCalendarMonth();
       }
@@ -4397,6 +5680,8 @@
     } catch(e) { 
         console.error(e);
         showVictoryMintFailed(e);
+    } finally {
+        __trophyMintInFlight = false;
     }
   }
 
@@ -4425,26 +5710,140 @@
   function updateDailyUI() { 
       document.getElementById('dailyInfo').textContent = `Games: ${Math.min(gamesPlayedTodayCount, MAX_GAMES_PER_DAY)}/${MAX_GAMES_PER_DAY}`; 
   }
-  function showLeaderboard() {
+
+  /** Skrót portfetu z UI, pełny 0x… jako „name”, lub unicode … — nie są prawdziwym nickiem. */
+  function isWalletSquashedDisplayName(s) {
+      if (!s || typeof s !== "string") return false;
+      const t = s.trim();
+      if (/^0x[a-fA-F0-9]{40}$/i.test(t)) return true;
+      if (/^0x[a-fA-F0-9]{1,12}\.{3}[a-fA-F0-9]{2,8}$/i.test(t)) return true;
+      if (/^0x[a-fA-F0-9]{4,12}\u2026[a-fA-F0-9]{4,10}$/i.test(t)) return true;
+      return false;
+  }
+
+  /** Czytelny alias dla portfela bez nazwy (zamiast surowego 0x…). */
+  function walletAnonLabelFromAddress(address) {
+      const a = String(address || "").toLowerCase();
+      if (!/^0x[a-f0-9]{40}$/.test(a)) return "Player";
+      return "Player #" + a.slice(-4).toUpperCase();
+  }
+
+  /** Nick z RTDB albo skrócony adres / id gracza (bez „undefined”). */
+  function formatLeaderboardDisplayName(playerId, playerObj) {
+      const raw = playerObj && playerObj.name;
+      if (typeof raw === "string") {
+          const t = raw.trim();
+          if (t && t !== "undefined" && t !== "null" && !isWalletSquashedDisplayName(t)) return t;
+      }
+      const id = String(playerId || "").trim();
+      if (/^0x[a-fA-F0-9]{40}$/.test(id)) {
+          return walletAnonLabelFromAddress(id);
+      }
+      if (id.length > 0) return id.length > 24 ? id.slice(0, 14) + "…" : id;
+      return "Player";
+  }
+
+  async function enrichLeaderboardNameCells(rows) {
+      const tbody = document.getElementById("leaderboardBody");
+      if (!tbody) return;
+      const need = rows
+          .map((row, i) => ({ row, i }))
+          .filter(({ row }) => leaderboardNeedsBasenameLookup(row.id, row.p));
+      if (need.length === 0) return;
+      const ids = need.map(({ row }) => row.id);
+      let map = await resolveDisplayNamesBatch(ids);
+      if (!map || typeof map !== "object") map = {};
+      const missing = [];
+      for (const { row } of need) {
+          const k = row.id.toLowerCase();
+          if (!map[k] || !String(map[k]).trim()) missing.push(row.id);
+      }
+      await Promise.all(
+          missing.map(async (addr) => {
+              try {
+                  const fb = await resolveBasenameForAddress(addr);
+                  if (fb && fb.trim()) map[addr.toLowerCase()] = fb.trim();
+              } catch (_) {}
+          })
+      );
+      for (const { row, i } of need) {
+          const k = row.id.toLowerCase();
+          if (!map[k] || !String(map[k]).trim()) map[k] = formatLeaderboardDisplayName(row.id, row.p);
+          const label = String(map[k]).trim();
+          const tr = tbody.children[i];
+          if (tr) {
+              const cell = tr.querySelector(".lb-name-cell");
+              if (cell) cell.textContent = label;
+          }
+          if (isBetterDisplayName(label)) void persistPlayerDisplayNameToRtdb(row.id, label);
+      }
+  }
+
+  async function showLeaderboard() {
       const tbody = document.getElementById('leaderboardBody');
       tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">Loading scores...</td></tr>';
       document.getElementById('leaderboardOverlay').classList.add('show');
       if (!db) return;
       const playersRef = playersRootRef();
-      onValue(playersRef, (snapshot) => {
-          const data = snapshot.val(); if (!data) return;
-          const sortedPlayers = Object.values(data).sort((a, b) => (b.score||0) - (a.score||0)).slice(0, 50);
-          tbody.innerHTML = sortedPlayers.map((p, i) => { 
-              const rank = i + 1; let rankClass = "rank-badge rank-other"; if(rank===1) rankClass = "rank-badge rank-1"; else if(rank===2) rankClass = "rank-badge rank-2"; else if(rank===3) rankClass = "rank-badge rank-3";
-              const isMe = p.name === myUsername; const nameStyle = isMe ? 'color: #3c8aff; font-weight: 700;' : 'color: #fff;';
-              return `<tr><td><div class="${rankClass}">${rank}</div></td><td style="${nameStyle}">${p.name}</td><td style="text-align:right; font-weight:700;">${p.score||0}</td></tr>`;
-          }).join('');
-      });
+      let snapshot;
+      try {
+          snapshot = await get(playersRef);
+      } catch (e) {
+          console.warn("leaderboard get", e);
+          tbody.innerHTML =
+              '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">Could not load scores.</td></tr>';
+          return;
+      }
+      const data = snapshot.val();
+      if (!data) {
+          tbody.innerHTML =
+              '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">No scores yet.</td></tr>';
+          return;
+      }
+      const rows = Object.entries(data)
+          .map(([id, p]) => ({ id, p }))
+          .sort((a, b) => (b.p.score || 0) - (a.p.score || 0))
+          .slice(0, 50);
+      tbody.innerHTML = rows
+          .map((row, i) => {
+              const rank = i + 1;
+              let rankClass = "rank-badge rank-other";
+              if (rank === 1) rankClass = "rank-badge rank-1";
+              else if (rank === 2) rankClass = "rank-badge rank-2";
+              else if (rank === 3) rankClass = "rank-badge rank-3";
+              const label = formatLeaderboardDisplayName(row.id, row.p);
+              const isMe = row.id === myUserId;
+              const nameStyle = isMe ? "color: #3c8aff; font-weight: 700;" : "color: #fff;";
+              const esc = String(label)
+                  .replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;")
+                  .replace(/"/g, "&quot;");
+              return (
+                  "<tr><td><div class=\"" +
+                  rankClass +
+                  "\">" +
+                  rank +
+                  "</div></td><td class=\"lb-name-cell\" style=\"" +
+                  nameStyle +
+                  "\">" +
+                  esc +
+                  "</td><td style=\"text-align:right; font-weight:700;\">" +
+                  (row.p.score || 0) +
+                  "</td></tr>"
+              );
+          })
+          .join("");
+      void enrichLeaderboardNameCells(rows);
   }
 
   // --- WINDOW CLOSING LOGIC ---
   window.closeVictoryModal = function() {
       document.getElementById('victoryModal').classList.remove('show');
+      if (victoryStatusAutoClearT) {
+          clearTimeout(victoryStatusAutoClearT);
+          victoryStatusAutoClearT = 0;
+      }
       try {
           if (__ptgConfettiClearT) clearTimeout(__ptgConfettiClearT);
           __ptgConfettiClearT = null;
@@ -4472,18 +5871,30 @@
   document.getElementById('leaderboardBtn').onclick = showLeaderboard;
   document.getElementById('closeLeaderboard').onclick = () => document.getElementById('leaderboardOverlay').classList.remove('show');
 
-  document.getElementById("ogBadgeMintBtn")?.addEventListener("click", function () {
-      void mintOgBadgeFromUi();
+  let __ptgNameRefreshLastMs = 0;
+  document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible" || !db) return;
+      const t = Date.now();
+      if (t - __ptgNameRefreshLastMs < 45000) return;
+      __ptgNameRefreshLastMs = t;
+      if (isLoggedIn() && myUserId && /^0x[a-fA-F0-9]{40}$/.test(myUserId)) void refreshMyDisplayNameInRtdb();
   });
-  document.getElementById("scoreMilestone10")?.addEventListener("click", function () {
-      void mintWinBadgeFromUi(10, PTG_WIN10_BADGE_NFT, NFT_BADGE_META_10);
-  });
-  document.getElementById("scoreMilestone100")?.addEventListener("click", function () {
-      void mintWinBadgeFromUi(100, PTG_WIN100_BADGE_NFT, NFT_BADGE_META_100);
-  });
-  document.getElementById("scoreMilestone1000")?.addEventListener("click", function () {
-      void mintWinBadgeFromUi(1000, PTG_WIN1000_BADGE_NFT, NFT_BADGE_META_1000);
-  });
+
+  if (!window.__ptgHeroBadgeMintListenersAttached) {
+      window.__ptgHeroBadgeMintListenersAttached = true;
+      document.getElementById("ogBadgeMintBtn")?.addEventListener("click", function () {
+          void mintOgBadgeFromUi();
+      });
+      document.getElementById("scoreMilestone10")?.addEventListener("click", function () {
+          void mintWinBadgeFromUi(10, PTG_WIN10_BADGE_NFT, NFT_BADGE_META_10);
+      });
+      document.getElementById("scoreMilestone100")?.addEventListener("click", function () {
+          void mintWinBadgeFromUi(100, PTG_WIN100_BADGE_NFT, NFT_BADGE_META_100);
+      });
+      document.getElementById("scoreMilestone1000")?.addEventListener("click", function () {
+          void mintWinBadgeFromUi(1000, PTG_WIN1000_BADGE_NFT, NFT_BADGE_META_1000);
+      });
+  }
 
   initCategoryFilterPanel();
 
@@ -4562,6 +5973,14 @@
       var r = ev.reason;
       var code = r && r.code;
       var msg = r && r.message ? String(r.message) : String(r || "");
+      /* Nie myl odrzucenia portfela z błędami RPC / symulacji (np. CALL_EXCEPTION). */
+      if (
+          /CALL_EXCEPTION|missing revert|internal_error|execution reverted|jsonrpc|nonce too low|insufficient funds/i.test(
+              msg
+          )
+      ) {
+          return;
+      }
       var userAbort =
           code === 4001 ||
           code === "ACTION_REJECTED" ||

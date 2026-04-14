@@ -11,13 +11,21 @@
     {
       "source": "/",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
       ]
     },
     {
       "source": "/index.html",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
       ]
     },
     {
@@ -47,6 +55,13 @@
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Content-Type", "value": "application/json; charset=utf-8" },
         { "key": "Cache-Control", "value": "public, max-age=120, s-maxage=300" }
+      ]
+    },
+    {
+      "source": "/api/ptg-resolve-names",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=120" }
       ]
     }
   ],

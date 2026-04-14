@@ -18,7 +18,12 @@ const DEFAULT_ALLOWED_MINT_TARGETS = [
 ];
 
 /** Dozwolone wywołania mint na allowlistowanych kontraktach. */
-const MINT_METHODS = ["mint()", "publicMint()", "publicMint(string)"];
+const MINT_METHODS = [
+  "mint()",
+  "publicMint()",
+  "publicMint(string)",
+  "mintWithSig(address,uint256,uint256,uint8,bytes32,bytes32)",
+];
 const MAX_GAS_LIMIT = 900000n;
 
 function buildAllowedMintAddressSet(ethersMod) {
@@ -130,8 +135,11 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "not_mint_calldata" });
     }
 
-    const gl = tx.gasLimit;
-    if (gl == null || gl > MAX_GAS_LIMIT) {
+    let gl = tx.gasLimit;
+    if ((gl == null || gl === 0n) && tx.gas != null) {
+      gl = tx.gas;
+    }
+    if (gl == null || gl === 0n || gl > MAX_GAS_LIMIT) {
       return res.status(400).json({ error: "bad_gas_limit" });
     }
 
@@ -153,10 +161,14 @@ module.exports = async (req, res) => {
       return res.status(502).json({ error: "bad_upstream_json" });
     }
     if (j.error) {
-      return res.status(400).json({
-        error: "rpc_rejected",
-        detail: j.error.message || String(j.error),
-      });
+      const rpcMsg =
+        j.error && typeof j.error === "object" && j.error.message
+          ? String(j.error.message).slice(0, 300)
+          : typeof j.error === "string"
+            ? j.error.slice(0, 300)
+            : "";
+      console.error("ptg-broadcast-mint rpc_rejected", rpcMsg);
+      return res.status(400).json({ error: "rpc_rejected", detail: rpcMsg });
     }
     if (!j.result || typeof j.result !== "string") {
       return res.status(502).json({ error: "no_tx_hash" });
@@ -165,9 +177,6 @@ module.exports = async (req, res) => {
   } catch (err) {
     console.error("ptg-broadcast-mint", err);
     setCors(req, res);
-    return res.status(500).json({
-      error: "internal_error",
-      detail: String(err && err.message ? err.message : err),
-    });
+    return res.status(500).json({ error: "internal_error" });
   }
 };

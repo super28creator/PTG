@@ -11,6 +11,8 @@ const ALLOWED = new Set([
   "eth_getBlockByNumber",
   "eth_getTransactionCount",
   "eth_getTransactionReceipt",
+  "eth_getStorageAt",
+  "eth_maxPriorityFeePerGas",
   "eth_chainId",
   "eth_blockNumber",
 ]);
