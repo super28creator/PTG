@@ -834,6 +834,18 @@
         color: #fff;
         line-height: 1.25;
     }
+    #ptgNotifPrompt .ptg-notif-hint {
+        display: none;
+        margin: 0 0 18px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: rgba(186, 198, 218, 0.92);
+        line-height: 1.5;
+        text-align: center;
+    }
+    #ptgNotifPrompt .ptg-notif-hint.show {
+        display: block;
+    }
     #ptgNotifPrompt .ptg-notif-lead {
         margin: 0 0 10px;
         font-size: 0.94rem;
@@ -1709,6 +1721,7 @@
         <div class="ptg-notif-grabber" aria-hidden="true"></div>
         <div class="ptg-notif-icon" aria-hidden="true">🔔</div>
         <h2 id="ptgNotifTitle" class="ptg-notif-title">Notifications</h2>
+        <p id="ptgNotifHint" class="ptg-notif-hint" role="status" aria-live="polite"></p>
         <div class="ptg-notif-actions">
             <button type="button" id="ptgNotifEnableBtn" class="big-mint-btn">Allow notifications</button>
         </div>
@@ -2119,8 +2132,8 @@
 
   /** Powiadomienia mini app: zapis po tokenie (addFrame / kontekst / webhook). */
   const PTG_NOTIF_ENABLED_KEY = "ptg:add-miniapp:has-token:v1";
-  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v7: miniapp-sdk + surface hint, re-show). */
-  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v7-done";
+  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v8: wait token + Warpcast ⋯ hint). */
+  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v8-done";
   /** Po onboardingu: ostatnie zamknięcie — powtórka co 7 dni jeśli nadal bez włączenia. */
   const PTG_NOTIF_LAST_SHOWN_AT_KEY = "ptg:notif-last-shown-at-v3";
   const PTG_NOTIF_REPEAT_MS = 7 * 24 * 60 * 60 * 1000;
@@ -3694,11 +3707,109 @@
 
   /** Tylko przycisk × — kończy onboarding; nie wyłącza powiadomień w kliencie. */
   function onNotificationPromptDismiss() {
+      ptgClearNotifHint();
       try {
           localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
           localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
       } catch (_) {}
       hideNotificationPrompt();
+  }
+
+  function ptgClearNotifHint() {
+      var h = document.getElementById("ptgNotifHint");
+      if (!h) return;
+      h.textContent = "";
+      h.classList.remove("show");
+  }
+
+  function ptgShowNotifHint(html) {
+      var h = document.getElementById("ptgNotifHint");
+      if (!h) return;
+      h.innerHTML = html;
+      h.classList.add("show");
+  }
+
+  function ptgSetNotifEnableBusy(busy) {
+      var btn = document.getElementById("ptgNotifEnableBtn");
+      if (!btn) return;
+      btn.disabled = !!busy;
+      if (busy) {
+          if (!btn.dataset.ptgLabel) btn.dataset.ptgLabel = btn.textContent || "Allow notifications";
+          btn.textContent = "Please wait…";
+      } else {
+          btn.textContent = btn.dataset.ptgLabel || "Allow notifications";
+      }
+  }
+
+  /**
+   * Po addMiniApp host czasem dopiero później ustawia token w kontekście / wysyła zdarzenie.
+   * Nie da się z JS przełączyć natywnego switcha w menu ⋯ Warpcast — tylko poczekać i pokazać instrukcję.
+   */
+  function ptgWaitForNotificationTokenAfterAdd(timeoutMs) {
+      return new Promise(function (resolve) {
+          var resolved = false;
+          var deadline = Date.now() + timeoutMs;
+          function finish(tok) {
+              if (resolved) return;
+              resolved = true;
+              try {
+                  if (sdk && sdk.off) {
+                      sdk.off("notificationsEnabled", onEvt);
+                      sdk.off("miniAppAdded", onEvt);
+                      sdk.off("frameAdded", onEvt);
+                  }
+              } catch (_) {}
+              resolve(tok || null);
+          }
+          function onEvt(payload) {
+              try {
+                  if (payload && payload.notificationDetails && payload.notificationDetails.token) {
+                      finish(payload.notificationDetails);
+                  }
+              } catch (_) {}
+          }
+          if (sdk && typeof sdk.on === "function") {
+              try {
+                  sdk.on("notificationsEnabled", onEvt);
+                  sdk.on("miniAppAdded", onEvt);
+                  sdk.on("frameAdded", onEvt);
+              } catch (_) {}
+          }
+          function poll() {
+              if (resolved) return;
+              if (Date.now() >= deadline) {
+                  try {
+                      if (sdk && sdk.off) {
+                          sdk.off("notificationsEnabled", onEvt);
+                          sdk.off("miniAppAdded", onEvt);
+                          sdk.off("frameAdded", onEvt);
+                      }
+                  } catch (_) {}
+                  finish(null);
+                  return;
+              }
+              Promise.resolve(sdk ? sdk.context : null)
+                  .then(function (ctx) {
+                      if (resolved) return;
+                      try {
+                          if (
+                              ctx &&
+                              ctx.client &&
+                              ctx.client.notificationDetails &&
+                              ctx.client.notificationDetails.token
+                          ) {
+                              finish(ctx.client.notificationDetails);
+                              return;
+                          }
+                      } catch (_) {}
+                      setTimeout(poll, 380);
+                  })
+                  .catch(function () {
+                      if (!resolved) setTimeout(poll, 380);
+                  });
+          }
+          poll();
+      });
   }
 
   function onNotificationPromptEnable() {
@@ -3707,32 +3818,37 @@
           onNotificationPromptDismiss();
           return;
       }
-      Promise.resolve()
+      ptgClearNotifHint();
+      ptgSetNotifEnableBusy(true);
+      var chain = Promise.resolve();
+      if (sdk && sdk.actions && typeof sdk.actions.ready === "function") {
+          chain = chain.then(function () {
+              return Promise.resolve(sdk.actions.ready({})).catch(function () {});
+          });
+      }
+      chain
           .then(function () {
               return addFn();
           })
-          .then(function (res) {
-              return Promise.resolve(sdk.context).then(function (ctx) {
-                  var fromRes = res && res.notificationDetails && res.notificationDetails.token;
-                  var fromCtx =
-                      ctx &&
-                      ctx.client &&
-                      ctx.client.notificationDetails &&
-                      ctx.client.notificationDetails.token;
+          .then(function () {
+              return ptgWaitForNotificationTokenAfterAdd(10000);
+          })
+          .then(function (details) {
+              var ok = !!(details && details.token);
+              if (ok) {
                   try {
                       localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
+                      localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1");
                   } catch (_) {}
-                  if (fromRes || fromCtx) {
-                      try {
-                          localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1");
-                      } catch (_) {}
-                  } else {
-                      try {
-                          localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
-                      } catch (_) {}
-                  }
+                  ptgClearNotifHint();
                   hideNotificationPrompt();
-              });
+              } else {
+                  ptgShowNotifHint(
+                      "Ten przełącznik kontroluje <strong>Warpcast</strong>, nie strona www. " +
+                          "Otwórz menu <strong>⋯</strong> (góra po prawej), włącz <strong>Allow notifications</strong>, " +
+                          "wróć tutaj i naciśnij ponownie <strong>Allow notifications</strong>."
+                  );
+              }
           })
           .catch(function (err) {
               console.warn("addFrame / addMiniApp", err);
@@ -3740,7 +3856,11 @@
                   localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
                   localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
               } catch (_) {}
+              ptgClearNotifHint();
               hideNotificationPrompt();
+          })
+          .finally(function () {
+              ptgSetNotifEnableBusy(false);
           });
   }
 
