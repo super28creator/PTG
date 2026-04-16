@@ -3831,6 +3831,7 @@
       });
   }
 
+  /* Suwak w menu Warpcast/Base = UI hosta; JS w mini apce nie może go animować. Inne apki: ten sam addMiniApp + token od hosta. */
   function onNotificationPromptEnable() {
       var addFn = ptgGetAddFrameAction();
       if (!addFn) {
@@ -3862,11 +3863,20 @@
                   ptgClearNotifHint();
                   hideNotificationPrompt();
               } else {
-                  ptgShowNotifHint(
-                      "Ten przełącznik kontroluje <strong>Warpcast</strong>, nie strona www. " +
-                          "Otwórz menu <strong>⋯</strong> (góra po prawej), włącz <strong>Allow notifications</strong>, " +
-                          "wróć tutaj i naciśnij ponownie <strong>Allow notifications</strong>."
-                  );
+                  if (ptgHost === "base") {
+                      ptgShowNotifHint(
+                          "<strong>Base App</strong> ma osobny kanał powiadomień (przypięcie aplikacji + zgoda w aplikacji Base, powiązanie z <strong>portfelem</strong>). " +
+                              "Suwaków w interfejsie Base nie ustawia kod strony www — to robi klient Base. " +
+                              "Wysyłka z naszego backendu to API Base Dashboard (adresy portfeli), nie token Farcaster."
+                      );
+                  } else {
+                      ptgShowNotifHint(
+                          "Inne mini apki też używają <strong>tego samego</strong> wywołania hosta (dodanie mini apki). " +
+                              "Suwak w Warpcast <strong>przesuwa się sam</strong>, gdy klient zapisze token — strona nie może go przeciągnąć jak natywny kontrolką. " +
+                              "Powiadomienia z serwera lecą przez <strong>oficjalny</strong> endpoint Farcaster (token z webhooka), tak jak wszędzie. " +
+                              "Jeśli suwak dalej jest wyłączony: menu <strong>⋯</strong> → włącz <strong>Allow notifications</strong>."
+                      );
+                  }
               }
           })
           .catch(function (err) {
