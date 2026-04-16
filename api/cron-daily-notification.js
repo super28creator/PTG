@@ -1,3 +1,7 @@
+/**
+ * Codzienne przypomnienie (Base App + Farcaster) — jedna treść: lib/daily-notification-copy.js.
+ * Harmonogram: vercel.json → 17:00 UTC (EU wieczór, US południe — dobry kompromis promocyjny).
+ */
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS");
@@ -10,6 +14,7 @@ const {
   sendToWallets,
 } = require("../lib/base-dashboard-notifications.js");
 const { hasServiceAccount, listAllTokenFids } = require("../lib/fc-notif-store.js");
+const dailyCopy = require("../lib/daily-notification-copy.js");
 
 function makeUuid() {
   try {
@@ -56,7 +61,14 @@ module.exports = async (req, res) => {
     });
   }
 
-  const out = { ok: true, app_url: appUrl, farcaster: null, base: null };
+  const out = {
+    ok: true,
+    app_url: appUrl,
+    schedule_utc: "17:00",
+    schedule_note: "Vercel cron; see vercel.json lib/daily-notification-copy.js",
+    farcaster: null,
+    base: null,
+  };
 
   try {
     /* --- Base Dashboard: fetch opted-in wallets, send --- */
@@ -73,10 +85,9 @@ module.exports = async (req, res) => {
         await sleep(DASHBOARD_REQUEST_GAP_MS);
         try {
           const sendResults = await sendToWallets(baseKey, appUrl, wallets, {
-            title: "Guess your phrase today?",
-            message:
-              "Do you guess your phrase today? Play now & keep your streak on Base. 🎯✨",
-            target_path: "/?source=notif-daily",
+            title: dailyCopy.dailyTitleBase(),
+            message: dailyCopy.dailyMessageBase(),
+            target_path: dailyCopy.DAILY_TARGET_PATH,
           });
           out.base = {
             ok: true,
@@ -91,9 +102,9 @@ module.exports = async (req, res) => {
 
     /* --- Farcaster: RTDB tokens → direct API (roll-your-own path) --- */
     const dailyFcNotification = {
-      title: "Guess your phrase today?",
-      body: "Do you guess your phrase today? Play now & keep your streak on Base. 🎯✨",
-      target_url: `${appUrl}/?source=notif-daily`,
+      title: dailyCopy.dailyTitleFarcaster(),
+      body: dailyCopy.dailyBodyFarcaster(),
+      target_url: `${appUrl}${dailyCopy.DAILY_TARGET_PATH}`,
       uuid: makeUuid(),
     };
     if (hasServiceAccount()) {

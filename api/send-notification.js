@@ -10,6 +10,7 @@ const {
   sendToWallets,
 } = require("../lib/base-dashboard-notifications.js");
 const { hasServiceAccount } = require("../lib/fc-notif-store.js");
+const dailyCopy = require("../lib/daily-notification-copy.js");
 
 function makeUuid() {
   try {
@@ -27,25 +28,20 @@ function clip(s, max) {
 }
 
 function defaultDailyFarcaster() {
+  const appUrl = defaultAppUrl();
   return {
-    title: clip("Guess your phrase today?", 32),
-    body: clip(
-      "Do you guess your phrase today? Play now & keep your streak on Base. 🎯✨",
-      128
-    ),
-    target_url: "https://phrasetoguess.xyz/?source=notif-daily",
+    title: dailyCopy.dailyTitleFarcaster(),
+    body: dailyCopy.dailyBodyFarcaster(),
+    target_url: `${appUrl}${dailyCopy.DAILY_TARGET_PATH}`,
     uuid: makeUuid(),
   };
 }
 
 function defaultDailyBase() {
   return {
-    title: clip("Guess your phrase today?", 30),
-    message: clip(
-      "Do you guess your phrase today? Play now & keep your streak on Base. 🎯✨",
-      200
-    ),
-    target_path: "/?source=notif-daily",
+    title: dailyCopy.dailyTitleBase(),
+    message: dailyCopy.dailyMessageBase(),
+    target_path: dailyCopy.DAILY_TARGET_PATH,
   };
 }
 
@@ -61,6 +57,7 @@ module.exports = async (req, res) => {
         farcaster: "Neynar + NEYNAR_API_KEY; test: target_fids or env FC_TEST_FID",
         base: "BASE_DASHBOARD_API_KEY + BASE_APP_URL; test: wallet_addresses or notification.wallet_addresses or env BASE_TEST_WALLET",
         farcaster_tokens: "FIREBASE_SERVICE_ACCOUNT_JSON + webhook — stores Warpcast tokens per FID; sends via api.farcaster.xyz before Neynar",
+        daily_cron: "Vercel cron 17:00 UTC (lib/daily-notification-copy.js) → Base + Farcaster",
         body: "Optional nested object notification: { title, body, message, target_path, target_fids, wallet_addresses }",
       },
     });
