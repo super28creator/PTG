@@ -874,8 +874,8 @@
         padding: 0;
         border: none;
         border-radius: 12px;
-        background: rgba(255, 255, 255, 0.08);
-        color: rgba(255, 255, 255, 0.92);
+        background: transparent;
+        color: rgba(255, 255, 255, 0.38);
         font-size: 1.5rem;
         line-height: 1;
         font-weight: 300;
@@ -884,9 +884,11 @@
         align-items: center;
         justify-content: center;
         z-index: 2;
+        opacity: 0.75;
     }
     #ptgNotifPrompt .ptg-notif-close:hover {
-        background: rgba(255, 255, 255, 0.14);
+        color: rgba(255, 255, 255, 0.55);
+        background: rgba(255, 255, 255, 0.06);
     }
 
     .auth-gate-card { padding-top: 28px; padding-bottom: 28px; }
@@ -1709,7 +1711,6 @@
         <h2 id="ptgNotifTitle" class="ptg-notif-title">Notifications</h2>
         <div class="ptg-notif-actions">
             <button type="button" id="ptgNotifEnableBtn" class="big-mint-btn">Allow notifications</button>
-            <button type="button" id="ptgNotifLaterBtn" class="ghost">Not now</button>
         </div>
     </div>
 </div>
@@ -1968,10 +1969,54 @@
       try {
           const fc = await import("https://esm.sh/@farcaster/frame-sdk");
           if (fc && fc.sdk) sdk = fc.sdk;
+          if (sdk) bindSdkNotificationEvents();
       } catch (e) {
           console.warn("Farcaster SDK unavailable on this client", e);
       }
   })();
+
+  function bindSdkNotificationEvents() {
+      if (!sdk || sdk.__ptgNotifEventsBound) return;
+      if (typeof sdk.on !== "function") return;
+      sdk.__ptgNotifEventsBound = true;
+      function markEnabledFromPayload(payload) {
+          try {
+              if (payload && payload.notificationDetails && payload.notificationDetails.token) {
+                  localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1");
+              }
+          } catch (_) {}
+      }
+      function markDisabled() {
+          try {
+              localStorage.removeItem(PTG_NOTIF_ENABLED_KEY);
+          } catch (_) {}
+      }
+      try {
+          sdk.on("frameAdded", markEnabledFromPayload);
+      } catch (_) {}
+      try {
+          sdk.on("notificationsEnabled", markEnabledFromPayload);
+      } catch (_) {}
+      try {
+          sdk.on("notificationsDisabled", markDisabled);
+      } catch (_) {}
+      try {
+          sdk.on("frameRemoved", markDisabled);
+      } catch (_) {}
+      try {
+          sdk.on("miniAppAdded", markEnabledFromPayload);
+      } catch (_) {}
+      try {
+          sdk.on("miniAppRemoved", markDisabled);
+      } catch (_) {}
+  }
+
+  function ptgGetAddFrameAction() {
+      if (!sdk || !sdk.actions) return null;
+      if (typeof sdk.actions.addFrame === "function") return sdk.actions.addFrame.bind(sdk.actions);
+      if (typeof sdk.actions.addMiniApp === "function") return sdk.actions.addMiniApp.bind(sdk.actions);
+      return null;
+  }
 
   // --- IMPORTS ---
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
@@ -2067,16 +2112,18 @@
   /** Base App Mini App host FID (see docs.base.org mini-apps). */
   const BASE_APP_CLIENT_FID = 309857;
 
-  /** Powiadomienia mini app: zgoda zapisana po sukcesie addMiniApp (token). */
+  /** Powiadomienia mini app: zapis po tokenie (addFrame / kontekst / webhook). */
   const PTG_NOTIF_ENABLED_KEY = "ptg:add-miniapp:has-token:v1";
-  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v5: reset pokazania po zmianie copy EN). */
-  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v5-done";
+  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v6: addFrame + webhook fix, re-show). */
+  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v6-done";
   /** Po onboardingu: ostatnie zamknięcie — powtórka co 7 dni jeśli nadal bez włączenia. */
   const PTG_NOTIF_LAST_SHOWN_AT_KEY = "ptg:notif-last-shown-at-v3";
   const PTG_NOTIF_REPEAT_MS = 7 * 24 * 60 * 60 * 1000;
 
   /** Gdzie działa klient: wpływa na kolejność logowania i źródło portfela. */
   let ptgHost = "browser";
+  /** True gdy host zgłosi `sdk.isInMiniApp()` (Base / Farcaster webview) — modal powiadomień nawet przy błędnym `ptgHost`. */
+  let ptgInMiniAppSurface = false;
 
   function getInjectedProvider() {
       const eth = globalThis.ethereum;
@@ -3485,6 +3532,14 @@
           await withTimeout(resolveMiniAppIdentity(), PTG_BOOT_IDENTITY_MS, "boot identity").catch((e) => {
               console.warn("Boot identity timed out, continuing with fallback UI", e);
           });
+          ptgInMiniAppSurface = false;
+          try {
+              if (sdk && typeof sdk.isInMiniApp === "function") {
+                  ptgInMiniAppSurface = await withTimeout(sdk.isInMiniApp(), 2500, "isInMiniApp").catch(function () {
+                      return false;
+                  });
+              }
+          } catch (_) {}
           updateAuthGateUI();
 
           refreshOgBadge();
@@ -3519,13 +3574,21 @@
           }, 400);
           /* Powiadomienia: po splashu + auth — nie czekamy na zamknięcie auth (gość też widzi prompt) */
           setTimeout(function () {
-              if (ptgHost === "farcaster" || ptgHost === "base") scheduleNotificationPrompt();
+              if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface) scheduleNotificationPrompt();
           }, 650);
       } catch (e) {
         console.error("Critical error during startApp", e);
           clearTimeout(safeLoad);
           if (typeof window.__ptgForceHideLoading === "function") window.__ptgForceHideLoading();
           else document.getElementById("loadingScreen").style.display = "none";
+          ptgInMiniAppSurface = false;
+          try {
+              if (sdk && typeof sdk.isInMiniApp === "function") {
+                  ptgInMiniAppSurface = await withTimeout(sdk.isInMiniApp(), 2500, "isInMiniApp").catch(function () {
+                      return false;
+                  });
+              }
+          } catch (_) {}
           refreshOgBadge();
           updateAuthGateUI();
           setAuthGateVisible(true);
@@ -3542,13 +3605,13 @@
               warmMintLambdasInBackground();
           }, 400);
           setTimeout(function () {
-              if (ptgHost === "farcaster" || ptgHost === "base") scheduleNotificationPrompt();
+              if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface) scheduleNotificationPrompt();
           }, 650);
       }
   }
 
   function notifPromptShouldShow() {
-      if (ptgHost !== "base" && ptgHost !== "farcaster") return false;
+      if (ptgHost !== "base" && ptgHost !== "farcaster" && !ptgInMiniAppSurface) return false;
       try {
           if (localStorage.getItem(PTG_NOTIF_ONBOARDING_DONE_KEY) !== "1") return true;
       } catch (_) {
@@ -3582,7 +3645,7 @@
       el.setAttribute("aria-hidden", "false");
   }
 
-  /** × / Nie teraz / ESC / tło — kończy pierwszy onboarding; nie wyłącza powiadomień w kliencie. */
+  /** Tylko przycisk × — kończy onboarding; nie wyłącza powiadomień w kliencie. */
   function onNotificationPromptDismiss() {
       try {
           localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
@@ -3592,28 +3655,40 @@
   }
 
   function onNotificationPromptEnable() {
-      if (!sdk || !sdk.actions || typeof sdk.actions.addMiniApp !== "function") {
+      var addFn = ptgGetAddFrameAction();
+      if (!addFn) {
           onNotificationPromptDismiss();
           return;
       }
-      Promise.resolve(sdk.actions.addMiniApp())
+      Promise.resolve()
+          .then(function () {
+              return addFn();
+          })
           .then(function (res) {
-              try {
-                  localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
-              } catch (_) {}
-              if (res && res.notificationDetails && res.notificationDetails.token) {
+              return Promise.resolve(sdk.context).then(function (ctx) {
+                  var fromRes = res && res.notificationDetails && res.notificationDetails.token;
+                  var fromCtx =
+                      ctx &&
+                      ctx.client &&
+                      ctx.client.notificationDetails &&
+                      ctx.client.notificationDetails.token;
                   try {
-                      localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1");
+                      localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
                   } catch (_) {}
-              } else {
-                  try {
-                      localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
-                  } catch (_) {}
-              }
-              hideNotificationPrompt();
+                  if (fromRes || fromCtx) {
+                      try {
+                          localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1");
+                      } catch (_) {}
+                  } else {
+                      try {
+                          localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
+                      } catch (_) {}
+                  }
+                  hideNotificationPrompt();
+              });
           })
           .catch(function (err) {
-              console.warn("addMiniApp", err);
+              console.warn("addFrame / addMiniApp", err);
               try {
                   localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
                   localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
@@ -3647,34 +3722,14 @@
 
   function initNotificationPromptUi() {
       var en = document.getElementById("ptgNotifEnableBtn");
-      var lat = document.getElementById("ptgNotifLaterBtn");
       var xb = document.getElementById("ptgNotifCloseBtn");
-      var overlay = document.getElementById("ptgNotifPrompt");
       if (en && !en.dataset.ptgBound) {
           en.dataset.ptgBound = "1";
           en.addEventListener("click", onNotificationPromptEnable);
       }
-      if (lat && !lat.dataset.ptgBound) {
-          lat.dataset.ptgBound = "1";
-          lat.addEventListener("click", onNotificationPromptDismiss);
-      }
       if (xb && !xb.dataset.ptgBound) {
           xb.dataset.ptgBound = "1";
           xb.addEventListener("click", onNotificationPromptDismiss);
-      }
-      if (overlay && !overlay.dataset.ptgBackdropBound) {
-          overlay.dataset.ptgBackdropBound = "1";
-          overlay.addEventListener("click", function (e) {
-              if (e.target === overlay) onNotificationPromptDismiss();
-          });
-      }
-      if (!window.__ptgNotifEscBound) {
-          window.__ptgNotifEscBound = true;
-          document.addEventListener("keydown", function (e) {
-              if (e.key !== "Escape") return;
-              var o = document.getElementById("ptgNotifPrompt");
-              if (o && o.classList.contains("show")) onNotificationPromptDismiss();
-          });
       }
   }
 

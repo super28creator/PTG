@@ -75,9 +75,8 @@ module.exports = async (req, res) => {
     if (event.event === "miniapp_added") {
       if (event.notificationDetails) {
         tokenStored = await saveToken(fid, event.notificationDetails);
-      } else {
-        await deleteToken(fid);
       }
+      /* Do not delete on add without details — user may enable notifications later (notifications_enabled). */
     } else if (event.event === "notifications_enabled") {
       tokenStored = await saveToken(fid, event.notificationDetails);
     } else if (event.event === "miniapp_removed" || event.event === "notifications_disabled") {
