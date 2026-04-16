@@ -776,7 +776,7 @@
 
     /* Powiadomienia mini app — sheet jak systemowy dialog (Base / Warpcast) */
     #ptgNotifPrompt {
-        z-index: 10020;
+        z-index: 10060;
         align-items: flex-end;
         justify-content: center;
         padding-bottom: 0;
@@ -3485,8 +3485,6 @@
           await withTimeout(resolveMiniAppIdentity(), PTG_BOOT_IDENTITY_MS, "boot identity").catch((e) => {
               console.warn("Boot identity timed out, continuing with fallback UI", e);
           });
-          /* Base App + Warpcast: modal zachęty → addMiniApp() (systemowy dialog jak przy tx) */
-          if (ptgHost === "farcaster" || ptgHost === "base") scheduleNotificationPrompt();
           updateAuthGateUI();
 
           refreshOgBadge();
@@ -3519,8 +3517,12 @@
           setTimeout(function () {
               warmMintLambdasInBackground();
           }, 400);
+          /* Powiadomienia: po splashu + auth — nie czekamy na zamknięcie auth (gość też widzi prompt) */
+          setTimeout(function () {
+              if (ptgHost === "farcaster" || ptgHost === "base") scheduleNotificationPrompt();
+          }, 650);
       } catch (e) {
-          console.error("Critical error during startApp", e);
+        console.error("Critical error during startApp", e);
           clearTimeout(safeLoad);
           if (typeof window.__ptgForceHideLoading === "function") window.__ptgForceHideLoading();
           else document.getElementById("loadingScreen").style.display = "none";
@@ -3539,6 +3541,9 @@
           setTimeout(function () {
               warmMintLambdasInBackground();
           }, 400);
+          setTimeout(function () {
+              if (ptgHost === "farcaster" || ptgHost === "base") scheduleNotificationPrompt();
+          }, 650);
       }
   }
 
@@ -3607,19 +3612,27 @@
           });
   }
 
+  function ptgNotifLoadingScreenHidden() {
+      var el = document.getElementById("loadingScreen");
+      if (!el) return true;
+      try {
+          if (el.style.display === "none") return true;
+      } catch (_) {}
+      return !el.classList.contains("show");
+  }
+
   function scheduleNotificationPrompt() {
       if (!notifPromptShouldShow()) return;
       var attempts = 0;
       function tick() {
           attempts += 1;
-          var ag = document.getElementById("authGateOverlay");
-          if (ag && ag.classList.contains("show")) {
-              if (attempts < 45) setTimeout(tick, 700);
+          if (!ptgNotifLoadingScreenHidden()) {
+              if (attempts < 60) setTimeout(tick, 100);
               return;
           }
           showNotificationPrompt();
       }
-      setTimeout(tick, 1100);
+      setTimeout(tick, 200);
   }
 
   function initNotificationPromptUi() {
