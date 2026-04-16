@@ -774,6 +774,96 @@
     }
     .modal-overlay.show { display: flex; }
 
+    /* Powiadomienia mini app — sheet jak systemowy dialog (Base / Warpcast) */
+    #ptgNotifPrompt {
+        z-index: 10020;
+        align-items: flex-end;
+        justify-content: center;
+        padding-bottom: 0;
+    }
+    @media (min-width: 560px) {
+        #ptgNotifPrompt {
+            align-items: center;
+            padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+        }
+    }
+    #ptgNotifPrompt .ptg-notif-sheet {
+        width: 100%;
+        max-width: 460px;
+        margin: 0 auto;
+        border-radius: 28px 28px 0 0;
+        padding: 26px 24px 28px;
+        background: linear-gradient(180deg, rgba(30, 36, 52, 0.98) 0%, rgba(15, 18, 29, 0.99) 100%);
+        border: 1px solid rgba(60, 138, 255, 0.45);
+        border-bottom: none;
+        box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+        text-align: center;
+        animation: ptgNotifSheetIn 0.38s var(--ease-base) forwards;
+        transform: translateY(0);
+    }
+    @media (min-width: 560px) {
+        #ptgNotifPrompt .ptg-notif-sheet {
+            border-radius: 28px;
+            border: 1px solid rgba(60, 138, 255, 0.45);
+            padding: 30px 28px 32px;
+        }
+    }
+    @keyframes ptgNotifSheetIn {
+        from { opacity: 0; transform: translateY(22px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    #ptgNotifPrompt .ptg-notif-grabber {
+        width: 40px;
+        height: 5px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.18);
+        margin: 0 auto 18px;
+    }
+    #ptgNotifPrompt .ptg-notif-icon {
+        font-size: 2.5rem;
+        line-height: 1;
+        margin-bottom: 12px;
+        filter: drop-shadow(0 0 18px rgba(60, 138, 255, 0.45));
+    }
+    #ptgNotifPrompt .ptg-notif-title {
+        margin: 0 0 10px;
+        font-size: 1.28rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: #fff;
+        line-height: 1.25;
+    }
+    #ptgNotifPrompt .ptg-notif-lead {
+        margin: 0 0 10px;
+        font-size: 0.94rem;
+        font-weight: 600;
+        color: rgba(232, 240, 255, 0.95);
+        line-height: 1.55;
+    }
+    #ptgNotifPrompt .ptg-notif-detail {
+        margin: 0 0 22px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: rgba(177, 183, 195, 0.9);
+        line-height: 1.55;
+    }
+    #ptgNotifPrompt .ptg-notif-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    #ptgNotifPrompt .ptg-notif-actions .big-mint-btn {
+        width: 100%;
+        font-size: 15px;
+        padding: 16px 18px;
+    }
+    #ptgNotifPrompt .ptg-notif-actions .ghost {
+        width: 100%;
+        padding: 14px 18px;
+        font-size: 14px;
+        opacity: 0.92;
+    }
+
     .auth-gate-card { padding-top: 28px; padding-bottom: 28px; }
     .auth-gate-title {
         margin: 0 0 8px;
@@ -1586,6 +1676,20 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="ptgNotifPrompt" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="ptgNotifTitle">
+    <div class="ptg-notif-sheet">
+        <div class="ptg-notif-grabber" aria-hidden="true"></div>
+        <div class="ptg-notif-icon" aria-hidden="true">🔔</div>
+        <h2 id="ptgNotifTitle" class="ptg-notif-title">Włącz powiadomienia</h2>
+        <p class="ptg-notif-lead">Dostawaj przypomnienie o dzisiejszej frazie i passie — podobnie jak przy zatwierdzaniu transakcji, otworzy się <strong>systemowy</strong> dialog zgody (Base App / Warpcast).</p>
+        <p class="ptg-notif-detail">Jedno krótkie przypomnienie dziennie. Możesz wyłączyć w ustawieniach aplikacji.</p>
+        <div class="ptg-notif-actions">
+            <button type="button" id="ptgNotifEnableBtn" class="big-mint-btn">Włącz powiadomienia</button>
+            <button type="button" id="ptgNotifLaterBtn" class="ghost">Nie teraz</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="victoryModal">
     <div class="mint-card victory-modal-content">
         <div class="victory-icon">🏆</div>
@@ -1938,6 +2042,12 @@
   const BASE_CHAIN_ID_HEX = "0x2105";
   /** Base App Mini App host FID (see docs.base.org mini-apps). */
   const BASE_APP_CLIENT_FID = 309857;
+
+  /** Powiadomienia mini app: zgoda zapisana po sukcesie addMiniApp (token). */
+  const PTG_NOTIF_ENABLED_KEY = "ptg:add-miniapp:has-token:v1";
+  /** Ostatnie „Nie teraz” — ponowny prompt po 7 dniach. */
+  const PTG_NOTIF_DISMISS_AT_KEY = "ptg:notif-prompt-dismissed-at-v2";
+  const PTG_NOTIF_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
   /** Gdzie działa klient: wpływa na kolejność logowania i źródło portfela. */
   let ptgHost = "browser";
@@ -3349,8 +3459,8 @@
           await withTimeout(resolveMiniAppIdentity(), PTG_BOOT_IDENTITY_MS, "boot identity").catch((e) => {
               console.warn("Boot identity timed out, continuing with fallback UI", e);
           });
-          /* Warpcast: addMiniApp + notification tokens. Base App (post–Apr 2026) does not use this path — see docs.base.org migrate-to-standard-web-app */
-          if (ptgHost === "farcaster") tryAutoAddMiniApp();
+          /* Base App + Warpcast: modal zachęty → addMiniApp() (systemowy dialog jak przy tx) */
+          if (ptgHost === "farcaster" || ptgHost === "base") scheduleNotificationPrompt();
           updateAuthGateUI();
 
           refreshOgBadge();
@@ -3406,36 +3516,106 @@
       }
   }
 
-  function tryAutoAddMiniApp() {
-      if (!sdk || !sdk.actions || typeof sdk.actions.addMiniApp !== "function") return;
-      const doneKey = "ptg:add-miniapp:has-token:v1";
-      const sessKey = "ptg:add-miniapp:prompted:session";
+  function notifPromptShouldShow() {
+      if (ptgHost !== "base" && ptgHost !== "farcaster") return false;
       try {
-          if (localStorage.getItem(doneKey) === "1") return;
+          if (localStorage.getItem(PTG_NOTIF_ENABLED_KEY) === "1") return false;
       } catch (_) {}
       try {
-          if (sessionStorage.getItem(sessKey) === "1") return;
+          const t = localStorage.getItem(PTG_NOTIF_DISMISS_AT_KEY);
+          if (t) {
+              const ts = parseInt(t, 10);
+              if (Number.isFinite(ts) && Date.now() - ts < PTG_NOTIF_COOLDOWN_MS) return false;
+          }
       } catch (_) {}
-      try {
-          sessionStorage.setItem(sessKey, "1");
-      } catch (_) {}
-      setTimeout(() => {
-          Promise.resolve(sdk.actions.addMiniApp())
-              .then((res) => {
-                  if (res && res.notificationDetails && res.notificationDetails.token) {
-                      try {
-                          localStorage.setItem(doneKey, "1");
-                      } catch (_) {}
-                      console.log("miniapp added with notifications enabled");
-                  } else {
-                      console.log("miniapp add prompt shown");
-                  }
-              })
-              .catch((err) => {
-                  console.warn("addMiniApp prompt skipped", err);
-              });
-      }, 1200);
+      return true;
   }
+
+  function hideNotificationPrompt() {
+      const el = document.getElementById("ptgNotifPrompt");
+      if (!el) return;
+      el.classList.remove("show");
+      el.setAttribute("aria-hidden", "true");
+  }
+
+  function showNotificationPrompt() {
+      const el = document.getElementById("ptgNotifPrompt");
+      if (!el) return;
+      el.classList.add("show");
+      el.setAttribute("aria-hidden", "false");
+  }
+
+  function onNotificationPromptDismiss() {
+      try {
+          localStorage.setItem(PTG_NOTIF_DISMISS_AT_KEY, String(Date.now()));
+      } catch (_) {}
+      hideNotificationPrompt();
+  }
+
+  function onNotificationPromptEnable() {
+      if (!sdk || !sdk.actions || typeof sdk.actions.addMiniApp !== "function") {
+          hideNotificationPrompt();
+          return;
+      }
+      Promise.resolve(sdk.actions.addMiniApp())
+          .then(function (res) {
+              if (res && res.notificationDetails && res.notificationDetails.token) {
+                  try {
+                      localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1");
+                  } catch (_) {}
+              }
+              hideNotificationPrompt();
+          })
+          .catch(function (err) {
+              console.warn("addMiniApp", err);
+              hideNotificationPrompt();
+          });
+  }
+
+  function scheduleNotificationPrompt() {
+      if (!notifPromptShouldShow()) return;
+      var attempts = 0;
+      function tick() {
+          attempts += 1;
+          var ag = document.getElementById("authGateOverlay");
+          if (ag && ag.classList.contains("show")) {
+              if (attempts < 45) setTimeout(tick, 700);
+              return;
+          }
+          showNotificationPrompt();
+      }
+      setTimeout(tick, 1100);
+  }
+
+  function initNotificationPromptUi() {
+      var en = document.getElementById("ptgNotifEnableBtn");
+      var lat = document.getElementById("ptgNotifLaterBtn");
+      var overlay = document.getElementById("ptgNotifPrompt");
+      if (en && !en.dataset.ptgBound) {
+          en.dataset.ptgBound = "1";
+          en.addEventListener("click", onNotificationPromptEnable);
+      }
+      if (lat && !lat.dataset.ptgBound) {
+          lat.dataset.ptgBound = "1";
+          lat.addEventListener("click", onNotificationPromptDismiss);
+      }
+      if (overlay && !overlay.dataset.ptgBackdropBound) {
+          overlay.dataset.ptgBackdropBound = "1";
+          overlay.addEventListener("click", function (e) {
+              if (e.target === overlay) onNotificationPromptDismiss();
+          });
+      }
+      if (!window.__ptgNotifEscBound) {
+          window.__ptgNotifEscBound = true;
+          document.addEventListener("keydown", function (e) {
+              if (e.key !== "Escape") return;
+              var o = document.getElementById("ptgNotifPrompt");
+              if (o && o.classList.contains("show")) onNotificationPromptDismiss();
+          });
+      }
+  }
+
+  initNotificationPromptUi();
 
   // --- DB SYNC ---
   async function syncUserProfile() {
