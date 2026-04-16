@@ -758,6 +758,10 @@
         padding: max(20px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
         animation: fadeIn 0.3s ease;
     }
+    /* Connect wallet nad promptem powiadomień (ten ma 10060), dopóki użytkownik się nie zaloguje */
+    #authGateOverlay.show {
+        z-index: 10070;
+    }
     /* Hard fail-safe: jeśli JS nie wystartuje (np. specyficzny desktop webview), splash sam znika. */
     #loadingScreen.show {
         animation:
@@ -779,7 +783,8 @@
         z-index: 10060;
         align-items: flex-end;
         justify-content: center;
-        padding-bottom: 0;
+        /* Base App: pasek wyszukiwania / nawigacji — unieś kartę nad dolny UI */
+        padding-bottom: max(100px, calc(env(safe-area-inset-bottom, 0px) + 72px));
     }
     @media (min-width: 560px) {
         #ptgNotifPrompt {
@@ -2132,8 +2137,8 @@
 
   /** Powiadomienia mini app: zapis po tokenie (addFrame / kontekst / webhook). */
   const PTG_NOTIF_ENABLED_KEY = "ptg:add-miniapp:has-token:v1";
-  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v8: wait token + Warpcast ⋯ hint). */
-  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v8-done";
+  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v9: po connect + wyżej na Base). */
+  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v9-done";
   /** Po onboardingu: ostatnie zamknięcie — powtórka co 7 dni jeśli nadal bez włączenia. */
   const PTG_NOTIF_LAST_SHOWN_AT_KEY = "ptg:notif-last-shown-at-v3";
   const PTG_NOTIF_REPEAT_MS = 7 * 24 * 60 * 60 * 1000;
@@ -2734,6 +2739,11 @@
       } else {
           checkGameStateAndRender();
       }
+      setTimeout(function () {
+          if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface || ptgNotificationSurfaceHint()) {
+              scheduleNotificationPrompt();
+          }
+      }, 650);
   }
 
   async function connectWalletForPlay() {
@@ -3625,12 +3635,14 @@
           setTimeout(function () {
               warmMintLambdasInBackground();
           }, 400);
-          /* Powiadomienia: po splashu + auth — nie czekamy na zamknięcie auth (gość też widzi prompt) */
-          setTimeout(function () {
-              if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface || ptgNotificationSurfaceHint()) {
-                  scheduleNotificationPrompt();
-              }
-          }, 650);
+          /* Powiadomienia dopiero po zalogowaniu (mini app), żeby nie kolidowało z Connect wallet */
+          if (isLoggedIn()) {
+              setTimeout(function () {
+                  if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface || ptgNotificationSurfaceHint()) {
+                      scheduleNotificationPrompt();
+                  }
+              }, 650);
+          }
       } catch (e) {
         console.error("Critical error during startApp", e);
           clearTimeout(safeLoad);
@@ -3660,15 +3672,22 @@
           setTimeout(function () {
               warmMintLambdasInBackground();
           }, 400);
-          setTimeout(function () {
-              if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface || ptgNotificationSurfaceHint()) {
-                  scheduleNotificationPrompt();
-              }
-          }, 650);
+          if (isLoggedIn()) {
+              setTimeout(function () {
+                  if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface || ptgNotificationSurfaceHint()) {
+                      scheduleNotificationPrompt();
+                  }
+              }, 650);
+          }
       }
   }
 
   function notifPromptShouldShow() {
+      if (!isLoggedIn()) return false;
+      try {
+          var ag = document.getElementById("authGateOverlay");
+          if (ag && ag.classList.contains("show")) return false;
+      } catch (_) {}
       if (ptgHost !== "base" && ptgHost !== "farcaster" && !ptgInMiniAppSurface && !ptgNotificationSurfaceHint()) {
           return false;
       }
