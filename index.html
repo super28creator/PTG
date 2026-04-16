@@ -3609,13 +3609,15 @@
           setTimeout(function () {
               warmMintLambdasInBackground();
           }, 400);
-          /* Powiadomienia dopiero po zalogowaniu (mini app), żeby nie kolidowało z Connect wallet */
+          /* Farcaster: czekamy na login (kolizja z Connect wallet). Base: pokazujemy instrukcję ⋯ → Save od razu. */
           if (isLoggedIn()) {
               setTimeout(function () {
                   if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface || ptgNotificationSurfaceHint()) {
                       scheduleNotificationPrompt();
                   }
               }, 650);
+          } else if (ptgHost === "base" || ptgNotifDetectBaseSurface()) {
+              setTimeout(function () { scheduleNotificationPrompt(); }, 800);
           }
       } catch (e) {
         console.error("Critical error during startApp", e);
@@ -3652,6 +3654,8 @@
                       scheduleNotificationPrompt();
                   }
               }, 650);
+          } else if (ptgHost === "base" || ptgNotifDetectBaseSurface()) {
+              setTimeout(function () { scheduleNotificationPrompt(); }, 800);
           }
       }
   }
@@ -3672,17 +3676,20 @@
   }
 
   /**
-   * Tylko środowiskowe warunki (logowanie, host, widoczność auth-gate).
-   * Stan „powiadomienia włączone" sprawdzamy zawsze asynchronicznie z kontekstu SDK,
-   * żeby nie blokować modala nieaktualną flagą z localStorage.
+   * Środowiskowe warunki pokazywania prompta.
+   * Base App: pokazujemy instrukcję ⋯ → Save **niezależnie od logowania i auth-gate** — Base traktuje apkę jak stronę web,
+   *           więc brak Farcaster profile / pustego embedded wallet nie powinien blokować hint-u.
+   * Farcaster: wymagamy zalogowania (ma Farcaster profile z kontekstu) i zamkniętego auth-gate (żeby nie nakładać się na Connect wallet).
    */
   function notifPromptShouldShow() {
+      var isBase = ptgHost === "base" || ptgNotifDetectBaseSurface();
+      if (isBase) return true;
       if (!isLoggedIn()) return false;
       try {
           var ag = document.getElementById("authGateOverlay");
           if (ag && ag.classList.contains("show")) return false;
       } catch (_) {}
-      if (ptgHost !== "base" && ptgHost !== "farcaster" && !ptgInMiniAppSurface && !ptgNotificationSurfaceHint()) {
+      if (ptgHost !== "farcaster" && !ptgInMiniAppSurface && !ptgNotificationSurfaceHint()) {
           return false;
       }
       return true;
