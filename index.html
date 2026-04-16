@@ -778,6 +778,102 @@
     }
     .modal-overlay.show { display: flex; }
 
+    /**
+     * Base App: `sdk.actions.addMiniApp` jest zdeprecjonowany (docs.base.org/apps/quickstart/migrate-to-standard-web-app).
+     * Nie ma natywnego arkusza „Add to Base" do wywołania z JS; użytkownik pinuje apkę z menu ⋯ → Save.
+     * Własny bottom sheet pokazuje krok-po-kroku, żeby prowadzić użytkownika do natywnego menu hosta.
+     */
+    #ptgBaseSaveSheet {
+        z-index: 10060;
+        align-items: flex-end;
+        justify-content: center;
+        padding-bottom: max(100px, calc(env(safe-area-inset-bottom, 0px) + 72px));
+    }
+    @media (min-width: 560px) {
+        #ptgBaseSaveSheet { align-items: center; padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); }
+    }
+    #ptgBaseSaveSheet .ptg-bs-sheet {
+        position: relative;
+        width: 100%;
+        max-width: 460px;
+        margin: 0 auto;
+        border-radius: 28px 28px 0 0;
+        padding: 20px 20px 24px;
+        background: linear-gradient(180deg, rgba(18, 22, 32, 0.99) 0%, rgba(10, 14, 22, 0.99) 100%);
+        border: 1px solid rgba(10, 88, 255, 0.42);
+        border-bottom: none;
+        box-shadow: 0 -14px 46px rgba(0, 0, 0, 0.6);
+        text-align: center;
+        animation: ptgBsIn 0.36s var(--ease-base) forwards;
+    }
+    @media (min-width: 560px) {
+        #ptgBaseSaveSheet .ptg-bs-sheet { border-radius: 24px; border: 1px solid rgba(10, 88, 255, 0.42); padding: 28px 26px 30px; }
+    }
+    @keyframes ptgBsIn { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+    #ptgBaseSaveSheet .ptg-bs-grabber { width: 40px; height: 5px; border-radius: 99px; background: rgba(255, 255, 255, 0.18); margin: 0 auto 14px; }
+    #ptgBaseSaveSheet .ptg-bs-close {
+        position: absolute; top: 12px; right: 12px;
+        width: 36px; height: 36px; border: none; border-radius: 10px;
+        background: transparent; color: rgba(255, 255, 255, 0.5);
+        font-size: 1.4rem; line-height: 1; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+    }
+    #ptgBaseSaveSheet .ptg-bs-close:hover { color: rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.06); }
+    #ptgBaseSaveSheet .ptg-bs-icon-wrap {
+        position: relative; width: 68px; height: 68px; margin: 0 auto 14px;
+        border-radius: 18px; overflow: visible; background: rgba(255, 255, 255, 0.05);
+        box-shadow: 0 8px 28px rgba(0, 82, 255, 0.25);
+    }
+    #ptgBaseSaveSheet .ptg-bs-icon-wrap img { width: 100%; height: 100%; border-radius: 18px; object-fit: cover; display: block; }
+    #ptgBaseSaveSheet .ptg-bs-icon-badge {
+        position: absolute; top: -6px; right: -6px; width: 26px; height: 26px; border-radius: 50%;
+        background: linear-gradient(145deg, #3b82f6, #0052ff); color: #fff; font-size: 15px; font-weight: 800;
+        line-height: 26px; text-align: center; border: 2px solid rgba(14, 16, 24, 0.98);
+        box-shadow: 0 2px 8px rgba(0, 82, 255, 0.55);
+    }
+    #ptgBaseSaveSheet .ptg-bs-title { margin: 0 0 4px; font-size: 1.18rem; font-weight: 800; letter-spacing: -0.02em; color: #fff; }
+    #ptgBaseSaveSheet .ptg-bs-sub { margin: 0 0 18px; font-size: 0.86rem; font-weight: 500; color: rgba(200, 210, 228, 0.85); line-height: 1.5; padding: 0 8px; }
+    #ptgBaseSaveSheet .ptg-bs-steps {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        margin: 0 0 18px;
+        padding: 4px 0;
+        text-align: left;
+        list-style: none;
+    }
+    #ptgBaseSaveSheet .ptg-bs-steps li {
+        display: flex; align-items: center; gap: 12px;
+        padding: 13px 14px; font-size: 0.94rem; font-weight: 600;
+        color: rgba(248, 250, 252, 0.96);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    #ptgBaseSaveSheet .ptg-bs-steps li:last-child { border-bottom: none; }
+    #ptgBaseSaveSheet .ptg-bs-step-num {
+        flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+        background: linear-gradient(145deg, #3b82f6, #0052ff);
+        color: #fff; font-size: 0.78rem; font-weight: 800;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 2px 6px rgba(0, 82, 255, 0.35);
+    }
+    #ptgBaseSaveSheet .ptg-bs-step-num.dot { background: rgba(255, 255, 255, 0.12); font-size: 1.05rem; letter-spacing: 1px; color: #fff; box-shadow: none; }
+    #ptgBaseSaveSheet .ptg-bs-actions { display: flex; gap: 10px; }
+    #ptgBaseSaveSheet .ptg-bs-btn {
+        flex: 1 1 50%; padding: 13px 12px;
+        font-size: 15px; font-weight: 800; border-radius: 999px; border: none;
+        cursor: pointer;
+    }
+    #ptgBaseSaveSheet .ptg-bs-btn-primary {
+        background: linear-gradient(145deg, #3b82f6, #0052ff);
+        color: #fff; box-shadow: 0 4px 16px rgba(0, 82, 255, 0.4);
+    }
+    #ptgBaseSaveSheet .ptg-bs-btn-secondary {
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(248, 250, 252, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        font-weight: 700;
+    }
+
     .auth-gate-card { padding-top: 28px; padding-bottom: 28px; }
     .auth-gate-title {
         margin: 0 0 8px;
@@ -1587,6 +1683,32 @@
             <span id="connectWalletBtnLabel">Connect wallet</span>
         </button>
         <p id="authGateError" style="margin: 14px 0 0; min-height: 22px; font-size: 13px; color: var(--danger); font-weight: 600; text-align: center;"></p>
+    </div>
+</div>
+
+<!--
+  Base App — instrukcja „⋯ → Save". Base zrezygnował z sdk.actions.addMiniApp (docs.base.org).
+  Nie ma natywnego arkusza z JS, więc prowadzimy usera do ich własnego menu.
+-->
+<div class="modal-overlay" id="ptgBaseSaveSheet" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="ptgBsTitle">
+    <div class="ptg-bs-sheet">
+        <button type="button" id="ptgBsCloseBtn" class="ptg-bs-close" aria-label="Close" title="Close">×</button>
+        <div class="ptg-bs-grabber" aria-hidden="true"></div>
+        <div class="ptg-bs-icon-wrap" aria-hidden="true">
+            <img src="https://phrasetoguess.xyz/api/farcaster-asset?type=icon" width="68" height="68" alt="" decoding="async" />
+            <span class="ptg-bs-icon-badge" aria-hidden="true">+</span>
+        </div>
+        <h2 id="ptgBsTitle" class="ptg-bs-title">Save PTG on Base</h2>
+        <p class="ptg-bs-sub">Pin Phrase To Guess to <strong>Your Apps</strong> and get a daily reminder to play.</p>
+        <ol class="ptg-bs-steps">
+            <li><span class="ptg-bs-step-num dot" aria-hidden="true">⋯</span> Tap the <strong>⋯</strong> menu (top-right)</li>
+            <li><span class="ptg-bs-step-num" aria-hidden="true">1</span> Choose <strong>Save</strong> to add to Your Apps</li>
+            <li><span class="ptg-bs-step-num" aria-hidden="true">2</span> Allow notifications in Base</li>
+        </ol>
+        <div class="ptg-bs-actions">
+            <button type="button" id="ptgBsLaterBtn" class="ptg-bs-btn ptg-bs-btn-secondary">Not now</button>
+            <button type="button" id="ptgBsGotItBtn" class="ptg-bs-btn ptg-bs-btn-primary">Got it</button>
+        </div>
     </div>
 </div>
 
@@ -3593,24 +3715,29 @@
   }
 
   /**
-   * Identyczny przepływ jak w FightNight / ChessMate — nie rysujemy własnego modala.
-   * Wołamy `sdk.actions.addMiniApp()` i klient hosta (Warpcast / Farcaster / Base App)
-   * sam renderuje swój natywny system sheet (grabber + ikona + „Add to Farcaster/Base" + „Enable notifications" + Not now / Add).
-   * Jedno wywołanie obsługuje wszystkie apki z Mini App SDK.
+   * Farcaster / Warpcast: natywny arkusz przez `sdk.actions.addMiniApp()` (identycznie jak FightNight / ChessMate).
+   * Base App: addMiniApp jest zdeprecjonowany (docs.base.org/apps/quickstart/migrate-to-standard-web-app) —
+   *            host traktuje apkę jak zwykłą stronę web i nie rysuje natywnego arkusza; pokazujemy instrukcję ⋯ → Save.
    */
   function scheduleNotificationPrompt() {
       if (!notifPromptShouldShow()) return;
       ptgWireHostNotificationListeners();
-      if (scheduleNotificationPrompt._inflight) return;
 
-      var attempts = 0;
+      const isBaseApp = ptgHost === "base" || ptgNotifDetectBaseSurface();
+      const attempts = { n: 0 };
       function tick() {
-          attempts += 1;
+          attempts.n += 1;
           if (!ptgNotifLoadingScreenHidden()) {
-              if (attempts < 60) setTimeout(tick, 100);
+              if (attempts.n < 60) setTimeout(tick, 100);
               return;
           }
-          // Zawsze aktualny stan z kontekstu hosta (nie ufamy lokalnej flagi — może być nieaktualna po wyłączeniu powiadomień w ustawieniach klienta).
+          if (isBaseApp) {
+              // Base: brak natywnego arkusza — nasza wizualna instrukcja prowadzi do menu hosta.
+              showBaseSaveSheet();
+              return;
+          }
+          // Farcaster: zawsze aktualny stan z kontekstu hosta (unika nieaktualnej flagi po wyłączeniu powiadomień).
+          if (scheduleNotificationPrompt._inflight) return;
           ptgHostHasNotificationToken()
               .then(function (has) {
                   if (has) {
@@ -3626,6 +3753,46 @@
       }
       setTimeout(tick, 200);
   }
+
+  function ptgNotifDetectBaseSurface() {
+      try {
+          const ua = (navigator.userAgent || "").toLowerCase();
+          if (ua.indexOf("coinbase") >= 0 || ua.indexOf("cbwallet") >= 0) return true;
+      } catch (_) {}
+      return false;
+  }
+
+  /** Dismissed per session (nie persistujemy; user prosił, żeby pokazywało się za każdym otwarciem). */
+  let ptgBaseSheetDismissed = false;
+
+  function showBaseSaveSheet() {
+      if (ptgBaseSheetDismissed) return;
+      const el = document.getElementById("ptgBaseSaveSheet");
+      if (!el) return;
+      el.classList.add("show");
+      el.setAttribute("aria-hidden", "false");
+  }
+
+  function hideBaseSaveSheet() {
+      const el = document.getElementById("ptgBaseSaveSheet");
+      if (!el) return;
+      el.classList.remove("show");
+      el.setAttribute("aria-hidden", "true");
+  }
+
+  function initBaseSaveSheetUi() {
+      const close = document.getElementById("ptgBsCloseBtn");
+      const later = document.getElementById("ptgBsLaterBtn");
+      const got = document.getElementById("ptgBsGotItBtn");
+      function dismiss() { ptgBaseSheetDismissed = true; hideBaseSaveSheet(); }
+      [close, later, got].forEach(function (btn) {
+          if (btn && !btn.dataset.ptgBound) {
+              btn.dataset.ptgBound = "1";
+              btn.addEventListener("click", dismiss);
+          }
+      });
+  }
+  initBaseSaveSheetUi();
 
   function ptgNotifLoadingScreenHidden() {
       var el = document.getElementById("loadingScreen");
