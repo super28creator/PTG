@@ -11,6 +11,9 @@
     },
     "api/farcaster-asset.js": {
       "includeFiles": "PTG-main.png"
+    },
+    "api/farcaster-manifest.js": {
+      "includeFiles": "farcaster-manifest.json"
     }
   },
   "headers": [
@@ -72,6 +75,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/.well-known/farcaster.json",
+      "destination": "/api/farcaster-manifest"
+    },
     {
       "source": "/api/mint-voucher",
       "destination": "/api/ptg-voucher"
