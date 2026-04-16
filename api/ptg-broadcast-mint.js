@@ -70,6 +70,11 @@ function setCors(req, res) {
   res.setHeader("Access-Control-Max-Age", "86400");
 }
 
+function logMint400(code, extra) {
+  const line = extra != null ? `ptg-broadcast-mint 400 ${code} ${extra}` : `ptg-broadcast-mint 400 ${code}`;
+  console.error(line);
+}
+
 module.exports = async (req, res) => {
   setCors(req, res);
   try {
@@ -84,6 +89,7 @@ module.exports = async (req, res) => {
       try {
         body = JSON.parse(body || "{}");
       } catch {
+        logMint400("invalid_json");
         return res.status(400).json({ error: "invalid_json" });
       }
     }
@@ -92,6 +98,7 @@ module.exports = async (req, res) => {
         ? body.rawTransaction.trim()
         : "";
     if (!/^0x[0-9a-fA-F]+$/.test(raw) || raw.length > 200000) {
+      logMint400("bad_raw_transaction");
       return res.status(400).json({ error: "bad_raw_transaction" });
     }
 
@@ -107,6 +114,7 @@ module.exports = async (req, res) => {
     try {
       tx = ethers.Transaction.from(raw);
     } catch (e) {
+      logMint400("invalid_raw_tx", String(e && e.message ? e.message : e).slice(0, 120));
       return res.status(400).json({
         error: "invalid_raw_tx",
         detail: String(e && e.message ? e.message : e),
@@ -114,24 +122,29 @@ module.exports = async (req, res) => {
     }
 
     if (tx.chainId !== 8453n) {
+      logMint400("wrong_chain", `got ${tx.chainId}`);
       return res.status(400).json({ error: "wrong_chain", expected: 8453 });
     }
     if (tx.to == null) {
+      logMint400("missing_to");
       return res.status(400).json({ error: "missing_to" });
     }
     let toAddr;
     try {
       toAddr = ethers.getAddress(tx.to);
     } catch {
+      logMint400("invalid_to");
       return res.status(400).json({ error: "invalid_to" });
     }
     if (!allowedTo.has(toAddr)) {
+      logMint400("wrong_contract", toAddr);
       return res.status(400).json({ error: "wrong_contract" });
     }
 
     const dataHex = String(tx.data || "0x").toLowerCase();
     const okSel = selectors.some((s) => dataHex.startsWith(s));
     if (!okSel) {
+      logMint400("not_mint_calldata", dataHex.slice(0, 14));
       return res.status(400).json({ error: "not_mint_calldata" });
     }
 
@@ -140,6 +153,7 @@ module.exports = async (req, res) => {
       gl = tx.gas;
     }
     if (gl == null || gl === 0n || gl > MAX_GAS_LIMIT) {
+      logMint400("bad_gas_limit", gl != null ? String(gl) : "null");
       return res.status(400).json({ error: "bad_gas_limit" });
     }
 
@@ -167,7 +181,7 @@ module.exports = async (req, res) => {
           : typeof j.error === "string"
             ? j.error.slice(0, 300)
             : "";
-      console.error("ptg-broadcast-mint rpc_rejected", rpcMsg);
+      logMint400("rpc_rejected", rpcMsg.slice(0, 200));
       return res.status(400).json({ error: "rpc_rejected", detail: rpcMsg });
     }
     if (!j.result || typeof j.result !== "string") {
