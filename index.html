@@ -230,7 +230,7 @@
     }
     .referral-modal-head {
         flex-shrink: 0;
-        margin-bottom: 12px;
+        margin-bottom: 14px;
     }
     .referral-modal-head h2 {
         margin: 0;
@@ -238,13 +238,6 @@
         font-weight: 800;
         color: #fff;
         letter-spacing: -0.02em;
-    }
-    .referral-modal-sub {
-        margin: 8px 0 0;
-        font-size: 12px;
-        font-weight: 500;
-        color: var(--text-muted);
-        line-height: 1.45;
     }
     .referral-stats-grid {
         display: grid;
@@ -342,14 +335,27 @@
         border: 1px solid rgba(60, 138, 255, 0.28);
         border-radius: 12px;
         padding: 10px 12px;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
         font-family: "Roboto Mono", ui-monospace, monospace;
+        cursor: text;
+        user-select: text;
+        -webkit-user-select: text;
     }
-    .referral-link-actions {
+    .referral-share-row {
         display: flex;
         flex-direction: column;
-        gap: 8px;
-        margin-bottom: 14px;
+        gap: 10px;
+        margin-bottom: 0;
+    }
+    @media (min-width: 360px) {
+        .referral-share-row {
+            flex-direction: row;
+            align-items: stretch;
+        }
+        .referral-share-row .referral-action-btn {
+            flex: 1;
+            min-width: 0;
+        }
     }
     .referral-action-btn {
         display: flex;
@@ -381,19 +387,13 @@
         background: rgba(90, 50, 160, 0.32);
         border-color: rgba(168, 120, 255, 0.55);
     }
-    .referral-action-btn--copy {
-        border: 1px solid rgba(245, 158, 11, 0.4);
-        background: rgba(245, 158, 11, 0.1);
+    .referral-action-btn--base {
+        border-color: rgba(0, 82, 255, 0.5);
+        background: linear-gradient(180deg, rgba(0, 82, 255, 0.2) 0%, rgba(0, 40, 120, 0.28) 100%);
     }
-    .referral-action-btn--copy:hover {
-        background: rgba(245, 158, 11, 0.2);
-        border-color: rgba(245, 158, 11, 0.55);
-    }
-    .referral-mini-hint {
-        font-size: 11px;
-        color: var(--text-muted);
-        line-height: 1.45;
-        margin: 0 0 12px;
+    .referral-action-btn--base:hover {
+        background: linear-gradient(180deg, rgba(0, 100, 255, 0.32) 0%, rgba(0, 50, 140, 0.38) 100%);
+        border-color: rgba(96, 165, 250, 0.65);
     }
 
     /* --- TYPOGRAPHY --- */
@@ -2097,9 +2097,6 @@
   <div class="mint-card referral-modal-card">
     <div class="referral-modal-head">
       <h2 id="referralModalTitle">Invite &amp; earn</h2>
-      <p class="referral-modal-sub" id="referralModalLead">
-        Share your link. When someone joins Phrase To Guess through it, you earn referral points. Claim them here; on-chain payouts will align with the upcoming token.
-      </p>
     </div>
     <div class="referral-stats-grid" aria-label="Referral stats">
       <div class="referral-stat-pill referral-stat-pill--blue">
@@ -2122,14 +2119,10 @@
     <p class="referral-section-label">Your invite link</p>
     <div class="referral-links-scroll">
       <div class="referral-url-box" id="referralUniversalUrl">—</div>
-      <div class="referral-link-actions">
-        <button type="button" class="referral-action-btn referral-action-btn--copy" id="referralCopyUniversalBtn">Copy link</button>
+      <div class="referral-share-row">
         <a class="referral-action-btn referral-action-btn--fc" id="referralFarcasterCompose" href="https://warpcast.com" target="_blank" rel="noopener noreferrer">Share on Farcaster</a>
-        <a class="referral-action-btn" id="referralFarcasterAddMini" href="https://warpcast.com" target="_blank" rel="noopener noreferrer">Add mini app (Warpcast)</a>
+        <a class="referral-action-btn referral-action-btn--base" id="referralBaseAppShare" href="https://base.app" target="_blank" rel="noopener noreferrer">Share on Base app</a>
       </div>
-      <p class="referral-mini-hint" id="referralBaseHint">
-        <strong style="color: rgba(226, 232, 240, 0.95);">Base app &amp; browser:</strong> the same HTTPS link opens everywhere — Base App, Farcaster, mobile Safari/Chrome, and desktop. No separate Base-only URL is required; pin the app from the host menu if you use Base.
-      </p>
     </div>
     <div style="margin-top: 12px; flex-shrink: 0;">
       <button type="button" class="ghost" id="closeReferralModal" style="width:100%;">Back to game</button>
@@ -2835,7 +2828,7 @@
                   lastClaimAt: Date.now(),
               };
           });
-          if (msg) msg.textContent = "Claimed. Points are stored for a future on-chain payout.";
+          if (msg) msg.textContent = "Claimed.";
       } catch (e) {
           console.warn("claim referral", e);
           if (msg) msg.textContent = "Could not claim. Try again.";
@@ -2858,32 +2851,25 @@
   async function refreshReferralModalContent() {
       const universalUrlEl = document.getElementById("referralUniversalUrl");
       const fcCompose = document.getElementById("referralFarcasterCompose");
-      const fcAdd = document.getElementById("referralFarcasterAddMini");
-      const lead = document.getElementById("referralModalLead");
+      const baseShare = document.getElementById("referralBaseAppShare");
+      const origin = ptgReferralInviteOrigin();
+      const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
       if (!isLoggedIn() || myUserId === "guest") {
-          if (universalUrlEl) universalUrlEl.textContent = "Connect to generate your personal invite link.";
-          if (fcCompose) fcCompose.href = "https://warpcast.com";
-          if (fcAdd) fcAdd.href = "https://warpcast.com";
-          if (lead) {
-              lead.innerHTML =
-                  "Share your link. When someone joins Phrase To Guess through it, you earn referral points. <strong style=\"color:#94a3b8;\">Connect first</strong> to see your link and stats.";
-          }
+          if (universalUrlEl) universalUrlEl.textContent = "Connect to get your invite link.";
+          const guestShare = "Play Phrase To Guess on Base — " + siteUrl;
+          if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(guestShare);
+          if (baseShare) baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(siteUrl);
           ptgUpdateReferralUiFromSnapshot(null);
           const btn = document.getElementById("referralClaimBtn");
           if (btn) btn.disabled = true;
           return;
       }
-      if (lead) {
-          lead.innerHTML =
-              "Share your link. When someone joins Phrase To Guess through it, you earn referral points. Claim them here; on-chain payouts will align with the upcoming token.";
-      }
       const code = await ptgRefCodeFromUserId(myUserId);
-      const origin = ptgReferralInviteOrigin();
       const u = origin + "/?ref=" + encodeURIComponent(code);
       if (universalUrlEl) universalUrlEl.textContent = u;
       const shareText = "Play Phrase To Guess on Base — " + u;
       if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareText);
-      if (fcAdd) fcAdd.href = "https://warpcast.com/~/add-mini-app?url=" + encodeURIComponent(u);
+      if (baseShare) baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(u);
       try {
           const sRef = ref(db, "referrals_v1/summary/" + myUserId);
           const snap = await get(sRef);
@@ -2908,35 +2894,6 @@
       if (!el) return;
       el.classList.remove("show");
       el.setAttribute("aria-hidden", "true");
-  }
-
-  async function copyReferralUniversalLink() {
-      const el = document.getElementById("referralUniversalUrl");
-      const msg = document.getElementById("referralClaimMsg");
-      const t = el && el.textContent ? el.textContent.trim() : "";
-      if (!t || t.indexOf("http") !== 0) {
-          if (msg) msg.textContent = "Connect first to copy your link.";
-          return;
-      }
-      try {
-          await navigator.clipboard.writeText(t);
-          if (msg) msg.textContent = "Link copied.";
-      } catch (_) {
-          try {
-              const ta = document.createElement("textarea");
-              ta.value = t;
-              ta.setAttribute("readonly", "");
-              ta.style.position = "fixed";
-              ta.style.left = "-9999px";
-              document.body.appendChild(ta);
-              ta.select();
-              document.execCommand("copy");
-              document.body.removeChild(ta);
-              if (msg) msg.textContent = "Link copied.";
-          } catch (e2) {
-              if (msg) msg.textContent = "Could not copy — select the link above.";
-          }
-      }
   }
 
   /** Po sync profilu: jeśli w RTDB jest tylko skrót adresu / brak nicku — dociągnij i zapisz (na bieżąco). */
@@ -7293,9 +7250,6 @@
   });
   document.getElementById("referralClaimBtn")?.addEventListener("click", function () {
       void claimReferralRewardsFromUi();
-  });
-  document.getElementById("referralCopyUniversalBtn")?.addEventListener("click", function () {
-      void copyReferralUniversalLink();
   });
   document.getElementById("referralOverlay")?.addEventListener("click", function (ev) {
       if (ev.target === ev.currentTarget) closeReferralModal();
