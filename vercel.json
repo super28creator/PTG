@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron-daily-notification",
+      "schedule": "0 18 * * *"
+    }
+  ],
   "functions": {
     "api/nft-image.js": {
       "includeFiles": "PTG-main.png"

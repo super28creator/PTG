@@ -39,7 +39,7 @@
   <meta name="twitter:site" content="@Super_Guess_" />
   
   <meta name="fc:miniapp" content='{
-    "version": "next",
+    "version": "1",
     "imageUrl": "https://phrasetoguess.xyz/api/nft-image",
     "button": {
       "title": "Play Phrase To Guess",
@@ -3335,6 +3335,7 @@
       /* Farcaster Mini App: signals splash removal. Base App: no-op / safe to ignore. */
       if (sdk && sdk.actions) {
           try { sdk.actions.ready(); } catch (err) { console.warn(err); }
+          tryAutoAddMiniApp();
       }
       const safeLoad = setTimeout(() => {
           if (typeof window.__ptgForceHideLoading === "function") window.__ptgForceHideLoading();
@@ -3402,6 +3403,32 @@
               warmMintLambdasInBackground();
           }, 400);
       }
+  }
+
+  function tryAutoAddMiniApp() {
+      if (!sdk || !sdk.actions || typeof sdk.actions.addMiniApp !== "function") return;
+      const lsKey = "ptg:add-miniapp:prompted:v1";
+      let alreadyPrompted = false;
+      try {
+          alreadyPrompted = localStorage.getItem(lsKey) === "1";
+      } catch (_) {}
+      if (alreadyPrompted) return;
+      try {
+          localStorage.setItem(lsKey, "1");
+      } catch (_) {}
+      setTimeout(() => {
+          Promise.resolve(sdk.actions.addMiniApp())
+              .then((res) => {
+                  if (res && res.notificationDetails && res.notificationDetails.token) {
+                      console.log("miniapp added with notifications enabled");
+                  } else {
+                      console.log("miniapp add prompt shown");
+                  }
+              })
+              .catch((err) => {
+                  console.warn("addMiniApp prompt skipped", err);
+              });
+      }, 1200);
   }
 
   // --- DB SYNC ---
