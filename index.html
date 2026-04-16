@@ -1932,6 +1932,9 @@
   const PTG_MINT_RPC_FETCH_MS = 900;
   const PTG_MINT_WALLET_ETH_CALL_MS = 700;
   const PTG_MINT_RELAY_FETCH_MS = 900;
+  /** Boot UX: nie blokuj całego UI na wolnym SDK/RTDB na desktopie. */
+  const PTG_BOOT_IDENTITY_MS = 1700;
+  const PTG_BOOT_PROFILE_SYNC_MS = 1800;
   /** Cena mintu zmienia się rzadko — cache odczytu skraca kolejne minty do ~0 dodatkowego RPC. */
   const PTG_MINT_PRICE_CACHE_MS = 45 * 60 * 1000;
 
@@ -3295,7 +3298,9 @@
           const seasonEl = document.getElementById("leaderboardSeasonLabel");
           if (seasonEl) seasonEl.textContent = "Season " + LEADERBOARD_SEASON;
 
-          await resolveMiniAppIdentity();
+          await withTimeout(resolveMiniAppIdentity(), PTG_BOOT_IDENTITY_MS, "boot identity").catch((e) => {
+              console.warn("Boot identity timed out, continuing with fallback UI", e);
+          });
           updateAuthGateUI();
 
           refreshOgBadge();
@@ -3304,7 +3309,9 @@
 
           if (isLoggedIn()) {
               setAuthGateVisible(false);
-              await syncUserProfile();
+              await withTimeout(syncUserProfile(), PTG_BOOT_PROFILE_SYNC_MS, "boot profile sync").catch((e) => {
+                  console.warn("Boot profile sync timed out, UI continues", e);
+              });
               if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY && !pendingMint) {
                   if (!tryRestoreActiveRound()) await initGame(true);
               } else {
@@ -3312,7 +3319,9 @@
               }
           } else {
               setAuthGateVisible(true);
-              await syncUserProfile();
+              await withTimeout(syncUserProfile(), PTG_BOOT_PROFILE_SYNC_MS, "boot profile sync").catch((e) => {
+                  console.warn("Boot profile sync timed out, guest UI continues", e);
+              });
               checkGameStateAndRender();
           }
           scheduleRefreshBadgeOnchainBalances();
@@ -3330,7 +3339,9 @@
           refreshOgBadge();
           updateAuthGateUI();
           setAuthGateVisible(true);
-          await syncUserProfile();
+          await withTimeout(syncUserProfile(), PTG_BOOT_PROFILE_SYNC_MS, "boot profile sync").catch((err) => {
+              console.warn("Boot fallback sync timed out", err);
+          });
           checkGameStateAndRender();
           scheduleRefreshBadgeOnchainBalances();
           setTimeout(
@@ -4050,24 +4061,78 @@
               throw new Error("No wallet found on Base network.");
           }
 
-          const web3Provider = new ethers.providers.Web3Provider(ethProvider);
-          const signer = web3Provider.getSigner();
-          const hintContract = new ethers.Contract(PTG_HINT_ADDRESS, PTG_HINT_ABI, signer);
+          const hintIface = new ethers.utils.Interface(PTG_HINT_ABI);
+          const toHint = ethers.utils.getAddress(PTG_HINT_ADDRESS);
+          const fromChk = ethers.utils.getAddress(accounts[0]);
           let hintPrice = null;
           try {
-              hintPrice = await hintContract.hintPrice();
+              const callData = hintIface.encodeFunctionData("hintPrice", []);
+              const quickHex = await walletRequestWithTimeout(
+                  ethProvider,
+                  "eth_call",
+                  [{ to: toHint, data: callData }, "latest"],
+                  Math.max(700, PTG_MINT_WALLET_ETH_CALL_MS)
+              );
+              hintPrice = ethers.BigNumber.from(quickHex);
               ptgHintPriceCacheWei = hintPrice;
-          } catch (_) {
+          } catch (hintReadErr) {
+              console.warn("hintPrice wallet eth_call failed, fallback to server RPC", hintReadErr);
+              try {
+                  const callData = hintIface.encodeFunctionData("hintPrice", []);
+                  const fallbackHex = await baseJsonRpc({
+                      jsonrpc: "2.0",
+                      id: 1,
+                      method: "eth_call",
+                      params: [{ to: toHint, data: callData }, "latest"],
+                  });
+                  hintPrice = ethers.BigNumber.from(fallbackHex);
+                  ptgHintPriceCacheWei = hintPrice;
+              } catch (_) {}
               if (ptgHintPriceCacheWei != null) {
                   hintPrice = ptgHintPriceCacheWei;
-              } else {
-                  throw new Error("Could not read hint price from contract.");
               }
           }
+          if (hintPrice == null) {
+              throw new Error("Could not read hint price from contract.");
+          }
           setHintStatus("Confirm hint purchase in wallet...", "#94a3b8");
-          const tx = await hintContract.buyHint({ value: hintPrice });
+          const buyData = hintIface.encodeFunctionData("buyHint", []);
+          const valueHex = ethers.BigNumber.from(hintPrice).toHexString();
+          let txHash = null;
+          try {
+              const rawSend = await walletRequestWithTimeout(
+                  ethProvider,
+                  "eth_sendTransaction",
+                  [
+                      {
+                          from: fromChk,
+                          to: toHint,
+                          data: buyData,
+                          value: valueHex,
+                      },
+                  ],
+                  22000
+              );
+              txHash = normalizeEthSendTxHash(rawSend);
+          } catch (sendErr) {
+              console.warn("hint eth_sendTransaction failed, trying sign+broadcast fallback", sendErr);
+              if (isUserRejectedWalletRequest(sendErr)) throw sendErr;
+              txHash = await signMintTxAndBroadcastViaSite(
+                  ethProvider,
+                  fromChk,
+                  toHint,
+                  buyData,
+                  valueHex
+              );
+          }
+          if (!txHash) {
+              throw new Error("Hint tx was not accepted by wallet.");
+          }
           setHintStatus("Hint tx sent - waiting for confirmation...", "#94a3b8");
-          await tx.wait();
+          const receipt = await waitForTxReceiptViaServer(txHash);
+          if (!receipt || receipt.status !== 1) {
+              throw new Error("Hint transaction reverted on-chain.");
+          }
 
           const letter = revealRandomHiddenLetter();
           if (!letter) {
