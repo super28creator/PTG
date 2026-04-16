@@ -12,12 +12,22 @@ function utcDateStamp() {
   return `${y}-${m}-${day}`;
 }
 
+function makeUuid() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch (_) {}
+  const rnd = `${Date.now()}-${Math.random()}`.replace(/[^0-9]/g, "").slice(0, 12);
+  return `00000000-0000-4000-8000-${rnd.padEnd(12, "0")}`;
+}
+
 function defaultDailyNotification() {
   return {
     title: "Phrase To Guess",
     body: "Daily reminder: play today's game and keep your streak.",
     target_url: "https://phrasetoguess.xyz/?source=notif-daily",
-    uuid: `ptg-daily-${utcDateStamp()}`,
+    uuid: makeUuid(),
   };
 }
 
@@ -48,7 +58,7 @@ module.exports = async (req, res) => {
             title: String(n.title || "Phrase To Guess"),
             body: String(n.body || "Test notification from Phrase To Guess."),
             target_url: String(n.target_url || "https://phrasetoguess.xyz/?source=notif-test"),
-            uuid: String(n.uuid || `ptg-test-${Date.now()}`),
+            uuid: String(n.uuid || makeUuid()),
           }
         : {
             ...defaultDailyNotification(),

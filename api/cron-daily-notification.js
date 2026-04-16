@@ -12,6 +12,16 @@ function utcDateStamp() {
   return `${y}-${m}-${day}`;
 }
 
+function makeUuid() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch (_) {}
+  const seed = `${Date.now()}-${Math.random()}-${utcDateStamp()}`.replace(/[^0-9]/g, "").slice(0, 12);
+  return `00000000-0000-4000-8000-${seed.padEnd(12, "0")}`;
+}
+
 module.exports = async (req, res) => {
   setCors(res);
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -39,7 +49,7 @@ module.exports = async (req, res) => {
       title: "Phrase To Guess",
       body: "Daily reminder: play today's game and keep your streak.",
       target_url: "https://phrasetoguess.xyz/?source=notif-daily",
-      uuid: `ptg-daily-${utcDateStamp()}`,
+      uuid: makeUuid(),
     },
   };
 
