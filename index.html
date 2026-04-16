@@ -758,6 +758,20 @@
         padding: max(20px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
         animation: fadeIn 0.3s ease;
     }
+    /* Hard fail-safe: jeśli JS nie wystartuje (np. specyficzny desktop webview), splash sam znika. */
+    #loadingScreen.show {
+        animation:
+            fadeIn 0.3s ease,
+            ptgLoadingAutoHide 0s linear 6s forwards;
+    }
+    @keyframes ptgLoadingAutoHide {
+        to {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            display: none;
+        }
+    }
     .modal-overlay.show { display: flex; }
 
     .auth-gate-card { padding-top: 28px; padding-bottom: 28px; }
@@ -6374,7 +6388,18 @@
   window.addEventListener("resize", scheduleWordFit);
   if (window.visualViewport) window.visualViewport.addEventListener("resize", scheduleWordFit);
 
-  window.onload = startApp;
+  let __ptgBootStarted = false;
+  function bootStartAppOnce() {
+      if (__ptgBootStarted) return;
+      __ptgBootStarted = true;
+      void startApp();
+  }
+  if (document.readyState === "loading") {
+      window.addEventListener("DOMContentLoaded", bootStartAppOnce, { once: true });
+      window.addEventListener("load", bootStartAppOnce, { once: true });
+  } else {
+      setTimeout(bootStartAppOnce, 0);
+  }
 </script>
 </body>
 </html>
