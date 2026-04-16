@@ -1967,12 +1967,17 @@
           console.warn("Vercel analytics disabled (import failed)", e);
       }
       try {
-          const fc = await import("https://esm.sh/@farcaster/frame-sdk");
-          if (fc && fc.sdk) sdk = fc.sdk;
-          if (sdk) bindSdkNotificationEvents();
-      } catch (e) {
-          console.warn("Farcaster SDK unavailable on this client", e);
+          const fc = await import("https://esm.sh/@farcaster/miniapp-sdk@0.3.0");
+          sdk = fc.sdk || fc.default || null;
+      } catch (e1) {
+          try {
+              const fc = await import("https://esm.sh/@farcaster/frame-sdk");
+              sdk = fc.sdk || fc.default || null;
+          } catch (e2) {
+              console.warn("Farcaster miniapp / frame SDK unavailable on this client", e1, e2);
+          }
       }
+      if (sdk) bindSdkNotificationEvents();
   })();
 
   function bindSdkNotificationEvents() {
@@ -1995,6 +2000,9 @@
           sdk.on("frameAdded", markEnabledFromPayload);
       } catch (_) {}
       try {
+          sdk.on("miniAppAdded", markEnabledFromPayload);
+      } catch (_) {}
+      try {
           sdk.on("notificationsEnabled", markEnabledFromPayload);
       } catch (_) {}
       try {
@@ -2004,17 +2012,14 @@
           sdk.on("frameRemoved", markDisabled);
       } catch (_) {}
       try {
-          sdk.on("miniAppAdded", markEnabledFromPayload);
-      } catch (_) {}
-      try {
           sdk.on("miniAppRemoved", markDisabled);
       } catch (_) {}
   }
 
   function ptgGetAddFrameAction() {
       if (!sdk || !sdk.actions) return null;
-      if (typeof sdk.actions.addFrame === "function") return sdk.actions.addFrame.bind(sdk.actions);
       if (typeof sdk.actions.addMiniApp === "function") return sdk.actions.addMiniApp.bind(sdk.actions);
+      if (typeof sdk.actions.addFrame === "function") return sdk.actions.addFrame.bind(sdk.actions);
       return null;
   }
 
@@ -2114,8 +2119,8 @@
 
   /** Powiadomienia mini app: zapis po tokenie (addFrame / kontekst / webhook). */
   const PTG_NOTIF_ENABLED_KEY = "ptg:add-miniapp:has-token:v1";
-  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v6: addFrame + webhook fix, re-show). */
-  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v6-done";
+  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v7: miniapp-sdk + surface hint, re-show). */
+  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v7-done";
   /** Po onboardingu: ostatnie zamknięcie — powtórka co 7 dni jeśli nadal bez włączenia. */
   const PTG_NOTIF_LAST_SHOWN_AT_KEY = "ptg:notif-last-shown-at-v3";
   const PTG_NOTIF_REPEAT_MS = 7 * 24 * 60 * 60 * 1000;
@@ -2124,6 +2129,32 @@
   let ptgHost = "browser";
   /** True gdy host zgłosi `sdk.isInMiniApp()` (Base / Farcaster webview) — modal powiadomień nawet przy błędnym `ptgHost`. */
   let ptgInMiniAppSurface = false;
+  /**
+   * Base App często ma `window === window.parent` — `isInMiniApp()` wtedy zwraca false mimo webview.
+   * Dodatkowa heurystyka (iframe / UA), żeby modal i tak mógł się pokazać.
+   */
+  function ptgSurfaceLooksEmbedded() {
+      try {
+          if (typeof window !== "undefined" && window.self !== window.top) return true;
+      } catch (e) {
+          return true;
+      }
+      try {
+          if (typeof window !== "undefined" && window.ReactNativeWebView) return true;
+      } catch (_) {}
+      return false;
+  }
+  function ptgLikelyInAppClientUA() {
+      try {
+          const ua = (navigator.userAgent || "").toLowerCase();
+          if (ua.indexOf("warpcast") >= 0 || ua.indexOf("farcaster") >= 0) return true;
+          if (ua.indexOf("coinbase") >= 0 || ua.indexOf("cbwallet") >= 0) return true;
+      } catch (_) {}
+      return false;
+  }
+  function ptgNotificationSurfaceHint() {
+      return ptgSurfaceLooksEmbedded() || ptgLikelyInAppClientUA();
+  }
 
   function getInjectedProvider() {
       const eth = globalThis.ethereum;
@@ -2593,7 +2624,15 @@
   async function resolveMiniAppIdentity() {
       ptgHost = "browser";
       try {
-          if (!sdk || sdk.context == null) return;
+          if (!sdk) {
+              try {
+                  const ua = (navigator.userAgent || "").toLowerCase();
+                  if (ua.indexOf("warpcast") >= 0 || ua.indexOf("farcaster") >= 0) ptgHost = "farcaster";
+                  else if (ua.indexOf("coinbase") >= 0 || ua.indexOf("cbwallet") >= 0) ptgHost = "base";
+              } catch (_) {}
+              return;
+          }
+          if (sdk.context == null) return;
 
           let ctx;
           try {
@@ -3514,7 +3553,7 @@
 
   async function startApp() {
       heroBadgeFxSuppressUntil = Date.now() + 1200;
-      await withTimeout(optionalSdkReadyPromise, 900, "optional sdk boot").catch(() => {});
+      await withTimeout(optionalSdkReadyPromise, 15000, "optional sdk boot").catch(function () {});
       /* Farcaster Mini App: signals splash removal. Base App: no-op / safe to ignore. */
       if (sdk && sdk.actions) {
           try { sdk.actions.ready(); } catch (err) { console.warn(err); }
@@ -3535,11 +3574,12 @@
           ptgInMiniAppSurface = false;
           try {
               if (sdk && typeof sdk.isInMiniApp === "function") {
-                  ptgInMiniAppSurface = await withTimeout(sdk.isInMiniApp(), 2500, "isInMiniApp").catch(function () {
+                  ptgInMiniAppSurface = await withTimeout(sdk.isInMiniApp(3000), 4000, "isInMiniApp").catch(function () {
                       return false;
                   });
               }
           } catch (_) {}
+          if (!ptgInMiniAppSurface) ptgInMiniAppSurface = ptgNotificationSurfaceHint();
           updateAuthGateUI();
 
           refreshOgBadge();
@@ -3574,7 +3614,9 @@
           }, 400);
           /* Powiadomienia: po splashu + auth — nie czekamy na zamknięcie auth (gość też widzi prompt) */
           setTimeout(function () {
-              if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface) scheduleNotificationPrompt();
+              if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface || ptgNotificationSurfaceHint()) {
+                  scheduleNotificationPrompt();
+              }
           }, 650);
       } catch (e) {
         console.error("Critical error during startApp", e);
@@ -3584,11 +3626,12 @@
           ptgInMiniAppSurface = false;
           try {
               if (sdk && typeof sdk.isInMiniApp === "function") {
-                  ptgInMiniAppSurface = await withTimeout(sdk.isInMiniApp(), 2500, "isInMiniApp").catch(function () {
+                  ptgInMiniAppSurface = await withTimeout(sdk.isInMiniApp(3000), 4000, "isInMiniApp").catch(function () {
                       return false;
                   });
               }
           } catch (_) {}
+          if (!ptgInMiniAppSurface) ptgInMiniAppSurface = ptgNotificationSurfaceHint();
           refreshOgBadge();
           updateAuthGateUI();
           setAuthGateVisible(true);
@@ -3605,13 +3648,17 @@
               warmMintLambdasInBackground();
           }, 400);
           setTimeout(function () {
-              if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface) scheduleNotificationPrompt();
+              if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface || ptgNotificationSurfaceHint()) {
+                  scheduleNotificationPrompt();
+              }
           }, 650);
       }
   }
 
   function notifPromptShouldShow() {
-      if (ptgHost !== "base" && ptgHost !== "farcaster" && !ptgInMiniAppSurface) return false;
+      if (ptgHost !== "base" && ptgHost !== "farcaster" && !ptgInMiniAppSurface && !ptgNotificationSurfaceHint()) {
+          return false;
+      }
       try {
           if (localStorage.getItem(PTG_NOTIF_ONBOARDING_DONE_KEY) !== "1") return true;
       } catch (_) {
