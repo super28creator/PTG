@@ -1708,7 +1708,7 @@
         <div class="ptg-notif-icon" aria-hidden="true">🔔</div>
         <h2 id="ptgNotifTitle" class="ptg-notif-title">Włącz powiadomienia</h2>
         <p class="ptg-notif-lead">Dostawaj przypomnienie o dzisiejszej frazie i passie — podobnie jak przy zatwierdzaniu transakcji, otworzy się <strong>systemowy</strong> dialog zgody (Base App / Warpcast).</p>
-        <p class="ptg-notif-detail">Przy <strong>pierwszym wejściu</strong> (od teraz) zobaczysz ten komunikat; potem <strong>co 7 dni</strong>, dopóki nie włączysz. Zamknięcie (×) tylko chowa okno — <strong>nie wyłącza</strong> powiadomień; wyłączysz je ręcznie w ustawieniach Base / Warpcast.</p>
+        <p class="ptg-notif-detail"><strong>Pierwszy raz</strong> ten ekran pojawia się zawsze (także gdy masz już włączone powiadomienia), żebyś mógł potwierdzić w systemowym oknie. Potem — <strong>co 7 dni</strong>, dopóki nie włączysz tutaj. × tylko zamyka kartę; wyłączenie powiadomień tylko w ustawieniach Base / Warpcast.</p>
         <div class="ptg-notif-actions">
             <button type="button" id="ptgNotifEnableBtn" class="big-mint-btn">Włącz powiadomienia</button>
             <button type="button" id="ptgNotifLaterBtn" class="ghost">Nie teraz</button>
@@ -2069,9 +2069,11 @@
   /** Base App Mini App host FID (see docs.base.org mini-apps). */
   const BASE_APP_CLIENT_FID = 309857;
 
-  /** Powiadomienia mini app: zgoda zapisana po sukcesie addMiniApp (token) — wtedy nie pokazujemy już promptu. */
+  /** Powiadomienia mini app: zgoda zapisana po sukcesie addMiniApp (token). */
   const PTG_NOTIF_ENABLED_KEY = "ptg:add-miniapp:has-token:v1";
-  /** Ostatnio pokazany / zamknięty prompt (× / Nie teraz / ESC / anulowanie dialogu) — następny raz za 7 dni. Brak = pierwsze wejście w tej wersji = pokaż każdemu. */
+  /** Pierwszy onboarding (nowy UI) — dopóki nie „1”, modal pokazuje się zawsze przy wejściu, także gdy token był już w LS. */
+  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v4-done";
+  /** Po onboardingu: ostatnie zamknięcie — powtórka co 7 dni jeśli nadal bez włączenia. */
   const PTG_NOTIF_LAST_SHOWN_AT_KEY = "ptg:notif-last-shown-at-v3";
   const PTG_NOTIF_REPEAT_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -3550,6 +3552,11 @@
   function notifPromptShouldShow() {
       if (ptgHost !== "base" && ptgHost !== "farcaster") return false;
       try {
+          if (localStorage.getItem(PTG_NOTIF_ONBOARDING_DONE_KEY) !== "1") return true;
+      } catch (_) {
+          return true;
+      }
+      try {
           if (localStorage.getItem(PTG_NOTIF_ENABLED_KEY) === "1") return false;
       } catch (_) {}
       try {
@@ -3577,9 +3584,10 @@
       el.setAttribute("aria-hidden", "false");
   }
 
-  /** × / Nie teraz / ESC / tło — tylko zamyka UI; nie wyłącza powiadomień (to w ustawieniach klienta). Ustawia datę → za 7 dni znowu prompt. */
+  /** × / Nie teraz / ESC / tło — kończy pierwszy onboarding; nie wyłącza powiadomień w kliencie. */
   function onNotificationPromptDismiss() {
       try {
+          localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
           localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
       } catch (_) {}
       hideNotificationPrompt();
@@ -3592,6 +3600,9 @@
       }
       Promise.resolve(sdk.actions.addMiniApp())
           .then(function (res) {
+              try {
+                  localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
+              } catch (_) {}
               if (res && res.notificationDetails && res.notificationDetails.token) {
                   try {
                       localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1");
@@ -3606,6 +3617,7 @@
           .catch(function (err) {
               console.warn("addMiniApp", err);
               try {
+                  localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
                   localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
               } catch (_) {}
               hideNotificationPrompt();
