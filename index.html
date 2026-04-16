@@ -3408,19 +3408,24 @@
 
   function tryAutoAddMiniApp() {
       if (!sdk || !sdk.actions || typeof sdk.actions.addMiniApp !== "function") return;
-      const lsKey = "ptg:add-miniapp:prompted:v1";
-      let alreadyPrompted = false;
+      const doneKey = "ptg:add-miniapp:has-token:v1";
+      const sessKey = "ptg:add-miniapp:prompted:session";
       try {
-          alreadyPrompted = localStorage.getItem(lsKey) === "1";
+          if (localStorage.getItem(doneKey) === "1") return;
       } catch (_) {}
-      if (alreadyPrompted) return;
       try {
-          localStorage.setItem(lsKey, "1");
+          if (sessionStorage.getItem(sessKey) === "1") return;
+      } catch (_) {}
+      try {
+          sessionStorage.setItem(sessKey, "1");
       } catch (_) {}
       setTimeout(() => {
           Promise.resolve(sdk.actions.addMiniApp())
               .then((res) => {
                   if (res && res.notificationDetails && res.notificationDetails.token) {
+                      try {
+                          localStorage.setItem(doneKey, "1");
+                      } catch (_) {}
                       console.log("miniapp added with notifications enabled");
                   } else {
                       console.log("miniapp add prompt shown");
