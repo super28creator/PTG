@@ -3335,7 +3335,6 @@
       /* Farcaster Mini App: signals splash removal. Base App: no-op / safe to ignore. */
       if (sdk && sdk.actions) {
           try { sdk.actions.ready(); } catch (err) { console.warn(err); }
-          tryAutoAddMiniApp();
       }
       const safeLoad = setTimeout(() => {
           if (typeof window.__ptgForceHideLoading === "function") window.__ptgForceHideLoading();
@@ -3350,6 +3349,8 @@
           await withTimeout(resolveMiniAppIdentity(), PTG_BOOT_IDENTITY_MS, "boot identity").catch((e) => {
               console.warn("Boot identity timed out, continuing with fallback UI", e);
           });
+          /* Warpcast: addMiniApp + notification tokens. Base App (post–Apr 2026) does not use this path — see docs.base.org migrate-to-standard-web-app */
+          if (ptgHost === "farcaster") tryAutoAddMiniApp();
           updateAuthGateUI();
 
           refreshOgBadge();
