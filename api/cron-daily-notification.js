@@ -9,6 +9,7 @@ const {
   fetchOptInWalletAddresses,
   sendToWallets,
 } = require("../lib/base-dashboard-notifications.js");
+const { hasServiceAccount, listAllTokenFids } = require("../lib/fc-notif-store.js");
 
 function makeUuid() {
   try {
@@ -87,16 +88,39 @@ module.exports = async (req, res) => {
       }
     }
 
-    /* --- Neynar: broadcast to all Farcaster mini-app opt-ins --- */
+    /* --- Farcaster: RTDB tokens → direct API (roll-your-own path) --- */
+    const dailyFcNotification = {
+      title: "Phrase To Guess",
+      body: "Daily reminder: play today's game and keep your streak.",
+      target_url: `${appUrl}/?source=notif-daily`,
+      uuid: makeUuid(),
+    };
+    if (hasServiceAccount()) {
+      try {
+        const { sendDirectToFids } = require("../lib/fc-send-direct.js");
+        const fids = await listAllTokenFids();
+        if (fids.length === 0) {
+          out.farcaster_direct = { ok: true, skipped: true, reason: "no_stored_tokens_in_rtdb" };
+        } else {
+          await sleep(DASHBOARD_REQUEST_GAP_MS);
+          const { results, okFids } = await sendDirectToFids(fids, dailyFcNotification);
+          out.farcaster_direct = {
+            ok: true,
+            recipient_fids: fids.length,
+            delivered: okFids.length,
+            results,
+          };
+        }
+      } catch (e) {
+        out.farcaster_direct = { ok: false, error: e && e.message ? String(e.message) : "direct_failed" };
+      }
+    }
+
+    /* --- Neynar: broadcast (managed tokens / users not in our RTDB) --- */
     if (neynarKey) {
       const payload = {
         target_fids: [],
-        notification: {
-          title: "Phrase To Guess",
-          body: "Daily reminder: play today's game and keep your streak.",
-          target_url: `${appUrl}/?source=notif-daily`,
-          uuid: makeUuid(),
-        },
+        notification: dailyFcNotification,
       };
       const neynarRes = await fetch("https://api.neynar.com/v2/farcaster/frame/notifications/", {
         method: "POST",
