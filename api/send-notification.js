@@ -51,8 +51,9 @@ module.exports = async (req, res) => {
       service: "ptg-send-notification",
       channels: ["farcaster", "base", "both"],
       docs: {
-        farcaster: "Neynar + NEYNAR_API_KEY",
-        base: "https://docs.base.org/apps/technical-guides/base-notifications — BASE_DASHBOARD_API_KEY, BASE_APP_URL",
+        farcaster: "Neynar + NEYNAR_API_KEY; test: target_fids or env FC_TEST_FID",
+        base: "BASE_DASHBOARD_API_KEY + BASE_APP_URL; test: wallet_addresses or notification.wallet_addresses or env BASE_TEST_WALLET",
+        body: "Optional nested object notification: { title, body, message, target_path, target_fids, wallet_addresses }",
       },
     });
   }
@@ -94,12 +95,30 @@ module.exports = async (req, res) => {
                 ...(n.uuid ? { uuid: String(n.uuid) } : {}),
               };
 
-        const target_fids = Array.isArray(body.target_fids)
+        let target_fids = Array.isArray(body.target_fids)
           ? body.target_fids
               .map((x) => Number(x))
               .filter((x) => Number.isInteger(x) && x > 0)
               .slice(0, 100)
           : [];
+        if (mode === "test" && target_fids.length === 0 && process.env.FC_TEST_FID) {
+          const fid = Number(String(process.env.FC_TEST_FID).trim());
+          if (Number.isInteger(fid) && fid > 0) target_fids = [fid];
+        }
+        if (mode === "test" && target_fids.length === 0 && process.env.FC_TEST_FIDS) {
+          const extra = String(process.env.FC_TEST_FIDS)
+            .split(/[\s,]+/)
+            .map((s) => Number(s.trim()))
+            .filter((x) => Number.isInteger(x) && x > 0)
+            .slice(0, 100);
+          if (extra.length) target_fids = extra;
+        }
+        if (target_fids.length === 0 && Array.isArray(n.target_fids)) {
+          target_fids = n.target_fids
+            .map((x) => Number(x))
+            .filter((x) => Number.isInteger(x) && x > 0)
+            .slice(0, 100);
+        }
 
         const neynarRes = await fetch("https://api.neynar.com/v2/farcaster/frame/notifications/", {
           method: "POST",
@@ -170,12 +189,23 @@ module.exports = async (req, res) => {
         let wallet_addresses = Array.isArray(body.wallet_addresses)
           ? body.wallet_addresses.map((a) => String(a).toLowerCase()).filter((a) => /^0x[a-f0-9]{40}$/.test(a))
           : [];
+        if (wallet_addresses.length === 0 && Array.isArray(n.wallet_addresses)) {
+          wallet_addresses = n.wallet_addresses
+            .map((a) => String(a).toLowerCase())
+            .filter((a) => /^0x[a-f0-9]{40}$/.test(a));
+        }
+        if (mode === "test" && wallet_addresses.length === 0 && process.env.BASE_TEST_WALLET) {
+          wallet_addresses = String(process.env.BASE_TEST_WALLET)
+            .split(/[\s,]+/)
+            .map((a) => a.trim().toLowerCase())
+            .filter((a) => /^0x[a-f0-9]{40}$/.test(a));
+        }
 
         if (mode === "test" && wallet_addresses.length === 0) {
           out.base = {
             ok: false,
             error: "wallet_addresses_required",
-            hint: "For Base test, POST wallet_addresses: [\"0x...\"]",
+            hint: "For Base test, set wallet_addresses, body.wallet_addresses, or env BASE_TEST_WALLET",
           };
           if (channel === "base") {
             return res.status(400).json(out.base);
