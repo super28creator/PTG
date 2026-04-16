@@ -827,7 +827,7 @@
         filter: drop-shadow(0 0 18px rgba(60, 138, 255, 0.45));
     }
     #ptgNotifPrompt .ptg-notif-title {
-        margin: 0 0 10px;
+        margin: 0 0 20px;
         font-size: 1.28rem;
         font-weight: 800;
         letter-spacing: -0.03em;
@@ -1703,15 +1703,13 @@
 
 <div class="modal-overlay" id="ptgNotifPrompt" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="ptgNotifTitle">
     <div class="ptg-notif-sheet">
-        <button type="button" id="ptgNotifCloseBtn" class="ptg-notif-close" aria-label="Zamknij" title="Zamknij">×</button>
+        <button type="button" id="ptgNotifCloseBtn" class="ptg-notif-close" aria-label="Close" title="Close">×</button>
         <div class="ptg-notif-grabber" aria-hidden="true"></div>
         <div class="ptg-notif-icon" aria-hidden="true">🔔</div>
-        <h2 id="ptgNotifTitle" class="ptg-notif-title">Włącz powiadomienia</h2>
-        <p class="ptg-notif-lead">Dostawaj przypomnienie o dzisiejszej frazie i passie — podobnie jak przy zatwierdzaniu transakcji, otworzy się <strong>systemowy</strong> dialog zgody (Base App / Warpcast).</p>
-        <p class="ptg-notif-detail"><strong>Pierwszy raz</strong> ten ekran pojawia się zawsze (także gdy masz już włączone powiadomienia), żebyś mógł potwierdzić w systemowym oknie. Potem — <strong>co 7 dni</strong>, dopóki nie włączysz tutaj. × tylko zamyka kartę; wyłączenie powiadomień tylko w ustawieniach Base / Warpcast.</p>
+        <h2 id="ptgNotifTitle" class="ptg-notif-title">Notifications</h2>
         <div class="ptg-notif-actions">
-            <button type="button" id="ptgNotifEnableBtn" class="big-mint-btn">Włącz powiadomienia</button>
-            <button type="button" id="ptgNotifLaterBtn" class="ghost">Nie teraz</button>
+            <button type="button" id="ptgNotifEnableBtn" class="big-mint-btn">Allow notifications</button>
+            <button type="button" id="ptgNotifLaterBtn" class="ghost">Not now</button>
         </div>
     </div>
 </div>
@@ -2071,8 +2069,8 @@
 
   /** Powiadomienia mini app: zgoda zapisana po sukcesie addMiniApp (token). */
   const PTG_NOTIF_ENABLED_KEY = "ptg:add-miniapp:has-token:v1";
-  /** Pierwszy onboarding (nowy UI) — dopóki nie „1”, modal pokazuje się zawsze przy wejściu, także gdy token był już w LS. */
-  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v4-done";
+  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v5: reset pokazania po zmianie copy EN). */
+  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v5-done";
   /** Po onboardingu: ostatnie zamknięcie — powtórka co 7 dni jeśli nadal bez włączenia. */
   const PTG_NOTIF_LAST_SHOWN_AT_KEY = "ptg:notif-last-shown-at-v3";
   const PTG_NOTIF_REPEAT_MS = 7 * 24 * 60 * 60 * 1000;
