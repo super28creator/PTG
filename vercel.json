@@ -14,6 +14,12 @@
     },
     "api/farcaster-manifest.js": {
       "includeFiles": "farcaster-manifest.json"
+    },
+    "api/send-notification.js": {
+      "includeFiles": "lib/**"
+    },
+    "api/cron-daily-notification.js": {
+      "includeFiles": "lib/**"
     }
   },
   "headers": [
