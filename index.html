@@ -963,6 +963,23 @@
         color: #fff;
         box-shadow: 0 4px 16px rgba(109, 40, 217, 0.4);
     }
+    /* Base App — niebieski akcent (jak Base Wallet / dashboard.base.org) */
+    #ptgNotifPrompt[data-ptg-surface="base"] .ptg-notif-sheet {
+        border-color: rgba(10, 88, 255, 0.38);
+    }
+    @media (min-width: 560px) {
+        #ptgNotifPrompt[data-ptg-surface="base"] .ptg-notif-sheet {
+            border-color: rgba(10, 88, 255, 0.38);
+        }
+    }
+    #ptgNotifPrompt[data-ptg-surface="base"] .ptg-notif-app-plus {
+        background: linear-gradient(145deg, #3b82f6, #0052ff);
+        box-shadow: 0 2px 8px rgba(0, 82, 255, 0.55);
+    }
+    #ptgNotifPrompt[data-ptg-surface="base"] .ptg-notif-btn-add {
+        background: linear-gradient(145deg, #3b82f6, #0052ff);
+        box-shadow: 0 4px 16px rgba(0, 82, 255, 0.4);
+    }
     #ptgNotifPrompt .ptg-notif-btn-add:disabled {
         opacity: 0.65;
         cursor: wait;
@@ -1817,8 +1834,8 @@
         <h2 id="ptgNotifTitle" class="ptg-notif-title">Add PTG to Farcaster</h2>
         <div class="ptg-notif-perms">
             <ul class="ptg-notif-feature-list" aria-hidden="true">
-                <li><span class="ptg-notif-fic" aria-hidden="true">📱</span> Add to Farcaster</li>
-                <li><span class="ptg-notif-fic" aria-hidden="true">🔔</span> Enable notifications</li>
+                <li><span class="ptg-notif-fic" aria-hidden="true">📱</span> <span id="ptgNotifFeatureAdd">Add to Farcaster</span></li>
+                <li><span class="ptg-notif-fic" aria-hidden="true">🔔</span> <span id="ptgNotifFeatureNotif">Enable notifications</span></li>
             </ul>
         </div>
         <p id="ptgNotifHint" class="ptg-notif-hint" role="status" aria-live="polite"></p>
@@ -3789,8 +3806,9 @@
   }
 
   /**
-   * Modal ma pokazywać się przy każdym otwarciu apki, dopóki użytkownik nie włączy powiadomień —
-   * identycznie jak inne Mini Appki (ChessMate, FightNight).
+   * Tylko środowiskowe warunki (logowanie, host, widoczność auth-gate).
+   * Stan „powiadomienia włączone" sprawdzamy zawsze asynchronicznie z kontekstu SDK,
+   * żeby nie blokować modala nieaktualną flagą z localStorage.
    */
   function notifPromptShouldShow() {
       if (!isLoggedIn()) return false;
@@ -3801,9 +3819,6 @@
       if (ptgHost !== "base" && ptgHost !== "farcaster" && !ptgInMiniAppSurface && !ptgNotificationSurfaceHint()) {
           return false;
       }
-      try {
-          if (localStorage.getItem(PTG_NOTIF_ENABLED_KEY) === "1") return false;
-      } catch (_) {}
       return true;
   }
 
@@ -3814,13 +3829,34 @@
       el.setAttribute("aria-hidden", "true");
   }
 
+  /**
+   * Base App (Coinbase Wallet / Base Wallet) ma niebieski akcent; Farcaster (Warpcast) — fioletowy.
+   * Reszta UI i akcja (`addMiniApp`) są takie same — różni się tylko copy + kolor.
+   */
+  function ptgNotifDetectSurface() {
+      if (ptgHost === "base") return "base";
+      if (ptgHost === "farcaster") return "farcaster";
+      try {
+          const ua = (navigator.userAgent || "").toLowerCase();
+          if (ua.indexOf("coinbase") >= 0 || ua.indexOf("cbwallet") >= 0 || ua.indexOf("base") >= 0) return "base";
+          if (ua.indexOf("warpcast") >= 0 || ua.indexOf("farcaster") >= 0) return "farcaster";
+      } catch (_) {}
+      return "farcaster";
+  }
+
   function showNotificationPrompt() {
       const el = document.getElementById("ptgNotifPrompt");
       if (!el) return;
-      var titleEl = document.getElementById("ptgNotifTitle");
+      const surface = ptgNotifDetectSurface();
+      try { el.setAttribute("data-ptg-surface", surface); } catch (_) {}
+      const titleEl = document.getElementById("ptgNotifTitle");
       if (titleEl) {
-          titleEl.textContent = ptgHost === "base" ? "Add PTG to Base" : "Add PTG to Farcaster";
+          titleEl.textContent = surface === "base" ? "Add PTG to Base" : "Add PTG to Farcaster";
       }
+      const addLbl = document.getElementById("ptgNotifFeatureAdd");
+      if (addLbl) addLbl.textContent = surface === "base" ? "Add to Base App" : "Add to Farcaster";
+      const notifLbl = document.getElementById("ptgNotifFeatureNotif");
+      if (notifLbl) notifLbl.textContent = "Enable notifications";
       el.classList.add("show");
       el.setAttribute("aria-hidden", "false");
   }
@@ -4043,12 +4079,17 @@
               if (attempts < 60) setTimeout(tick, 100);
               return;
           }
+          /**
+           * ZAWSZE czytamy stan z kontekstu hosta — unika sytuacji, w której użytkownik wyłączył
+           * powiadomienia w ustawieniach klienta, a lokalna flaga PTG_NOTIF_ENABLED_KEY jest nieaktualna.
+           */
           ptgHostHasNotificationToken()
               .then(function (has) {
                   if (has) {
                       try { localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1"); } catch (_) {}
                       return;
                   }
+                  try { localStorage.removeItem(PTG_NOTIF_ENABLED_KEY); } catch (_) {}
                   if (!notifPromptShouldShow()) return;
                   showNotificationPrompt();
               })
