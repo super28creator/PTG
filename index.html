@@ -1795,11 +1795,24 @@
 </div>
 
 <script type="module">
-  // --- VERCEL ANALYTICS ---
-  import { inject } from 'https://esm.sh/@vercel/analytics'; inject();
+  // --- OPTIONAL SDK IMPORTS (nie blokują startu appki) ---
+  let sdk = null;
+  const optionalSdkReadyPromise = (async function initOptionalClientSdks() {
+      try {
+          const va = await import("https://esm.sh/@vercel/analytics");
+          if (va && typeof va.inject === "function") va.inject();
+      } catch (e) {
+          console.warn("Vercel analytics disabled (import failed)", e);
+      }
+      try {
+          const fc = await import("https://esm.sh/@farcaster/frame-sdk");
+          if (fc && fc.sdk) sdk = fc.sdk;
+      } catch (e) {
+          console.warn("Farcaster SDK unavailable on this client", e);
+      }
+  })();
 
   // --- IMPORTS ---
-  import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
   import { getDatabase, ref, get, set, update, runTransaction, onValue } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js';
 
@@ -3285,6 +3298,7 @@
 
   async function startApp() {
       heroBadgeFxSuppressUntil = Date.now() + 1200;
+      await withTimeout(optionalSdkReadyPromise, 900, "optional sdk boot").catch(() => {});
       /* Farcaster Mini App: signals splash removal. Base App: no-op / safe to ignore. */
       if (sdk && sdk.actions) {
           try { sdk.actions.ready(); } catch (err) { console.warn(err); }
