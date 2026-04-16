@@ -798,9 +798,9 @@
         max-width: 460px;
         margin: 0 auto;
         border-radius: 28px 28px 0 0;
-        padding: 26px 24px 28px;
-        background: linear-gradient(180deg, rgba(30, 36, 52, 0.98) 0%, rgba(15, 18, 29, 0.99) 100%);
-        border: 1px solid rgba(60, 138, 255, 0.45);
+        padding: 20px 20px 24px;
+        background: linear-gradient(180deg, rgba(22, 24, 34, 0.99) 0%, rgba(12, 14, 22, 0.99) 100%);
+        border: 1px solid rgba(124, 58, 237, 0.35);
         border-bottom: none;
         box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
         text-align: center;
@@ -810,7 +810,7 @@
     @media (min-width: 560px) {
         #ptgNotifPrompt .ptg-notif-sheet {
             border-radius: 28px;
-            border: 1px solid rgba(60, 138, 255, 0.45);
+            border: 1px solid rgba(124, 58, 237, 0.35);
             padding: 30px 28px 32px;
         }
     }
@@ -823,21 +823,75 @@
         height: 5px;
         border-radius: 99px;
         background: rgba(255, 255, 255, 0.18);
-        margin: 0 auto 18px;
+        margin: 0 auto 14px;
     }
-    #ptgNotifPrompt .ptg-notif-icon {
-        font-size: 2.5rem;
-        line-height: 1;
-        margin-bottom: 12px;
-        filter: drop-shadow(0 0 18px rgba(60, 138, 255, 0.45));
+    #ptgNotifPrompt .ptg-notif-app-icon-wrap {
+        position: relative;
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 14px;
+        border-radius: 18px;
+        overflow: visible;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+        background: rgba(255, 255, 255, 0.06);
+    }
+    #ptgNotifPrompt .ptg-notif-app-icon-wrap img {
+        width: 100%;
+        height: 100%;
+        border-radius: 18px;
+        object-fit: cover;
+        display: block;
+    }
+    #ptgNotifPrompt .ptg-notif-app-plus {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: linear-gradient(145deg, #8b5cf6, #6d28d9);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 800;
+        line-height: 24px;
+        text-align: center;
+        border: 2px solid rgba(14, 16, 24, 0.98);
+        box-shadow: 0 2px 8px rgba(109, 40, 217, 0.5);
     }
     #ptgNotifPrompt .ptg-notif-title {
-        margin: 0 0 20px;
-        font-size: 1.28rem;
+        margin: 0 0 6px;
+        font-size: 1.125rem;
         font-weight: 800;
-        letter-spacing: -0.03em;
+        letter-spacing: -0.02em;
         color: #fff;
-        line-height: 1.25;
+        line-height: 1.3;
+        padding: 0 8px;
+    }
+    #ptgNotifPrompt .ptg-notif-feature-list {
+        list-style: none;
+        margin: 0 0 16px;
+        padding: 4px 4px 0;
+        text-align: left;
+    }
+    #ptgNotifPrompt .ptg-notif-feature-list li {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 10px;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: rgba(248, 250, 252, 0.96);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    #ptgNotifPrompt .ptg-notif-feature-list li:last-child {
+        border-bottom: none;
+    }
+    #ptgNotifPrompt .ptg-notif-fic {
+        font-size: 1.25rem;
+        line-height: 1;
+        width: 28px;
+        text-align: center;
+        flex-shrink: 0;
     }
     #ptgNotifPrompt .ptg-notif-hint {
         display: none;
@@ -867,19 +921,42 @@
     }
     #ptgNotifPrompt .ptg-notif-actions {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         gap: 10px;
+        align-items: stretch;
     }
-    #ptgNotifPrompt .ptg-notif-actions .big-mint-btn {
-        width: 100%;
+    #ptgNotifPrompt .ptg-notif-btn-later {
+        flex: 1 1 50%;
+        min-width: 0;
+        padding: 14px 12px;
         font-size: 15px;
-        padding: 16px 18px;
+        font-weight: 700;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(248, 250, 252, 0.95);
+        cursor: pointer;
     }
-    #ptgNotifPrompt .ptg-notif-actions .ghost {
-        width: 100%;
-        padding: 14px 18px;
-        font-size: 14px;
-        opacity: 0.92;
+    #ptgNotifPrompt .ptg-notif-btn-later:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    #ptgNotifPrompt .ptg-notif-btn-add {
+        flex: 1 1 50%;
+        min-width: 0;
+        padding: 14px 12px;
+        font-size: 15px;
+        font-weight: 800;
+        border-radius: 14px;
+        border: none;
+        cursor: pointer;
+        background: linear-gradient(145deg, #8b5cf6, #6d28d9);
+        color: #fff;
+        box-shadow: 0 4px 16px rgba(109, 40, 217, 0.4);
+    }
+    #ptgNotifPrompt .ptg-notif-btn-add:disabled {
+        opacity: 0.65;
+        cursor: wait;
     }
     #ptgNotifPrompt .ptg-notif-close {
         position: absolute;
@@ -1724,11 +1801,19 @@
     <div class="ptg-notif-sheet">
         <button type="button" id="ptgNotifCloseBtn" class="ptg-notif-close" aria-label="Close" title="Close">×</button>
         <div class="ptg-notif-grabber" aria-hidden="true"></div>
-        <div class="ptg-notif-icon" aria-hidden="true">🔔</div>
-        <h2 id="ptgNotifTitle" class="ptg-notif-title">Notifications</h2>
+        <div class="ptg-notif-app-icon-wrap" aria-hidden="true">
+            <img id="ptgNotifAppIcon" src="/api/farcaster-asset?type=icon" width="72" height="72" alt="" decoding="async" />
+            <span class="ptg-notif-app-plus" aria-hidden="true">+</span>
+        </div>
+        <h2 id="ptgNotifTitle" class="ptg-notif-title">Add Phrase To Guess to Farcaster</h2>
+        <ul class="ptg-notif-feature-list" aria-hidden="true">
+            <li><span class="ptg-notif-fic" aria-hidden="true">📱</span> Add to Farcaster</li>
+            <li><span class="ptg-notif-fic" aria-hidden="true">🔔</span> Enable notifications</li>
+        </ul>
         <p id="ptgNotifHint" class="ptg-notif-hint" role="status" aria-live="polite"></p>
         <div class="ptg-notif-actions">
-            <button type="button" id="ptgNotifEnableBtn" class="big-mint-btn">Allow notifications</button>
+            <button type="button" id="ptgNotifLaterBtn" class="ptg-notif-btn-later">Not now</button>
+            <button type="button" id="ptgNotifAddBtn" class="ptg-notif-btn-add">Add</button>
         </div>
     </div>
 </div>
@@ -2137,8 +2222,8 @@
 
   /** Powiadomienia mini app: zapis po tokenie (addFrame / kontekst / webhook). */
   const PTG_NOTIF_ENABLED_KEY = "ptg:add-miniapp:has-token:v1";
-  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v9: po connect + wyżej na Base). */
-  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v9-done";
+  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v10: UI jak natywny Add to Farcaster). */
+  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v10-done";
   /** Po onboardingu: ostatnie zamknięcie — powtórka co 7 dni jeśli nadal bez włączenia. */
   const PTG_NOTIF_LAST_SHOWN_AT_KEY = "ptg:notif-last-shown-at-v3";
   const PTG_NOTIF_REPEAT_MS = 7 * 24 * 60 * 60 * 1000;
@@ -3720,11 +3805,16 @@
   function showNotificationPrompt() {
       const el = document.getElementById("ptgNotifPrompt");
       if (!el) return;
+      var titleEl = document.getElementById("ptgNotifTitle");
+      if (titleEl) {
+          titleEl.textContent =
+              ptgHost === "base" ? "Add Phrase To Guess to Base" : "Add Phrase To Guess to Farcaster";
+      }
       el.classList.add("show");
       el.setAttribute("aria-hidden", "false");
   }
 
-  /** Tylko przycisk × — kończy onboarding; nie wyłącza powiadomień w kliencie. */
+  /** Not now / × — kończy onboarding; nie wyłącza powiadomień w kliencie. */
   function onNotificationPromptDismiss() {
       ptgClearNotifHint();
       try {
@@ -3749,15 +3839,20 @@
   }
 
   function ptgSetNotifEnableBusy(busy) {
-      var btn = document.getElementById("ptgNotifEnableBtn");
-      if (!btn) return;
-      btn.disabled = !!busy;
-      if (busy) {
-          if (!btn.dataset.ptgLabel) btn.dataset.ptgLabel = btn.textContent || "Allow notifications";
-          btn.textContent = "Please wait…";
-      } else {
-          btn.textContent = btn.dataset.ptgLabel || "Allow notifications";
+      var addBtn = document.getElementById("ptgNotifAddBtn");
+      var laterBtn = document.getElementById("ptgNotifLaterBtn");
+      var closeBtn = document.getElementById("ptgNotifCloseBtn");
+      if (addBtn) {
+          addBtn.disabled = !!busy;
+          if (busy) {
+              if (!addBtn.dataset.ptgLabel) addBtn.dataset.ptgLabel = addBtn.textContent || "Add";
+              addBtn.textContent = "Adding…";
+          } else {
+              addBtn.textContent = addBtn.dataset.ptgLabel || "Add";
+          }
       }
+      if (laterBtn) laterBtn.disabled = !!busy;
+      if (closeBtn) closeBtn.disabled = !!busy;
   }
 
   /**
@@ -3865,16 +3960,11 @@
               } else {
                   if (ptgHost === "base") {
                       ptgShowNotifHint(
-                          "<strong>Base App</strong> ma osobny kanał powiadomień (przypięcie aplikacji + zgoda w aplikacji Base, powiązanie z <strong>portfelem</strong>). " +
-                              "Suwaków w interfejsie Base nie ustawia kod strony www — to robi klient Base. " +
-                              "Wysyłka z naszego backendu to API Base Dashboard (adresy portfeli), nie token Farcaster."
+                          "<strong>Base App</strong>: powiadomienia po przypięciu apki i zgodzie w aplikacji Base (portfel). Spróbuj ponownie <strong>Add</strong> po zapisaniu w Base."
                       );
                   } else {
                       ptgShowNotifHint(
-                          "Inne mini apki też używają <strong>tego samego</strong> wywołania hosta (dodanie mini apki). " +
-                              "Suwak w Warpcast <strong>przesuwa się sam</strong>, gdy klient zapisze token — strona nie może go przeciągnąć jak natywny kontrolką. " +
-                              "Powiadomienia z serwera lecą przez <strong>oficjalny</strong> endpoint Farcaster (token z webhooka), tak jak wszędzie. " +
-                              "Jeśli suwak dalej jest wyłączony: menu <strong>⋯</strong> → włącz <strong>Allow notifications</strong>."
+                          "Jeśli Warpcast nie dokończył dodawania: menu <strong>⋯</strong> → włącz powiadomienia, potem ponownie <strong>Add</strong>."
                       );
                   }
               }
@@ -3917,11 +4007,16 @@
   }
 
   function initNotificationPromptUi() {
-      var en = document.getElementById("ptgNotifEnableBtn");
+      var add = document.getElementById("ptgNotifAddBtn");
+      var lat = document.getElementById("ptgNotifLaterBtn");
       var xb = document.getElementById("ptgNotifCloseBtn");
-      if (en && !en.dataset.ptgBound) {
-          en.dataset.ptgBound = "1";
-          en.addEventListener("click", onNotificationPromptEnable);
+      if (add && !add.dataset.ptgBound) {
+          add.dataset.ptgBound = "1";
+          add.addEventListener("click", onNotificationPromptEnable);
+      }
+      if (lat && !lat.dataset.ptgBound) {
+          lat.dataset.ptgBound = "1";
+          lat.addEventListener("click", onNotificationPromptDismiss);
       }
       if (xb && !xb.dataset.ptgBound) {
           xb.dataset.ptgBound = "1";
