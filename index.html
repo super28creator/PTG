@@ -303,19 +303,94 @@
         color: rgba(148, 163, 184, 0.95);
         margin-left: 4px;
     }
+    .referral-activity-toggle-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 12px;
+        flex-shrink: 0;
+    }
+    .referral-mini-icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 13px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(0, 0, 0, 0.42);
+        color: rgba(226, 232, 240, 0.92);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+        padding: 0;
+    }
+    .referral-mini-icon-btn svg {
+        display: block;
+        pointer-events: none;
+    }
+    .referral-mini-icon-btn:active {
+        transform: scale(0.96);
+    }
+    .referral-mini-icon-btn--base {
+        border-color: rgba(0, 82, 255, 0.42);
+    }
+    .referral-mini-icon-btn--base[aria-expanded="true"] {
+        border-color: rgba(96, 165, 250, 0.75);
+        background: rgba(0, 82, 255, 0.22);
+        box-shadow: 0 0 0 2px rgba(0, 82, 255, 0.25), 0 4px 18px rgba(0, 82, 255, 0.2);
+    }
+    .referral-mini-icon-btn--fc {
+        border-color: rgba(168, 85, 247, 0.42);
+    }
+    .referral-mini-icon-btn--fc[aria-expanded="true"] {
+        border-color: rgba(192, 132, 252, 0.75);
+        background: rgba(88, 40, 140, 0.28);
+        box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.22), 0 4px 18px rgba(120, 50, 180, 0.2);
+    }
+    .referral-mini-icon-btn:focus-visible {
+        outline: 2px solid var(--cerulean);
+        outline-offset: 2px;
+    }
+    .referral-tree-panels-wrap {
+        flex: 1;
+        min-height: 0;
+        margin-bottom: 12px;
+        display: flex;
+        flex-direction: column;
+    }
+    .referral-tree-panels-wrap[hidden] {
+        display: none !important;
+    }
     .referral-tree-panels {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
         gap: 6px;
         align-items: stretch;
         flex: 1;
         min-height: 0;
-        margin-bottom: 14px;
+    }
+    .referral-tree-panels--both {
+        grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
     }
     @media (max-width: 340px) {
-        .referral-tree-panels {
+        .referral-tree-panels--both {
             grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1fr);
         }
+    }
+    .referral-tree-panels--hist-only {
+        grid-template-columns: 1fr;
+    }
+    .referral-tree-panels--hist-only .referral-tree-divider,
+    .referral-tree-panels--hist-only .referral-panel--fc {
+        display: none !important;
+    }
+    .referral-tree-panels--inv-only {
+        grid-template-columns: 1fr;
+    }
+    .referral-tree-panels--inv-only .referral-tree-divider,
+    .referral-tree-panels--inv-only .referral-panel--base {
+        display: none !important;
     }
     .referral-panel {
         display: flex;
@@ -2272,31 +2347,52 @@
       <div class="referral-balance-amount" id="referralBalanceDisplay">0.00<span class="referral-balance-currency">$</span></div>
     </div>
 
-    <div class="referral-tree-panels" aria-label="Referral activity">
-      <div class="referral-panel referral-panel--base">
-        <div class="referral-panel-head">Base</div>
-        <div class="referral-panel-sub">Claims &amp; withdrawals</div>
-        <div class="referral-panel-scroll" id="referralHistoryList"></div>
-      </div>
-      <div class="referral-tree-divider" aria-hidden="true">
-        <svg class="referral-tree-svg" viewBox="0 0 28 200" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="ptgReferralTreeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style="stop-color:#38bdf8"/>
-              <stop offset="55%" style="stop-color:#0052ff"/>
-              <stop offset="100%" style="stop-color:#a855f7"/>
-            </linearGradient>
-          </defs>
-          <path d="M14 4 L14 88" stroke="url(#ptgReferralTreeGrad)" stroke-width="3" stroke-linecap="round" fill="none"/>
-          <path d="M14 88 L4 118" stroke="url(#ptgReferralTreeGrad)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-          <path d="M14 88 L24 118" stroke="url(#ptgReferralTreeGrad)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-          <path d="M14 118 L14 196" stroke="url(#ptgReferralTreeGrad)" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.85"/>
+    <div class="referral-activity-toggle-row" role="toolbar" aria-label="Show referral activity">
+      <button type="button" class="referral-mini-icon-btn referral-mini-icon-btn--base" id="referralToggleHistoryBtn" aria-expanded="false" aria-controls="referralHistoryPanelHost" title="Claims &amp; withdrawals" aria-label="Show claims and withdrawals history">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="8" y1="13" x2="16" y2="13"/>
+          <line x1="8" y1="17" x2="13" y2="17"/>
         </svg>
-      </div>
-      <div class="referral-panel referral-panel--fc">
-        <div class="referral-panel-head">Farcaster</div>
-        <div class="referral-panel-sub">Who you invited</div>
-        <div class="referral-panel-scroll" id="referralInvitesList"></div>
+      </button>
+      <button type="button" class="referral-mini-icon-btn referral-mini-icon-btn--fc" id="referralToggleInvitesBtn" aria-expanded="false" aria-controls="referralInvitesPanelHost" title="Who you invited" aria-label="Show who you invited">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="referralTreePanelsWrap" class="referral-tree-panels-wrap" hidden>
+      <div id="referralTreePanelsInner" class="referral-tree-panels referral-tree-panels--both" aria-label="Referral activity">
+        <div class="referral-panel referral-panel--base" id="referralHistoryPanelHost">
+          <div class="referral-panel-head">Base</div>
+          <div class="referral-panel-sub">Claims &amp; withdrawals</div>
+          <div class="referral-panel-scroll" id="referralHistoryList"></div>
+        </div>
+        <div class="referral-tree-divider" aria-hidden="true">
+          <svg class="referral-tree-svg" viewBox="0 0 28 200" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="ptgReferralTreeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#38bdf8"/>
+                <stop offset="55%" style="stop-color:#0052ff"/>
+                <stop offset="100%" style="stop-color:#a855f7"/>
+              </linearGradient>
+            </defs>
+            <path d="M14 4 L14 88" stroke="url(#ptgReferralTreeGrad)" stroke-width="3" stroke-linecap="round" fill="none"/>
+            <path d="M14 88 L4 118" stroke="url(#ptgReferralTreeGrad)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M14 88 L24 118" stroke="url(#ptgReferralTreeGrad)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M14 118 L14 196" stroke="url(#ptgReferralTreeGrad)" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.85"/>
+          </svg>
+        </div>
+        <div class="referral-panel referral-panel--fc" id="referralInvitesPanelHost">
+          <div class="referral-panel-head">Farcaster</div>
+          <div class="referral-panel-sub">Who you invited</div>
+          <div class="referral-panel-scroll" id="referralInvitesList"></div>
+        </div>
       </div>
     </div>
 
@@ -3218,6 +3314,7 @@
   async function showReferralModal() {
       const el = document.getElementById("referralOverlay");
       if (!el) return;
+      ptgResetReferralPanelToggles();
       el.classList.add("show");
       el.setAttribute("aria-hidden", "false");
       const msg = document.getElementById("referralClaimMsg");
@@ -3230,6 +3327,48 @@
       if (!el) return;
       el.classList.remove("show");
       el.setAttribute("aria-hidden", "true");
+      ptgResetReferralPanelToggles();
+  }
+
+  function ptgResetReferralPanelToggles() {
+      const hBtn = document.getElementById("referralToggleHistoryBtn");
+      const iBtn = document.getElementById("referralToggleInvitesBtn");
+      if (hBtn) hBtn.setAttribute("aria-expanded", "false");
+      if (iBtn) iBtn.setAttribute("aria-expanded", "false");
+      ptgSyncReferralPanelLayout();
+  }
+
+  function ptgSyncReferralPanelLayout() {
+      const wrap = document.getElementById("referralTreePanelsWrap");
+      const inner = document.getElementById("referralTreePanelsInner");
+      const hBtn = document.getElementById("referralToggleHistoryBtn");
+      const iBtn = document.getElementById("referralToggleInvitesBtn");
+      if (!wrap || !inner) return;
+      const histOpen = hBtn && hBtn.getAttribute("aria-expanded") === "true";
+      const invOpen = iBtn && iBtn.getAttribute("aria-expanded") === "true";
+      if (!histOpen && !invOpen) {
+          wrap.hidden = true;
+          return;
+      }
+      wrap.hidden = false;
+      inner.classList.remove("referral-tree-panels--both", "referral-tree-panels--hist-only", "referral-tree-panels--inv-only");
+      if (histOpen && invOpen) inner.classList.add("referral-tree-panels--both");
+      else if (histOpen) inner.classList.add("referral-tree-panels--hist-only");
+      else inner.classList.add("referral-tree-panels--inv-only");
+  }
+
+  function ptgOnReferralToggleHistoryClick() {
+      const b = document.getElementById("referralToggleHistoryBtn");
+      if (!b) return;
+      b.setAttribute("aria-expanded", b.getAttribute("aria-expanded") === "true" ? "false" : "true");
+      ptgSyncReferralPanelLayout();
+  }
+
+  function ptgOnReferralToggleInvitesClick() {
+      const b = document.getElementById("referralToggleInvitesBtn");
+      if (!b) return;
+      b.setAttribute("aria-expanded", b.getAttribute("aria-expanded") === "true" ? "false" : "true");
+      ptgSyncReferralPanelLayout();
   }
 
   async function copyReferralInviteLink() {
@@ -7605,6 +7744,12 @@
   });
   document.getElementById("referralCopyInlineBtn")?.addEventListener("click", function () {
       void copyReferralInviteLink();
+  });
+  document.getElementById("referralToggleHistoryBtn")?.addEventListener("click", function () {
+      ptgOnReferralToggleHistoryClick();
+  });
+  document.getElementById("referralToggleInvitesBtn")?.addEventListener("click", function () {
+      ptgOnReferralToggleInvitesClick();
   });
   document.getElementById("referralClaimBtn")?.addEventListener("click", function () {
       void claimReferralRewardsFromUi();
