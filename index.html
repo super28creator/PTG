@@ -788,6 +788,7 @@
         }
     }
     #ptgNotifPrompt .ptg-notif-sheet {
+        position: relative;
         width: 100%;
         max-width: 460px;
         margin: 0 auto;
@@ -862,6 +863,30 @@
         padding: 14px 18px;
         font-size: 14px;
         opacity: 0.92;
+    }
+    #ptgNotifPrompt .ptg-notif-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        width: 40px;
+        height: 40px;
+        margin: 0;
+        padding: 0;
+        border: none;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 1.5rem;
+        line-height: 1;
+        font-weight: 300;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+    }
+    #ptgNotifPrompt .ptg-notif-close:hover {
+        background: rgba(255, 255, 255, 0.14);
     }
 
     .auth-gate-card { padding-top: 28px; padding-bottom: 28px; }
@@ -1678,11 +1703,12 @@
 
 <div class="modal-overlay" id="ptgNotifPrompt" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="ptgNotifTitle">
     <div class="ptg-notif-sheet">
+        <button type="button" id="ptgNotifCloseBtn" class="ptg-notif-close" aria-label="Zamknij" title="Zamknij">×</button>
         <div class="ptg-notif-grabber" aria-hidden="true"></div>
         <div class="ptg-notif-icon" aria-hidden="true">🔔</div>
         <h2 id="ptgNotifTitle" class="ptg-notif-title">Włącz powiadomienia</h2>
         <p class="ptg-notif-lead">Dostawaj przypomnienie o dzisiejszej frazie i passie — podobnie jak przy zatwierdzaniu transakcji, otworzy się <strong>systemowy</strong> dialog zgody (Base App / Warpcast).</p>
-        <p class="ptg-notif-detail">Jedno krótkie przypomnienie dziennie. Możesz wyłączyć w ustawieniach aplikacji.</p>
+        <p class="ptg-notif-detail">Przy <strong>pierwszym wejściu</strong> (od teraz) zobaczysz ten komunikat; potem <strong>co 7 dni</strong>, dopóki nie włączysz. Zamknięcie (×) tylko chowa okno — <strong>nie wyłącza</strong> powiadomień; wyłączysz je ręcznie w ustawieniach Base / Warpcast.</p>
         <div class="ptg-notif-actions">
             <button type="button" id="ptgNotifEnableBtn" class="big-mint-btn">Włącz powiadomienia</button>
             <button type="button" id="ptgNotifLaterBtn" class="ghost">Nie teraz</button>
@@ -2043,11 +2069,11 @@
   /** Base App Mini App host FID (see docs.base.org mini-apps). */
   const BASE_APP_CLIENT_FID = 309857;
 
-  /** Powiadomienia mini app: zgoda zapisana po sukcesie addMiniApp (token). */
+  /** Powiadomienia mini app: zgoda zapisana po sukcesie addMiniApp (token) — wtedy nie pokazujemy już promptu. */
   const PTG_NOTIF_ENABLED_KEY = "ptg:add-miniapp:has-token:v1";
-  /** Ostatnie „Nie teraz” — ponowny prompt po 7 dniach. */
-  const PTG_NOTIF_DISMISS_AT_KEY = "ptg:notif-prompt-dismissed-at-v2";
-  const PTG_NOTIF_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+  /** Ostatnio pokazany / zamknięty prompt (× / Nie teraz / ESC / anulowanie dialogu) — następny raz za 7 dni. Brak = pierwsze wejście w tej wersji = pokaż każdemu. */
+  const PTG_NOTIF_LAST_SHOWN_AT_KEY = "ptg:notif-last-shown-at-v3";
+  const PTG_NOTIF_REPEAT_MS = 7 * 24 * 60 * 60 * 1000;
 
   /** Gdzie działa klient: wpływa na kolejność logowania i źródło portfela. */
   let ptgHost = "browser";
@@ -3522,13 +3548,14 @@
           if (localStorage.getItem(PTG_NOTIF_ENABLED_KEY) === "1") return false;
       } catch (_) {}
       try {
-          const t = localStorage.getItem(PTG_NOTIF_DISMISS_AT_KEY);
-          if (t) {
-              const ts = parseInt(t, 10);
-              if (Number.isFinite(ts) && Date.now() - ts < PTG_NOTIF_COOLDOWN_MS) return false;
-          }
-      } catch (_) {}
-      return true;
+          const t = localStorage.getItem(PTG_NOTIF_LAST_SHOWN_AT_KEY);
+          if (!t) return true;
+          const ts = parseInt(t, 10);
+          if (!Number.isFinite(ts)) return true;
+          return Date.now() - ts >= PTG_NOTIF_REPEAT_MS;
+      } catch (_) {
+          return true;
+      }
   }
 
   function hideNotificationPrompt() {
@@ -3545,16 +3572,17 @@
       el.setAttribute("aria-hidden", "false");
   }
 
+  /** × / Nie teraz / ESC / tło — tylko zamyka UI; nie wyłącza powiadomień (to w ustawieniach klienta). Ustawia datę → za 7 dni znowu prompt. */
   function onNotificationPromptDismiss() {
       try {
-          localStorage.setItem(PTG_NOTIF_DISMISS_AT_KEY, String(Date.now()));
+          localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
       } catch (_) {}
       hideNotificationPrompt();
   }
 
   function onNotificationPromptEnable() {
       if (!sdk || !sdk.actions || typeof sdk.actions.addMiniApp !== "function") {
-          hideNotificationPrompt();
+          onNotificationPromptDismiss();
           return;
       }
       Promise.resolve(sdk.actions.addMiniApp())
@@ -3563,11 +3591,18 @@
                   try {
                       localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1");
                   } catch (_) {}
+              } else {
+                  try {
+                      localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
+                  } catch (_) {}
               }
               hideNotificationPrompt();
           })
           .catch(function (err) {
               console.warn("addMiniApp", err);
+              try {
+                  localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
+              } catch (_) {}
               hideNotificationPrompt();
           });
   }
@@ -3590,6 +3625,7 @@
   function initNotificationPromptUi() {
       var en = document.getElementById("ptgNotifEnableBtn");
       var lat = document.getElementById("ptgNotifLaterBtn");
+      var xb = document.getElementById("ptgNotifCloseBtn");
       var overlay = document.getElementById("ptgNotifPrompt");
       if (en && !en.dataset.ptgBound) {
           en.dataset.ptgBound = "1";
@@ -3598,6 +3634,10 @@
       if (lat && !lat.dataset.ptgBound) {
           lat.dataset.ptgBound = "1";
           lat.addEventListener("click", onNotificationPromptDismiss);
+      }
+      if (xb && !xb.dataset.ptgBound) {
+          xb.dataset.ptgBound = "1";
+          xb.addEventListener("click", onNotificationPromptDismiss);
       }
       if (overlay && !overlay.dataset.ptgBackdropBound) {
           overlay.dataset.ptgBackdropBound = "1";
