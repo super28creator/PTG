@@ -212,9 +212,188 @@
         max-width: 100%;
         width: max-content;
     }
-    /* Kolumna ikon + blok wyniku — bez nadmiernego % szerokości w miniappach */
+    /* Kolumna ikon + blok wyniku — bez nadmiernego % szerokości w miniappach (3 ikony: ref, gwiazda, kalendarz) */
     .card--main-game .card-header-main {
-        padding-right: clamp(108px, 30vw, 172px);
+        padding-right: clamp(132px, 36vw, 198px);
+    }
+    .cal-icon-svg--users {
+        stroke: currentColor;
+        fill: none;
+    }
+    .referral-modal-card {
+        max-height: min(88vh, 720px);
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 420px;
+        overflow: hidden;
+    }
+    .referral-modal-head {
+        flex-shrink: 0;
+        margin-bottom: 12px;
+    }
+    .referral-modal-head h2 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -0.02em;
+    }
+    .referral-modal-sub {
+        margin: 8px 0 0;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-muted);
+        line-height: 1.45;
+    }
+    .referral-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+    .referral-stat-pill {
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 10px 8px;
+        text-align: center;
+    }
+    .referral-stat-pill--gold {
+        border-color: rgba(245, 158, 11, 0.45);
+        background: rgba(245, 158, 11, 0.08);
+    }
+    .referral-stat-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+    }
+    .referral-stat-val {
+        font-size: 18px;
+        font-weight: 800;
+        color: #fbbf24;
+        font-variant-numeric: tabular-nums;
+    }
+    .referral-stat-pill--blue .referral-stat-val {
+        color: var(--cerulean);
+    }
+    .referral-stat-pill--muted .referral-stat-val {
+        color: #e2e8f0;
+    }
+    .referral-claim-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    .referral-claim-btn {
+        width: 100%;
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(16, 185, 129, 0.45);
+        background: linear-gradient(180deg, rgba(16, 185, 129, 0.22) 0%, rgba(6, 78, 59, 0.35) 100%);
+        color: #ecfdf5;
+        font-weight: 800;
+        font-size: 14px;
+        cursor: pointer;
+        transition: filter 0.15s ease, transform 0.12s ease;
+    }
+    .referral-claim-btn:hover:not(:disabled) {
+        filter: brightness(1.08);
+    }
+    .referral-claim-btn:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+    .referral-claim-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+    .referral-claim-msg {
+        min-height: 18px;
+        font-size: 12px;
+        color: var(--text-muted);
+        text-align: center;
+    }
+    .referral-links-scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-right: 4px;
+        margin-right: -4px;
+    }
+    .referral-section-label {
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgba(148, 163, 184, 0.95);
+        margin: 0 0 8px;
+    }
+    .referral-url-box {
+        font-size: 11px;
+        line-height: 1.4;
+        word-break: break-all;
+        color: #e2e8f0;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(60, 138, 255, 0.28);
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+        font-family: "Roboto Mono", ui-monospace, monospace;
+    }
+    .referral-link-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+    .referral-action-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(60, 138, 255, 0.12);
+        color: #fff;
+        font-weight: 700;
+        font-size: 13px;
+        text-decoration: none;
+        cursor: pointer;
+        box-sizing: border-box;
+        transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .referral-action-btn:hover {
+        background: rgba(60, 138, 255, 0.22);
+        border-color: rgba(60, 138, 255, 0.45);
+    }
+    .referral-action-btn--fc {
+        border-color: rgba(138, 99, 255, 0.45);
+        background: rgba(70, 40, 120, 0.22);
+    }
+    .referral-action-btn--fc:hover {
+        background: rgba(90, 50, 160, 0.32);
+        border-color: rgba(168, 120, 255, 0.55);
+    }
+    .referral-action-btn--copy {
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        background: rgba(245, 158, 11, 0.1);
+    }
+    .referral-action-btn--copy:hover {
+        background: rgba(245, 158, 11, 0.2);
+        border-color: rgba(245, 158, 11, 0.55);
+    }
+    .referral-mini-hint {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.45;
+        margin: 0 0 12px;
     }
 
     /* --- TYPOGRAPHY --- */
@@ -1760,6 +1939,14 @@
   <div class="card card--main-game">
     <div class="cal-floating-tools" role="toolbar" aria-label="Game tools">
       <div class="cal-floating-tools__icons">
+        <button type="button" id="referralOpenBtn" class="cal-icon-btn" title="Invites & referral link" aria-label="Open referral invites and rewards">
+          <svg class="cal-icon-svg cal-icon-svg--users" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </button>
         <button type="button" id="categoryFilterToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="categoryFilterPanel" title="Category pool" aria-label="Choose categories for new phrases">
           <svg class="cal-icon-svg cal-icon-svg--star" viewBox="0 0 24 24" aria-hidden="true">
             <polygon points="12 2 15 9 22 9 17 14 19 22 12 18 5 22 7 14 2 9 9 9"/>
@@ -1906,6 +2093,50 @@
   <p class="site-footer__legal">©2026 Super Creator.Powered by Base.</p>
 </footer>
 
+<div class="modal-overlay" id="referralOverlay" aria-hidden="true" role="dialog" aria-labelledby="referralModalTitle" aria-modal="true">
+  <div class="mint-card referral-modal-card">
+    <div class="referral-modal-head">
+      <h2 id="referralModalTitle">Invite &amp; earn</h2>
+      <p class="referral-modal-sub" id="referralModalLead">
+        Share your link. When someone joins Phrase To Guess through it, you earn referral points. Claim them here; on-chain payouts will align with the upcoming token.
+      </p>
+    </div>
+    <div class="referral-stats-grid" aria-label="Referral stats">
+      <div class="referral-stat-pill referral-stat-pill--blue">
+        <div class="referral-stat-label">Invites</div>
+        <div class="referral-stat-val" id="referralInvitesCount">0</div>
+      </div>
+      <div class="referral-stat-pill referral-stat-pill--gold">
+        <div class="referral-stat-label">Pending</div>
+        <div class="referral-stat-val" id="referralPendingDisplay">0</div>
+      </div>
+      <div class="referral-stat-pill referral-stat-pill--muted">
+        <div class="referral-stat-label">Claimed</div>
+        <div class="referral-stat-val" id="referralClaimedDisplay">0</div>
+      </div>
+    </div>
+    <div class="referral-claim-row">
+      <button type="button" class="referral-claim-btn" id="referralClaimBtn">Claim referral rewards</button>
+      <div class="referral-claim-msg" id="referralClaimMsg" role="status" aria-live="polite"></div>
+    </div>
+    <p class="referral-section-label">Your invite link</p>
+    <div class="referral-links-scroll">
+      <div class="referral-url-box" id="referralUniversalUrl">—</div>
+      <div class="referral-link-actions">
+        <button type="button" class="referral-action-btn referral-action-btn--copy" id="referralCopyUniversalBtn">Copy link</button>
+        <a class="referral-action-btn referral-action-btn--fc" id="referralFarcasterCompose" href="https://warpcast.com" target="_blank" rel="noopener noreferrer">Share on Farcaster</a>
+        <a class="referral-action-btn" id="referralFarcasterAddMini" href="https://warpcast.com" target="_blank" rel="noopener noreferrer">Add mini app (Warpcast)</a>
+      </div>
+      <p class="referral-mini-hint" id="referralBaseHint">
+        <strong style="color: rgba(226, 232, 240, 0.95);">Base app &amp; browser:</strong> the same HTTPS link opens everywhere — Base App, Farcaster, mobile Safari/Chrome, and desktop. No separate Base-only URL is required; pin the app from the host menu if you use Base.
+      </p>
+    </div>
+    <div style="margin-top: 12px; flex-shrink: 0;">
+      <button type="button" class="ghost" id="closeReferralModal" style="width:100%;">Back to game</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="leaderboardOverlay">
   <div class="mint-card" style="max-height: 80vh; display: flex; flex-direction: column;">
     <div class="leaderboard-header">
@@ -1950,6 +2181,18 @@
       window.addEventListener("unhandledrejection", function () {
           setTimeout(forceHideLoadingScreen, 0);
       });
+      try {
+          var q = window.location && window.location.search;
+          if (q && q.length > 1) {
+              var p = new URLSearchParams(q.slice(1));
+              var r = p.get("ref");
+              if (r && /^[a-f0-9]{12}$/i.test(String(r).trim())) {
+                  try {
+                      localStorage.setItem("ptg_pending_ref", String(r).trim().toLowerCase());
+                  } catch (e) {}
+              }
+          }
+      } catch (e) {}
   })();
 </script>
 
@@ -2412,6 +2655,288 @@
   }
   function playersRootRef() {
     return ref(db, `players_s${LEADERBOARD_SEASON}`);
+  }
+
+  const PTG_REF_INVITE_REWARD = 50;
+  let referralSummaryUnsubscribe = null;
+
+  function ptgReferralInviteOrigin() {
+      try {
+          if (typeof location !== "undefined" && location.protocol !== "file:" && location.origin) {
+              return location.origin;
+          }
+      } catch (_) {}
+      try {
+          const link = document.querySelector('link[rel="canonical"]');
+          if (link && link.href) return new URL(link.href).origin;
+      } catch (_) {}
+      return "https://phrasetoguess.xyz";
+  }
+
+  async function ptgRefCodeFromUserId(id) {
+      const s = String(id || "").trim();
+      if (!s) return "";
+      try {
+          const enc = new TextEncoder().encode("ptg_ref_v1:" + s);
+          const buf = await crypto.subtle.digest("SHA-256", enc);
+          const arr = Array.from(new Uint8Array(buf));
+          return arr.map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 12);
+      } catch (_) {
+          let h = 0;
+          for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+          return ("000000000000" + Math.abs(h).toString(16)).slice(-12);
+      }
+  }
+
+  async function ensureReferralSelfIndex() {
+      if (!db || !isLoggedIn() || myUserId === "guest") return;
+      const code = await ptgRefCodeFromUserId(myUserId);
+      if (!/^[a-f0-9]{12}$/.test(code)) return;
+      const idxRef = ref(db, "referrals_v1/index/" + code);
+      try {
+          const snap = await get(idxRef);
+          if (!snap.exists()) {
+              await set(idxRef, { ownerId: myUserId, ts: Date.now() });
+              return;
+          }
+          const v = snap.val();
+          if (v && v.ownerId && v.ownerId !== myUserId) {
+              console.warn("referral index collision", code);
+          }
+      } catch (e) {
+          console.warn("ensureReferralSelfIndex", e);
+      }
+  }
+
+  async function tryProcessReferralAttribution() {
+      if (!db || !isLoggedIn() || myUserId === "guest") return;
+      let pending = null;
+      try {
+          pending = localStorage.getItem("ptg_pending_ref");
+      } catch (_) {}
+      if (!pending) return;
+      const refCode = String(pending).trim().toLowerCase();
+      if (!/^[a-f0-9]{12}$/.test(refCode)) {
+          try {
+              localStorage.removeItem("ptg_pending_ref");
+          } catch (_) {}
+          return;
+      }
+      const myCode = await ptgRefCodeFromUserId(myUserId);
+      if (refCode === myCode) {
+          try {
+              localStorage.removeItem("ptg_pending_ref");
+          } catch (_) {}
+          return;
+      }
+      let idxSnap;
+      try {
+          idxSnap = await get(ref(db, "referrals_v1/index/" + refCode));
+      } catch (e) {
+          console.warn("referral index lookup", e);
+          return;
+      }
+      if (!idxSnap.exists()) {
+          try {
+              localStorage.removeItem("ptg_pending_ref");
+          } catch (_) {}
+          return;
+      }
+      const ownerId = idxSnap.val().ownerId;
+      if (!ownerId || ownerId === myUserId) {
+          try {
+              localStorage.removeItem("ptg_pending_ref");
+          } catch (_) {}
+          return;
+      }
+      const vis = String(myUserId).replace(/[^a-zA-Z0-9_]/g, "_");
+      const edgeKey = refCode + "_" + vis.slice(0, 72);
+      const edgeRef = ref(db, "referrals_v1/edges/" + edgeKey);
+      try {
+          const edgeSnap = await get(edgeRef);
+          if (edgeSnap.exists()) {
+              try {
+                  localStorage.removeItem("ptg_pending_ref");
+              } catch (_) {}
+              return;
+          }
+          await set(edgeRef, { ts: Date.now(), invitee: myUserId });
+      } catch (e) {
+          console.warn("referral edge", e);
+          return;
+      }
+      try {
+          await runTransaction(ref(db, "referrals_v1/summary/" + ownerId), (cur) => {
+              const o = cur && typeof cur === "object" ? cur : {};
+              const invites = (typeof o.invites === "number" ? o.invites : 0) + 1;
+              const pendingReward = (typeof o.pendingReward === "number" ? o.pendingReward : 0) + PTG_REF_INVITE_REWARD;
+              return { ...o, invites, pendingReward, lastInviteAt: Date.now() };
+          });
+      } catch (e) {
+          console.warn("referral summary tx", e);
+      }
+      try {
+          localStorage.removeItem("ptg_pending_ref");
+      } catch (_) {}
+  }
+
+  function ptgUpdateReferralUiFromSnapshot(d) {
+      const elInv = document.getElementById("referralInvitesCount");
+      const elPend = document.getElementById("referralPendingDisplay");
+      const elClaimed = document.getElementById("referralClaimedDisplay");
+      if (elInv) elInv.textContent = d && typeof d.invites === "number" ? String(d.invites) : "0";
+      if (elPend) elPend.textContent = d && typeof d.pendingReward === "number" ? String(d.pendingReward) : "0";
+      if (elClaimed) elClaimed.textContent = d && typeof d.claimedTotal === "number" ? String(d.claimedTotal) : "0";
+      const btn = document.getElementById("referralClaimBtn");
+      if (btn) {
+          const pr = d && typeof d.pendingReward === "number" ? d.pendingReward : 0;
+          btn.disabled = !isLoggedIn() || pr <= 0;
+      }
+  }
+
+  function bindReferralSummaryListener() {
+      if (typeof referralSummaryUnsubscribe === "function") {
+          try {
+              referralSummaryUnsubscribe();
+          } catch (_) {}
+      }
+      referralSummaryUnsubscribe = null;
+      if (!db || !isLoggedIn() || myUserId === "guest") return;
+      const sRef = ref(db, "referrals_v1/summary/" + myUserId);
+      referralSummaryUnsubscribe = onValue(sRef, (snap) => {
+          const d = snap.exists() ? snap.val() : null;
+          ptgUpdateReferralUiFromSnapshot(d);
+      });
+  }
+
+  async function ptgEnsureReferralPipeline() {
+      await ensureReferralSelfIndex();
+      await tryProcessReferralAttribution();
+      bindReferralSummaryListener();
+  }
+
+  async function claimReferralRewardsFromUi() {
+      const btn = document.getElementById("referralClaimBtn");
+      const msg = document.getElementById("referralClaimMsg");
+      if (!db || !isLoggedIn() || myUserId === "guest") {
+          if (msg) msg.textContent = "Connect your wallet (or Farcaster in-app) to claim.";
+          return;
+      }
+      if (btn) btn.disabled = true;
+      try {
+          await runTransaction(ref(db, "referrals_v1/summary/" + myUserId), (cur) => {
+              const o = cur && typeof cur === "object" ? cur : {};
+              const pr = typeof o.pendingReward === "number" ? o.pendingReward : 0;
+              if (pr <= 0) return o;
+              return {
+                  ...o,
+                  pendingReward: 0,
+                  claimedTotal: (typeof o.claimedTotal === "number" ? o.claimedTotal : 0) + pr,
+                  lastClaimAt: Date.now(),
+              };
+          });
+          if (msg) msg.textContent = "Claimed. Points are stored for a future on-chain payout.";
+      } catch (e) {
+          console.warn("claim referral", e);
+          if (msg) msg.textContent = "Could not claim. Try again.";
+      } finally {
+          if (btn) {
+              const sRef = ref(db, "referrals_v1/summary/" + myUserId);
+              get(sRef)
+                  .then((snap) => {
+                      const d = snap.exists() ? snap.val() : null;
+                      const pr = d && typeof d.pendingReward === "number" ? d.pendingReward : 0;
+                      btn.disabled = pr <= 0;
+                  })
+                  .catch(() => {
+                      if (btn) btn.disabled = false;
+                  });
+          }
+      }
+  }
+
+  async function refreshReferralModalContent() {
+      const universalUrlEl = document.getElementById("referralUniversalUrl");
+      const fcCompose = document.getElementById("referralFarcasterCompose");
+      const fcAdd = document.getElementById("referralFarcasterAddMini");
+      const lead = document.getElementById("referralModalLead");
+      if (!isLoggedIn() || myUserId === "guest") {
+          if (universalUrlEl) universalUrlEl.textContent = "Connect to generate your personal invite link.";
+          if (fcCompose) fcCompose.href = "https://warpcast.com";
+          if (fcAdd) fcAdd.href = "https://warpcast.com";
+          if (lead) {
+              lead.innerHTML =
+                  "Share your link. When someone joins Phrase To Guess through it, you earn referral points. <strong style=\"color:#94a3b8;\">Connect first</strong> to see your link and stats.";
+          }
+          ptgUpdateReferralUiFromSnapshot(null);
+          const btn = document.getElementById("referralClaimBtn");
+          if (btn) btn.disabled = true;
+          return;
+      }
+      if (lead) {
+          lead.innerHTML =
+              "Share your link. When someone joins Phrase To Guess through it, you earn referral points. Claim them here; on-chain payouts will align with the upcoming token.";
+      }
+      const code = await ptgRefCodeFromUserId(myUserId);
+      const origin = ptgReferralInviteOrigin();
+      const u = origin + "/?ref=" + encodeURIComponent(code);
+      if (universalUrlEl) universalUrlEl.textContent = u;
+      const shareText = "Play Phrase To Guess on Base — " + u;
+      if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareText);
+      if (fcAdd) fcAdd.href = "https://warpcast.com/~/add-mini-app?url=" + encodeURIComponent(u);
+      try {
+          const sRef = ref(db, "referrals_v1/summary/" + myUserId);
+          const snap = await get(sRef);
+          ptgUpdateReferralUiFromSnapshot(snap.exists() ? snap.val() : null);
+      } catch (_) {
+          ptgUpdateReferralUiFromSnapshot(null);
+      }
+  }
+
+  async function showReferralModal() {
+      const el = document.getElementById("referralOverlay");
+      if (!el) return;
+      el.classList.add("show");
+      el.setAttribute("aria-hidden", "false");
+      const msg = document.getElementById("referralClaimMsg");
+      if (msg) msg.textContent = "";
+      await refreshReferralModalContent();
+  }
+
+  function closeReferralModal() {
+      const el = document.getElementById("referralOverlay");
+      if (!el) return;
+      el.classList.remove("show");
+      el.setAttribute("aria-hidden", "true");
+  }
+
+  async function copyReferralUniversalLink() {
+      const el = document.getElementById("referralUniversalUrl");
+      const msg = document.getElementById("referralClaimMsg");
+      const t = el && el.textContent ? el.textContent.trim() : "";
+      if (!t || t.indexOf("http") !== 0) {
+          if (msg) msg.textContent = "Connect first to copy your link.";
+          return;
+      }
+      try {
+          await navigator.clipboard.writeText(t);
+          if (msg) msg.textContent = "Link copied.";
+      } catch (_) {
+          try {
+              const ta = document.createElement("textarea");
+              ta.value = t;
+              ta.setAttribute("readonly", "");
+              ta.style.position = "fixed";
+              ta.style.left = "-9999px";
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand("copy");
+              document.body.removeChild(ta);
+              if (msg) msg.textContent = "Link copied.";
+          } catch (e2) {
+              if (msg) msg.textContent = "Could not copy — select the link above.";
+          }
+      }
   }
 
   /** Po sync profilu: jeśli w RTDB jest tylko skrót adresu / brak nicku — dociągnij i zapisz (na bieżąco). */
@@ -3893,6 +4418,12 @@
   // --- DB SYNC ---
   async function syncUserProfile() {
       if (!db) {
+          if (typeof referralSummaryUnsubscribe === "function") {
+              try {
+                  referralSummaryUnsubscribe();
+              } catch (_) {}
+              referralSummaryUnsubscribe = null;
+          }
           mintCalendarDays = mergeMintCalendars(loadMintCalendarFromStorage(), {});
           updateScoreUI();
           updateDailyUI();
@@ -3905,6 +4436,12 @@
                   userProfileUnsubscribe();
               } catch (_) {}
               userProfileUnsubscribe = null;
+          }
+          if (typeof referralSummaryUnsubscribe === "function") {
+              try {
+                  referralSummaryUnsubscribe();
+              } catch (_) {}
+              referralSummaryUnsubscribe = null;
           }
           profileBadgesMinted = { og: false, m10: false, m100: false, m1000: false };
           mintCalendarDays = mergeMintCalendars(loadMintCalendarFromStorage(), {});
@@ -3973,6 +4510,7 @@
       updateDailyUI();
       renderCalendarMonth();
       void refreshMyDisplayNameInRtdb();
+      void ptgEnsureReferralPipeline();
   }
 
   // --- CORE GAME INIT ---
@@ -6747,6 +7285,21 @@
   document.getElementById('connectWalletBtn')?.addEventListener('click', () => connectWalletForPlay());
   document.getElementById('leaderboardBtn').onclick = showLeaderboard;
   document.getElementById('closeLeaderboard').onclick = () => document.getElementById('leaderboardOverlay').classList.remove('show');
+  document.getElementById("referralOpenBtn")?.addEventListener("click", function () {
+      void showReferralModal();
+  });
+  document.getElementById("closeReferralModal")?.addEventListener("click", function () {
+      closeReferralModal();
+  });
+  document.getElementById("referralClaimBtn")?.addEventListener("click", function () {
+      void claimReferralRewardsFromUi();
+  });
+  document.getElementById("referralCopyUniversalBtn")?.addEventListener("click", function () {
+      void copyReferralUniversalLink();
+  });
+  document.getElementById("referralOverlay")?.addEventListener("click", function (ev) {
+      if (ev.target === ev.currentTarget) closeReferralModal();
+  });
 
   let __ptgNameRefreshLastMs = 0;
   document.addEventListener("visibilitychange", () => {

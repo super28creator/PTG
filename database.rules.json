@@ -34,6 +34,10 @@
         ".read": true,
         ".write": true
       }
+    },
+    "referrals_v1": {
+      ".read": true,
+      ".write": true
     }
   }
 }
