@@ -28,8 +28,11 @@ function clip(s, max) {
 
 function defaultDailyFarcaster() {
   return {
-    title: "Phrase To Guess",
-    body: "Daily reminder: play today's game and keep your streak.",
+    title: clip("Guess your phrase today?", 32),
+    body: clip(
+      "Do you guess your phrase today? Play now & keep your streak on Base. 🎯✨",
+      128
+    ),
     target_url: "https://phrasetoguess.xyz/?source=notif-daily",
     uuid: makeUuid(),
   };
@@ -37,8 +40,11 @@ function defaultDailyFarcaster() {
 
 function defaultDailyBase() {
   return {
-    title: clip("Phrase To Guess", 30),
-    message: clip("Daily reminder: play today's game and keep your streak.", 200),
+    title: clip("Guess your phrase today?", 30),
+    message: clip(
+      "Do you guess your phrase today? Play now & keep your streak on Base. 🎯✨",
+      200
+    ),
     target_path: "/?source=notif-daily",
   };
 }

@@ -73,8 +73,9 @@ module.exports = async (req, res) => {
         await sleep(DASHBOARD_REQUEST_GAP_MS);
         try {
           const sendResults = await sendToWallets(baseKey, appUrl, wallets, {
-            title: "Phrase To Guess",
-            message: "Daily reminder: play today's game and keep your streak.",
+            title: "Guess your phrase today?",
+            message:
+              "Do you guess your phrase today? Play now & keep your streak on Base. 🎯✨",
             target_path: "/?source=notif-daily",
           });
           out.base = {
@@ -90,8 +91,8 @@ module.exports = async (req, res) => {
 
     /* --- Farcaster: RTDB tokens → direct API (roll-your-own path) --- */
     const dailyFcNotification = {
-      title: "Phrase To Guess",
-      body: "Daily reminder: play today's game and keep your streak.",
+      title: "Guess your phrase today?",
+      body: "Do you guess your phrase today? Play now & keep your streak on Base. 🎯✨",
       target_url: `${appUrl}/?source=notif-daily`,
       uuid: makeUuid(),
     };
