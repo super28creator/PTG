@@ -1794,6 +1794,25 @@
   </div>
 </div>
 
+<script>
+  (function () {
+      function forceHideLoadingScreen() {
+          var el = document.getElementById("loadingScreen");
+          if (!el) return;
+          el.classList.remove("show");
+          el.style.display = "none";
+      }
+      window.__ptgForceHideLoading = forceHideLoadingScreen;
+      setTimeout(forceHideLoadingScreen, 4500);
+      window.addEventListener("error", function () {
+          setTimeout(forceHideLoadingScreen, 0);
+      });
+      window.addEventListener("unhandledrejection", function () {
+          setTimeout(forceHideLoadingScreen, 0);
+      });
+  })();
+</script>
+
 <script type="module">
   // --- OPTIONAL SDK IMPORTS (nie blokują startu appki) ---
   let sdk = null;
@@ -3304,7 +3323,8 @@
           try { sdk.actions.ready(); } catch (err) { console.warn(err); }
       }
       const safeLoad = setTimeout(() => {
-          document.getElementById("loadingScreen").style.display = "none";
+          if (typeof window.__ptgForceHideLoading === "function") window.__ptgForceHideLoading();
+          else document.getElementById("loadingScreen").style.display = "none";
       }, 2000);
       try {
           const app = initializeApp(firebaseConfig);
@@ -3319,7 +3339,8 @@
 
           refreshOgBadge();
           clearTimeout(safeLoad);
-          document.getElementById("loadingScreen").style.display = "none";
+          if (typeof window.__ptgForceHideLoading === "function") window.__ptgForceHideLoading();
+          else document.getElementById("loadingScreen").style.display = "none";
 
           if (isLoggedIn()) {
               setAuthGateVisible(false);
@@ -3349,7 +3370,8 @@
       } catch (e) {
           console.error("Critical error during startApp", e);
           clearTimeout(safeLoad);
-          document.getElementById("loadingScreen").style.display = "none";
+          if (typeof window.__ptgForceHideLoading === "function") window.__ptgForceHideLoading();
+          else document.getElementById("loadingScreen").style.display = "none";
           refreshOgBadge();
           updateAuthGateUI();
           setAuthGateVisible(true);
