@@ -2233,11 +2233,6 @@
 
   /** Powiadomienia mini app: zapis po tokenie (addFrame / kontekst / webhook). */
   const PTG_NOTIF_ENABLED_KEY = "ptg:add-miniapp:has-token:v1";
-  /** Pierwszy onboarding — dopóki nie „1”, modal przy wejściu (v11: PTG + szary box jak Farcaster). */
-  const PTG_NOTIF_ONBOARDING_DONE_KEY = "ptg:notif-onboarding-v11-done";
-  /** Po onboardingu: ostatnie zamknięcie — powtórka co 7 dni jeśli nadal bez włączenia. */
-  const PTG_NOTIF_LAST_SHOWN_AT_KEY = "ptg:notif-last-shown-at-v3";
-  const PTG_NOTIF_REPEAT_MS = 7 * 24 * 60 * 60 * 1000;
 
   /** Gdzie działa klient: wpływa na kolejność logowania i źródło portfela. */
   let ptgHost = "browser";
@@ -3778,6 +3773,25 @@
       }
   }
 
+  /**
+   * Host (Farcaster/Base) po włączeniu powiadomień publikuje token w `sdk.context.client.notificationDetails`.
+   * Sprawdzenie na starcie pozwala wyciszyć modal dla osób, które już mają włączone.
+   */
+  async function ptgHostHasNotificationToken() {
+      try {
+          if (!sdk || !sdk.context) return false;
+          const ctx = await Promise.resolve(sdk.context);
+          const tok = ctx && ctx.client && ctx.client.notificationDetails && ctx.client.notificationDetails.token;
+          return Boolean(tok);
+      } catch (_) {
+          return false;
+      }
+  }
+
+  /**
+   * Modal ma pokazywać się przy każdym otwarciu apki, dopóki użytkownik nie włączy powiadomień —
+   * identycznie jak inne Mini Appki (ChessMate, FightNight).
+   */
   function notifPromptShouldShow() {
       if (!isLoggedIn()) return false;
       try {
@@ -3788,22 +3802,9 @@
           return false;
       }
       try {
-          if (localStorage.getItem(PTG_NOTIF_ONBOARDING_DONE_KEY) !== "1") return true;
-      } catch (_) {
-          return true;
-      }
-      try {
           if (localStorage.getItem(PTG_NOTIF_ENABLED_KEY) === "1") return false;
       } catch (_) {}
-      try {
-          const t = localStorage.getItem(PTG_NOTIF_LAST_SHOWN_AT_KEY);
-          if (!t) return true;
-          const ts = parseInt(t, 10);
-          if (!Number.isFinite(ts)) return true;
-          return Date.now() - ts >= PTG_NOTIF_REPEAT_MS;
-      } catch (_) {
-          return true;
-      }
+      return true;
   }
 
   function hideNotificationPrompt() {
@@ -3824,13 +3825,9 @@
       el.setAttribute("aria-hidden", "false");
   }
 
-  /** Not now / × — kończy onboarding; nie wyłącza powiadomień w kliencie. */
+  /** Not now / × — tylko zamyka modal w tej sesji; następne otwarcie apki znów go pokaże (dopóki brak tokenu). */
   function onNotificationPromptDismiss() {
       ptgClearNotifHint();
-      try {
-          localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
-          localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
-      } catch (_) {}
       hideNotificationPrompt();
   }
 
@@ -3962,7 +3959,6 @@
               var ok = !!(details && details.token);
               if (ok) {
                   try {
-                      localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
                       localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1");
                   } catch (_) {}
                   ptgClearNotifHint();
@@ -3993,10 +3989,6 @@
                   );
                   return;
               }
-              try {
-                  localStorage.setItem(PTG_NOTIF_ONBOARDING_DONE_KEY, "1");
-                  localStorage.setItem(PTG_NOTIF_LAST_SHOWN_AT_KEY, String(Date.now()));
-              } catch (_) {}
               ptgClearNotifHint();
               hideNotificationPrompt();
           })
@@ -4014,8 +4006,36 @@
       return !el.classList.contains("show");
   }
 
+  /**
+   * Globalny nasłuch — gdy host (Farcaster / Base) włączy powiadomienia w tle,
+   * zapamiętujemy to i chowamy modal (ten sam wzorzec w obu aplikacjach).
+   */
+  function ptgWireHostNotificationListeners() {
+      if (!sdk || typeof sdk.on !== "function" || ptgWireHostNotificationListeners._done) return;
+      ptgWireHostNotificationListeners._done = true;
+      function onEnabled(payload) {
+          try {
+              var tok = payload && payload.notificationDetails && payload.notificationDetails.token;
+              if (tok) {
+                  try { localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1"); } catch (_) {}
+                  hideNotificationPrompt();
+              }
+          } catch (_) {}
+      }
+      function onDisabled() {
+          try { localStorage.removeItem(PTG_NOTIF_ENABLED_KEY); } catch (_) {}
+      }
+      try { sdk.on("notificationsEnabled", onEnabled); } catch (_) {}
+      try { sdk.on("miniAppAdded", onEnabled); } catch (_) {}
+      try { sdk.on("frameAdded", onEnabled); } catch (_) {}
+      try { sdk.on("notificationsDisabled", onDisabled); } catch (_) {}
+      try { sdk.on("miniAppRemoved", onDisabled); } catch (_) {}
+      try { sdk.on("frameRemoved", onDisabled); } catch (_) {}
+  }
+
   function scheduleNotificationPrompt() {
       if (!notifPromptShouldShow()) return;
+      ptgWireHostNotificationListeners();
       var attempts = 0;
       function tick() {
           attempts += 1;
@@ -4023,7 +4043,18 @@
               if (attempts < 60) setTimeout(tick, 100);
               return;
           }
-          showNotificationPrompt();
+          ptgHostHasNotificationToken()
+              .then(function (has) {
+                  if (has) {
+                      try { localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1"); } catch (_) {}
+                      return;
+                  }
+                  if (!notifPromptShouldShow()) return;
+                  showNotificationPrompt();
+              })
+              .catch(function () {
+                  if (notifPromptShouldShow()) showNotificationPrompt();
+              });
       }
       setTimeout(tick, 200);
   }
