@@ -778,239 +778,6 @@
     }
     .modal-overlay.show { display: flex; }
 
-    /* Powiadomienia mini app — sheet jak systemowy dialog (Base / Warpcast) */
-    #ptgNotifPrompt {
-        z-index: 10060;
-        align-items: flex-end;
-        justify-content: center;
-        /* Base App: pasek wyszukiwania / nawigacji — unieś kartę nad dolny UI */
-        padding-bottom: max(100px, calc(env(safe-area-inset-bottom, 0px) + 72px));
-    }
-    @media (min-width: 560px) {
-        #ptgNotifPrompt {
-            align-items: center;
-            padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
-        }
-    }
-    #ptgNotifPrompt .ptg-notif-sheet {
-        position: relative;
-        width: 100%;
-        max-width: 460px;
-        margin: 0 auto;
-        border-radius: 28px 28px 0 0;
-        padding: 20px 20px 24px;
-        background: linear-gradient(180deg, rgba(22, 24, 34, 0.99) 0%, rgba(12, 14, 22, 0.99) 100%);
-        border: 1px solid rgba(124, 58, 237, 0.35);
-        border-bottom: none;
-        box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
-        text-align: center;
-        animation: ptgNotifSheetIn 0.38s var(--ease-base) forwards;
-        transform: translateY(0);
-    }
-    @media (min-width: 560px) {
-        #ptgNotifPrompt .ptg-notif-sheet {
-            border-radius: 28px;
-            border: 1px solid rgba(124, 58, 237, 0.35);
-            padding: 30px 28px 32px;
-        }
-    }
-    @keyframes ptgNotifSheetIn {
-        from { opacity: 0; transform: translateY(22px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    #ptgNotifPrompt .ptg-notif-grabber {
-        width: 40px;
-        height: 5px;
-        border-radius: 99px;
-        background: rgba(255, 255, 255, 0.18);
-        margin: 0 auto 14px;
-    }
-    #ptgNotifPrompt .ptg-notif-app-icon-wrap {
-        position: relative;
-        width: 72px;
-        height: 72px;
-        margin: 0 auto 14px;
-        border-radius: 18px;
-        overflow: visible;
-        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
-        background: rgba(255, 255, 255, 0.06);
-    }
-    #ptgNotifPrompt .ptg-notif-app-icon-wrap img {
-        width: 100%;
-        height: 100%;
-        border-radius: 18px;
-        object-fit: cover;
-        display: block;
-    }
-    #ptgNotifPrompt .ptg-notif-app-plus {
-        position: absolute;
-        top: -6px;
-        right: -6px;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: linear-gradient(145deg, #8b5cf6, #6d28d9);
-        color: #fff;
-        font-size: 15px;
-        font-weight: 800;
-        line-height: 24px;
-        text-align: center;
-        border: 2px solid rgba(14, 16, 24, 0.98);
-        box-shadow: 0 2px 8px rgba(109, 40, 217, 0.5);
-    }
-    #ptgNotifPrompt .ptg-notif-title {
-        margin: 0 0 20px;
-        font-size: 1.125rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        color: #fff;
-        line-height: 1.3;
-        padding: 0 8px;
-    }
-    /* Jak w kliencie Farcaster: lista uprawnień w szarym „configu” */
-    #ptgNotifPrompt .ptg-notif-perms {
-        background: rgba(255, 255, 255, 0.07);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        margin: 0 0 18px;
-        padding: 4px 0;
-        overflow: hidden;
-    }
-    #ptgNotifPrompt .ptg-notif-feature-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        text-align: left;
-    }
-    #ptgNotifPrompt .ptg-notif-feature-list li {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 14px;
-        font-size: 0.9375rem;
-        font-weight: 600;
-        color: rgba(248, 250, 252, 0.96);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    #ptgNotifPrompt .ptg-notif-feature-list li:last-child {
-        border-bottom: none;
-    }
-    #ptgNotifPrompt .ptg-notif-fic {
-        font-size: 1.25rem;
-        line-height: 1;
-        width: 28px;
-        text-align: center;
-        flex-shrink: 0;
-    }
-    #ptgNotifPrompt .ptg-notif-hint {
-        display: none;
-        margin: 0 0 18px;
-        font-size: 0.8125rem;
-        font-weight: 500;
-        color: rgba(186, 198, 218, 0.92);
-        line-height: 1.5;
-        text-align: center;
-    }
-    #ptgNotifPrompt .ptg-notif-hint.show {
-        display: block;
-    }
-    #ptgNotifPrompt .ptg-notif-lead {
-        margin: 0 0 10px;
-        font-size: 0.94rem;
-        font-weight: 600;
-        color: rgba(232, 240, 255, 0.95);
-        line-height: 1.55;
-    }
-    #ptgNotifPrompt .ptg-notif-detail {
-        margin: 0 0 22px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        color: rgba(177, 183, 195, 0.9);
-        line-height: 1.55;
-    }
-    #ptgNotifPrompt .ptg-notif-actions {
-        display: flex;
-        flex-direction: row;
-        gap: 10px;
-        align-items: stretch;
-    }
-    #ptgNotifPrompt .ptg-notif-btn-later {
-        flex: 1 1 50%;
-        min-width: 0;
-        padding: 14px 12px;
-        font-size: 15px;
-        font-weight: 700;
-        border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.22);
-        background: rgba(255, 255, 255, 0.06);
-        color: rgba(248, 250, 252, 0.95);
-        cursor: pointer;
-    }
-    #ptgNotifPrompt .ptg-notif-btn-later:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    #ptgNotifPrompt .ptg-notif-btn-add {
-        flex: 1 1 50%;
-        min-width: 0;
-        padding: 14px 12px;
-        font-size: 15px;
-        font-weight: 800;
-        border-radius: 999px;
-        border: none;
-        cursor: pointer;
-        background: linear-gradient(145deg, #8b5cf6, #6d28d9);
-        color: #fff;
-        box-shadow: 0 4px 16px rgba(109, 40, 217, 0.4);
-    }
-    /* Base App — niebieski akcent (jak Base Wallet / dashboard.base.org) */
-    #ptgNotifPrompt[data-ptg-surface="base"] .ptg-notif-sheet {
-        border-color: rgba(10, 88, 255, 0.38);
-    }
-    @media (min-width: 560px) {
-        #ptgNotifPrompt[data-ptg-surface="base"] .ptg-notif-sheet {
-            border-color: rgba(10, 88, 255, 0.38);
-        }
-    }
-    #ptgNotifPrompt[data-ptg-surface="base"] .ptg-notif-app-plus {
-        background: linear-gradient(145deg, #3b82f6, #0052ff);
-        box-shadow: 0 2px 8px rgba(0, 82, 255, 0.55);
-    }
-    #ptgNotifPrompt[data-ptg-surface="base"] .ptg-notif-btn-add {
-        background: linear-gradient(145deg, #3b82f6, #0052ff);
-        box-shadow: 0 4px 16px rgba(0, 82, 255, 0.4);
-    }
-    #ptgNotifPrompt .ptg-notif-btn-add:disabled {
-        opacity: 0.65;
-        cursor: wait;
-    }
-    #ptgNotifPrompt .ptg-notif-close {
-        position: absolute;
-        top: 14px;
-        right: 14px;
-        width: 40px;
-        height: 40px;
-        margin: 0;
-        padding: 0;
-        border: none;
-        border-radius: 12px;
-        background: transparent;
-        color: rgba(255, 255, 255, 0.38);
-        font-size: 1.5rem;
-        line-height: 1;
-        font-weight: 300;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2;
-        opacity: 0.75;
-    }
-    #ptgNotifPrompt .ptg-notif-close:hover {
-        color: rgba(255, 255, 255, 0.55);
-        background: rgba(255, 255, 255, 0.06);
-    }
-
     .auth-gate-card { padding-top: 28px; padding-bottom: 28px; }
     .auth-gate-title {
         margin: 0 0 8px;
@@ -1820,29 +1587,6 @@
             <span id="connectWalletBtnLabel">Connect wallet</span>
         </button>
         <p id="authGateError" style="margin: 14px 0 0; min-height: 22px; font-size: 13px; color: var(--danger); font-weight: 600; text-align: center;"></p>
-    </div>
-</div>
-
-<div class="modal-overlay" id="ptgNotifPrompt" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="ptgNotifTitle">
-    <div class="ptg-notif-sheet">
-        <button type="button" id="ptgNotifCloseBtn" class="ptg-notif-close" aria-label="Close" title="Close">×</button>
-        <div class="ptg-notif-grabber" aria-hidden="true"></div>
-        <div class="ptg-notif-app-icon-wrap" aria-hidden="true">
-            <img id="ptgNotifAppIcon" src="https://phrasetoguess.xyz/api/farcaster-asset?type=icon" width="72" height="72" alt="" decoding="async" />
-            <span class="ptg-notif-app-plus" aria-hidden="true">+</span>
-        </div>
-        <h2 id="ptgNotifTitle" class="ptg-notif-title">Add PTG to Farcaster</h2>
-        <div class="ptg-notif-perms">
-            <ul class="ptg-notif-feature-list" aria-hidden="true">
-                <li><span class="ptg-notif-fic" aria-hidden="true">📱</span> <span id="ptgNotifFeatureAdd">Add to Farcaster</span></li>
-                <li><span class="ptg-notif-fic" aria-hidden="true">🔔</span> <span id="ptgNotifFeatureNotif">Enable notifications</span></li>
-            </ul>
-        </div>
-        <p id="ptgNotifHint" class="ptg-notif-hint" role="status" aria-live="polite"></p>
-        <div class="ptg-notif-actions">
-            <button type="button" id="ptgNotifLaterBtn" class="ptg-notif-btn-later">Not now</button>
-            <button type="button" id="ptgNotifAddBtn" class="ptg-notif-btn-add">Add</button>
-        </div>
     </div>
 </div>
 
@@ -3822,85 +3566,108 @@
       return true;
   }
 
-  function hideNotificationPrompt() {
-      const el = document.getElementById("ptgNotifPrompt");
-      if (!el) return;
-      el.classList.remove("show");
-      el.setAttribute("aria-hidden", "true");
-  }
-
   /**
-   * Base App (Coinbase Wallet / Base Wallet) ma niebieski akcent; Farcaster (Warpcast) — fioletowy.
-   * Reszta UI i akcja (`addMiniApp`) są takie same — różni się tylko copy + kolor.
+   * Globalny nasłuch — host (Farcaster/Base) publikuje zdarzenia włączenia/wyłączenia powiadomień.
+   * Aktualizujemy lokalną flagę, żeby kolejne otwarcia apki wiedziały, czy trzeba jeszcze o to prosić.
    */
-  function ptgNotifDetectSurface() {
-      if (ptgHost === "base") return "base";
-      if (ptgHost === "farcaster") return "farcaster";
-      try {
-          const ua = (navigator.userAgent || "").toLowerCase();
-          if (ua.indexOf("coinbase") >= 0 || ua.indexOf("cbwallet") >= 0 || ua.indexOf("base") >= 0) return "base";
-          if (ua.indexOf("warpcast") >= 0 || ua.indexOf("farcaster") >= 0) return "farcaster";
-      } catch (_) {}
-      return "farcaster";
-  }
-
-  function showNotificationPrompt() {
-      const el = document.getElementById("ptgNotifPrompt");
-      if (!el) return;
-      const surface = ptgNotifDetectSurface();
-      try { el.setAttribute("data-ptg-surface", surface); } catch (_) {}
-      const titleEl = document.getElementById("ptgNotifTitle");
-      if (titleEl) {
-          titleEl.textContent = surface === "base" ? "Add PTG to Base" : "Add PTG to Farcaster";
+  function ptgWireHostNotificationListeners() {
+      if (!sdk || typeof sdk.on !== "function" || ptgWireHostNotificationListeners._done) return;
+      ptgWireHostNotificationListeners._done = true;
+      function onEnabled(payload) {
+          try {
+              var tok = payload && payload.notificationDetails && payload.notificationDetails.token;
+              if (tok) {
+                  try { localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1"); } catch (_) {}
+              }
+          } catch (_) {}
       }
-      const addLbl = document.getElementById("ptgNotifFeatureAdd");
-      if (addLbl) addLbl.textContent = surface === "base" ? "Add to Base App" : "Add to Farcaster";
-      const notifLbl = document.getElementById("ptgNotifFeatureNotif");
-      if (notifLbl) notifLbl.textContent = "Enable notifications";
-      el.classList.add("show");
-      el.setAttribute("aria-hidden", "false");
-  }
-
-  /** Not now / × — tylko zamyka modal w tej sesji; następne otwarcie apki znów go pokaże (dopóki brak tokenu). */
-  function onNotificationPromptDismiss() {
-      ptgClearNotifHint();
-      hideNotificationPrompt();
-  }
-
-  function ptgClearNotifHint() {
-      var h = document.getElementById("ptgNotifHint");
-      if (!h) return;
-      h.textContent = "";
-      h.classList.remove("show");
-  }
-
-  function ptgShowNotifHint(html) {
-      var h = document.getElementById("ptgNotifHint");
-      if (!h) return;
-      h.innerHTML = html;
-      h.classList.add("show");
-  }
-
-  function ptgSetNotifEnableBusy(busy) {
-      var addBtn = document.getElementById("ptgNotifAddBtn");
-      var laterBtn = document.getElementById("ptgNotifLaterBtn");
-      var closeBtn = document.getElementById("ptgNotifCloseBtn");
-      if (addBtn) {
-          addBtn.disabled = !!busy;
-          if (busy) {
-              if (!addBtn.dataset.ptgLabel) addBtn.dataset.ptgLabel = addBtn.textContent || "Add";
-              addBtn.textContent = "Adding…";
-          } else {
-              addBtn.textContent = addBtn.dataset.ptgLabel || "Add";
-          }
+      function onDisabled() {
+          try { localStorage.removeItem(PTG_NOTIF_ENABLED_KEY); } catch (_) {}
       }
-      if (laterBtn) laterBtn.disabled = !!busy;
-      if (closeBtn) closeBtn.disabled = !!busy;
+      try { sdk.on("notificationsEnabled", onEnabled); } catch (_) {}
+      try { sdk.on("miniAppAdded", onEnabled); } catch (_) {}
+      try { sdk.on("frameAdded", onEnabled); } catch (_) {}
+      try { sdk.on("notificationsDisabled", onDisabled); } catch (_) {}
+      try { sdk.on("miniAppRemoved", onDisabled); } catch (_) {}
+      try { sdk.on("frameRemoved", onDisabled); } catch (_) {}
   }
 
   /**
-   * Po addMiniApp host czasem dopiero później ustawia token w kontekście / wysyła zdarzenie.
-   * Nie da się z JS przełączyć natywnego switcha w menu ⋯ Warpcast — tylko poczekać i pokazać instrukcję.
+   * Identyczny przepływ jak w FightNight / ChessMate — nie rysujemy własnego modala.
+   * Wołamy `sdk.actions.addMiniApp()` i klient hosta (Warpcast / Farcaster / Base App)
+   * sam renderuje swój natywny system sheet (grabber + ikona + „Add to Farcaster/Base" + „Enable notifications" + Not now / Add).
+   * Jedno wywołanie obsługuje wszystkie apki z Mini App SDK.
+   */
+  function scheduleNotificationPrompt() {
+      if (!notifPromptShouldShow()) return;
+      ptgWireHostNotificationListeners();
+      if (scheduleNotificationPrompt._inflight) return;
+
+      var attempts = 0;
+      function tick() {
+          attempts += 1;
+          if (!ptgNotifLoadingScreenHidden()) {
+              if (attempts < 60) setTimeout(tick, 100);
+              return;
+          }
+          // Zawsze aktualny stan z kontekstu hosta (nie ufamy lokalnej flagi — może być nieaktualna po wyłączeniu powiadomień w ustawieniach klienta).
+          ptgHostHasNotificationToken()
+              .then(function (has) {
+                  if (has) {
+                      try { localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1"); } catch (_) {}
+                      return;
+                  }
+                  try { localStorage.removeItem(PTG_NOTIF_ENABLED_KEY); } catch (_) {}
+                  triggerNativeAddMiniApp();
+              })
+              .catch(function () {
+                  triggerNativeAddMiniApp();
+              });
+      }
+      setTimeout(tick, 200);
+  }
+
+  function ptgNotifLoadingScreenHidden() {
+      var el = document.getElementById("loadingScreen");
+      if (!el) return true;
+      try { if (el.style.display === "none") return true; } catch (_) {}
+      return !el.classList.contains("show");
+  }
+
+  function triggerNativeAddMiniApp() {
+      if (scheduleNotificationPrompt._inflight) return;
+      var addFn = ptgGetAddFrameAction();
+      if (!addFn) return;
+      scheduleNotificationPrompt._inflight = true;
+
+      var chain = Promise.resolve();
+      if (sdk && sdk.actions && typeof sdk.actions.ready === "function") {
+          chain = chain.then(function () {
+              return Promise.resolve(sdk.actions.ready({})).catch(function () {});
+          });
+      }
+      chain
+          .then(function () { return addFn(); })
+          .then(function () {
+              // Token przychodzi asynchronicznie (event + kontekst). Opcjonalnie poczekaj chwilę, żeby zapisać flagę.
+              return ptgWaitForNotificationTokenAfterAdd(8000);
+          })
+          .then(function (details) {
+              if (details && details.token) {
+                  try { localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1"); } catch (_) {}
+              }
+          })
+          .catch(function (err) {
+              // Błędy (RejectedByUser, InvalidDomain, itd.) tylko logujemy — host sam poinformuje usera.
+              try { console.warn("addMiniApp", err && err.name, err && err.message); } catch (_) {}
+          })
+          .finally(function () {
+              scheduleNotificationPrompt._inflight = false;
+          });
+  }
+
+  /**
+   * Po addMiniApp host wysyła zdarzenie/aktualizuje kontekst. Krótki polling, żeby nie blokować UI.
    */
   function ptgWaitForNotificationTokenAfterAdd(timeoutMs) {
       return new Promise(function (resolve) {
@@ -3932,193 +3699,22 @@
                   sdk.on("frameAdded", onEvt);
               } catch (_) {}
           }
-          function poll() {
+          (function poll() {
               if (resolved) return;
-              if (Date.now() >= deadline) {
-                  try {
-                      if (sdk && sdk.off) {
-                          sdk.off("notificationsEnabled", onEvt);
-                          sdk.off("miniAppAdded", onEvt);
-                          sdk.off("frameAdded", onEvt);
-                      }
-                  } catch (_) {}
-                  finish(null);
-                  return;
-              }
+              if (Date.now() >= deadline) { finish(null); return; }
               Promise.resolve(sdk ? sdk.context : null)
                   .then(function (ctx) {
                       if (resolved) return;
                       try {
-                          if (
-                              ctx &&
-                              ctx.client &&
-                              ctx.client.notificationDetails &&
-                              ctx.client.notificationDetails.token
-                          ) {
-                              finish(ctx.client.notificationDetails);
-                              return;
-                          }
+                          var tok = ctx && ctx.client && ctx.client.notificationDetails && ctx.client.notificationDetails.token;
+                          if (tok) { finish(ctx.client.notificationDetails); return; }
                       } catch (_) {}
                       setTimeout(poll, 380);
                   })
-                  .catch(function () {
-                      if (!resolved) setTimeout(poll, 380);
-                  });
-          }
-          poll();
+                  .catch(function () { if (!resolved) setTimeout(poll, 380); });
+          })();
       });
   }
-
-  /* Suwak w menu Warpcast/Base = UI hosta; JS w mini apce nie może go animować. Inne apki: ten sam addMiniApp + token od hosta. */
-  function onNotificationPromptEnable() {
-      var addFn = ptgGetAddFrameAction();
-      if (!addFn) {
-          onNotificationPromptDismiss();
-          return;
-      }
-      ptgClearNotifHint();
-      ptgSetNotifEnableBusy(true);
-      var chain = Promise.resolve();
-      if (sdk && sdk.actions && typeof sdk.actions.ready === "function") {
-          chain = chain.then(function () {
-              return Promise.resolve(sdk.actions.ready({})).catch(function () {});
-          });
-      }
-      chain
-          .then(function () {
-              return addFn();
-          })
-          .then(function () {
-              return ptgWaitForNotificationTokenAfterAdd(10000);
-          })
-          .then(function (details) {
-              var ok = !!(details && details.token);
-              if (ok) {
-                  try {
-                      localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1");
-                  } catch (_) {}
-                  ptgClearNotifHint();
-                  hideNotificationPrompt();
-              } else {
-                  if (ptgHost === "base") {
-                      ptgShowNotifHint(
-                          "<strong>Base App</strong>: powiadomienia po przypięciu apki i zgodzie w aplikacji Base (portfel). Spróbuj ponownie <strong>Add</strong> po zapisaniu w Base."
-                      );
-                  } else {
-                      ptgShowNotifHint(
-                          "Jeśli Warpcast nie dokończył dodawania: menu <strong>⋯</strong> → włącz powiadomienia, potem ponownie <strong>Add</strong>."
-                      );
-                  }
-              }
-          })
-          .catch(function (err) {
-              console.warn("addFrame / addMiniApp", err);
-              var name = err && err.name ? String(err.name) : "";
-              var msg = err && err.message ? String(err.message) : "";
-              var isDomain =
-                  /InvalidDomain|invalid_domain/i.test(name) ||
-                  /invalid.*manifest|domain.*manifest|manifest.*domain/i.test(msg);
-              if (isDomain) {
-                  ptgShowNotifHint(
-                      "Z dokumentacji Farcaster: <strong>addMiniApp</strong> działa tylko na domenie zgodnej z <strong>homeUrl</strong> w manifestie (np. <strong>phrasetoguess.xyz</strong>). " +
-                          "Otwórz grę pod tym adresem — inny host (np. podgląd Vercel) nie doda apki."
-                  );
-                  return;
-              }
-              ptgClearNotifHint();
-              hideNotificationPrompt();
-          })
-          .finally(function () {
-              ptgSetNotifEnableBusy(false);
-          });
-  }
-
-  function ptgNotifLoadingScreenHidden() {
-      var el = document.getElementById("loadingScreen");
-      if (!el) return true;
-      try {
-          if (el.style.display === "none") return true;
-      } catch (_) {}
-      return !el.classList.contains("show");
-  }
-
-  /**
-   * Globalny nasłuch — gdy host (Farcaster / Base) włączy powiadomienia w tle,
-   * zapamiętujemy to i chowamy modal (ten sam wzorzec w obu aplikacjach).
-   */
-  function ptgWireHostNotificationListeners() {
-      if (!sdk || typeof sdk.on !== "function" || ptgWireHostNotificationListeners._done) return;
-      ptgWireHostNotificationListeners._done = true;
-      function onEnabled(payload) {
-          try {
-              var tok = payload && payload.notificationDetails && payload.notificationDetails.token;
-              if (tok) {
-                  try { localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1"); } catch (_) {}
-                  hideNotificationPrompt();
-              }
-          } catch (_) {}
-      }
-      function onDisabled() {
-          try { localStorage.removeItem(PTG_NOTIF_ENABLED_KEY); } catch (_) {}
-      }
-      try { sdk.on("notificationsEnabled", onEnabled); } catch (_) {}
-      try { sdk.on("miniAppAdded", onEnabled); } catch (_) {}
-      try { sdk.on("frameAdded", onEnabled); } catch (_) {}
-      try { sdk.on("notificationsDisabled", onDisabled); } catch (_) {}
-      try { sdk.on("miniAppRemoved", onDisabled); } catch (_) {}
-      try { sdk.on("frameRemoved", onDisabled); } catch (_) {}
-  }
-
-  function scheduleNotificationPrompt() {
-      if (!notifPromptShouldShow()) return;
-      ptgWireHostNotificationListeners();
-      var attempts = 0;
-      function tick() {
-          attempts += 1;
-          if (!ptgNotifLoadingScreenHidden()) {
-              if (attempts < 60) setTimeout(tick, 100);
-              return;
-          }
-          /**
-           * ZAWSZE czytamy stan z kontekstu hosta — unika sytuacji, w której użytkownik wyłączył
-           * powiadomienia w ustawieniach klienta, a lokalna flaga PTG_NOTIF_ENABLED_KEY jest nieaktualna.
-           */
-          ptgHostHasNotificationToken()
-              .then(function (has) {
-                  if (has) {
-                      try { localStorage.setItem(PTG_NOTIF_ENABLED_KEY, "1"); } catch (_) {}
-                      return;
-                  }
-                  try { localStorage.removeItem(PTG_NOTIF_ENABLED_KEY); } catch (_) {}
-                  if (!notifPromptShouldShow()) return;
-                  showNotificationPrompt();
-              })
-              .catch(function () {
-                  if (notifPromptShouldShow()) showNotificationPrompt();
-              });
-      }
-      setTimeout(tick, 200);
-  }
-
-  function initNotificationPromptUi() {
-      var add = document.getElementById("ptgNotifAddBtn");
-      var lat = document.getElementById("ptgNotifLaterBtn");
-      var xb = document.getElementById("ptgNotifCloseBtn");
-      if (add && !add.dataset.ptgBound) {
-          add.dataset.ptgBound = "1";
-          add.addEventListener("click", onNotificationPromptEnable);
-      }
-      if (lat && !lat.dataset.ptgBound) {
-          lat.dataset.ptgBound = "1";
-          lat.addEventListener("click", onNotificationPromptDismiss);
-      }
-      if (xb && !xb.dataset.ptgBound) {
-          xb.dataset.ptgBound = "1";
-          xb.addEventListener("click", onNotificationPromptDismiss);
-      }
-  }
-
-  initNotificationPromptUi();
 
   // --- DB SYNC ---
   async function syncUserProfile() {
