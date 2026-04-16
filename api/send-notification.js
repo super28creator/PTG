@@ -9,6 +9,7 @@ const {
   fetchOptInWalletAddresses,
   sendToWallets,
 } = require("../lib/base-dashboard-notifications.js");
+const { hasServiceAccount } = require("../lib/fc-notif-store.js");
 
 function makeUuid() {
   try {
@@ -53,6 +54,7 @@ module.exports = async (req, res) => {
       docs: {
         farcaster: "Neynar + NEYNAR_API_KEY; test: target_fids or env FC_TEST_FID",
         base: "BASE_DASHBOARD_API_KEY + BASE_APP_URL; test: wallet_addresses or notification.wallet_addresses or env BASE_TEST_WALLET",
+        farcaster_tokens: "FIREBASE_SERVICE_ACCOUNT_JSON + webhook — stores Warpcast tokens per FID; sends via api.farcaster.xyz before Neynar",
         body: "Optional nested object notification: { title, body, message, target_path, target_fids, wallet_addresses }",
       },
     });
@@ -70,56 +72,82 @@ module.exports = async (req, res) => {
 
     const out = { ok: true, mode, channel, farcaster: null, base: null };
 
-    /* --- Farcaster / Neynar --- */
+    /* --- Farcaster: direct API (stored tokens) then Neynar fallback --- */
     if (channel === "farcaster" || channel === "both") {
       const apiKey = process.env.NEYNAR_API_KEY;
-      if (!apiKey) {
+
+      const notification =
+        mode === "test"
+          ? {
+              title: clip(n.title || "Phrase To Guess", 32),
+              body: clip(n.body || "Test notification from Phrase To Guess.", 128),
+              target_url: String(n.target_url || "https://phrasetoguess.xyz/?source=notif-test"),
+              uuid: String(n.uuid || makeUuid()),
+            }
+          : {
+              ...defaultDailyFarcaster(),
+              ...(n.title ? { title: clip(n.title, 32) } : {}),
+              ...(n.body ? { body: clip(n.body, 128) } : {}),
+              ...(n.target_url ? { target_url: String(n.target_url) } : {}),
+              ...(n.uuid ? { uuid: String(n.uuid) } : {}),
+            };
+
+      let target_fids = Array.isArray(body.target_fids)
+        ? body.target_fids
+            .map((x) => Number(x))
+            .filter((x) => Number.isInteger(x) && x > 0)
+            .slice(0, 100)
+        : [];
+      if (mode === "test" && target_fids.length === 0 && process.env.FC_TEST_FID) {
+        const fid = Number(String(process.env.FC_TEST_FID).trim());
+        if (Number.isInteger(fid) && fid > 0) target_fids = [fid];
+      }
+      if (mode === "test" && target_fids.length === 0 && process.env.FC_TEST_FIDS) {
+        const extra = String(process.env.FC_TEST_FIDS)
+          .split(/[\s,]+/)
+          .map((s) => Number(s.trim()))
+          .filter((x) => Number.isInteger(x) && x > 0)
+          .slice(0, 100);
+        if (extra.length) target_fids = extra;
+      }
+      if (target_fids.length === 0 && Array.isArray(n.target_fids)) {
+        target_fids = n.target_fids
+          .map((x) => Number(x))
+          .filter((x) => Number.isInteger(x) && x > 0)
+          .slice(0, 100);
+      }
+
+      let directMeta = null;
+      let neynarTargetFids = target_fids;
+      if (hasServiceAccount() && target_fids.length > 0) {
+        const { sendDirectToFids } = require("../lib/fc-send-direct.js");
+        const { results, okFids } = await sendDirectToFids(target_fids, notification);
+        directMeta = { results, okFids };
+        neynarTargetFids = target_fids.filter((fid) => !okFids.includes(fid));
+      }
+
+      const needNeynarBroadcast = target_fids.length === 0;
+      const needNeynarSubset = neynarTargetFids.length > 0;
+      const needNeynar = needNeynarBroadcast || needNeynarSubset;
+
+      if (!needNeynar && target_fids.length > 0) {
+        out.farcaster = {
+          ok: true,
+          via: "farcaster_direct_api",
+          direct: directMeta,
+          notification,
+        };
+      } else if (needNeynar && !apiKey) {
+        out.farcaster = {
+          ok: false,
+          error: "missing_neynar_api_key",
+          hint: "Broadcast (empty target_fids) still needs Neynar; or complete direct sends for all FIDs",
+          direct: directMeta,
+        };
         if (channel === "farcaster") {
           return res.status(500).json({ ok: false, error: "missing_neynar_api_key" });
         }
-        out.farcaster = { skipped: true, reason: "missing_neynar_api_key" };
-      } else {
-        const notification =
-          mode === "test"
-            ? {
-                title: clip(n.title || "Phrase To Guess", 32),
-                body: clip(n.body || "Test notification from Phrase To Guess.", 128),
-                target_url: String(n.target_url || "https://phrasetoguess.xyz/?source=notif-test"),
-                uuid: String(n.uuid || makeUuid()),
-              }
-            : {
-                ...defaultDailyFarcaster(),
-                ...(n.title ? { title: clip(n.title, 32) } : {}),
-                ...(n.body ? { body: clip(n.body, 128) } : {}),
-                ...(n.target_url ? { target_url: String(n.target_url) } : {}),
-                ...(n.uuid ? { uuid: String(n.uuid) } : {}),
-              };
-
-        let target_fids = Array.isArray(body.target_fids)
-          ? body.target_fids
-              .map((x) => Number(x))
-              .filter((x) => Number.isInteger(x) && x > 0)
-              .slice(0, 100)
-          : [];
-        if (mode === "test" && target_fids.length === 0 && process.env.FC_TEST_FID) {
-          const fid = Number(String(process.env.FC_TEST_FID).trim());
-          if (Number.isInteger(fid) && fid > 0) target_fids = [fid];
-        }
-        if (mode === "test" && target_fids.length === 0 && process.env.FC_TEST_FIDS) {
-          const extra = String(process.env.FC_TEST_FIDS)
-            .split(/[\s,]+/)
-            .map((s) => Number(s.trim()))
-            .filter((x) => Number.isInteger(x) && x > 0)
-            .slice(0, 100);
-          if (extra.length) target_fids = extra;
-        }
-        if (target_fids.length === 0 && Array.isArray(n.target_fids)) {
-          target_fids = n.target_fids
-            .map((x) => Number(x))
-            .filter((x) => Number.isInteger(x) && x > 0)
-            .slice(0, 100);
-        }
-
+      } else if (needNeynar && apiKey) {
         const neynarRes = await fetch("https://api.neynar.com/v2/farcaster/frame/notifications/", {
           method: "POST",
           headers: {
@@ -127,7 +155,7 @@ module.exports = async (req, res) => {
             "x-api-key": apiKey,
           },
           body: JSON.stringify({
-            target_fids,
+            target_fids: neynarTargetFids,
             notification,
           }),
         });
@@ -137,21 +165,29 @@ module.exports = async (req, res) => {
           json = text ? JSON.parse(text) : null;
         } catch (_) {}
         if (!neynarRes.ok) {
-          out.farcaster = { ok: false, status: neynarRes.status, body: json || text };
+          out.farcaster = {
+            ok: false,
+            status: neynarRes.status,
+            body: json || text,
+            direct: directMeta,
+            neynar_target_fids: neynarTargetFids,
+          };
           if (channel === "farcaster") {
             return res.status(neynarRes.status).json({
               ok: false,
               error: "neynar_send_failed",
               neynar_status: neynarRes.status,
               neynar_body: json || text || null,
+              direct: directMeta,
             });
           }
         } else {
           out.farcaster = {
             ok: true,
-            sent_to: target_fids.length > 0 ? "target_fids" : "all_opted_in",
+            sent_to: neynarTargetFids.length > 0 ? "target_fids" : "all_opted_in",
             notification,
             neynar: json,
+            direct: directMeta,
           };
         }
       }

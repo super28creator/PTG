@@ -10,9 +10,11 @@
     "http-server": "^14.1.1"
   },
   "dependencies": {
+    "@farcaster/miniapp-node": "^0.2.0",
     "@vercel/analytics": "^1.6.1",
     "ethers": "^6.13.5",
     "firebase": "^12.7.0",
+    "firebase-admin": "^13.8.0",
     "sharp": "^0.33.5"
   }
 }

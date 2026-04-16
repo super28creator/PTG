@@ -20,6 +20,9 @@
     },
     "api/cron-daily-notification.js": {
       "includeFiles": "lib/**"
+    },
+    "api/webhook.js": {
+      "includeFiles": "lib/**"
     }
   },
   "headers": [
