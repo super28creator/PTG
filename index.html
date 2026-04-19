@@ -618,49 +618,93 @@
         font-variant-numeric: tabular-nums;
     }
     .referral-invite-split {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        align-items: start;
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+        gap: 0;
+        min-height: min(52vh, 420px);
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: radial-gradient(120% 90% at 50% 0%, rgba(60, 138, 255, 0.12), rgba(2, 6, 23, 0.55));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
-    @media (max-width: 420px) {
+    .referral-invite-split-divider {
+        flex: 0 0 1px;
+        width: 1px;
+        align-self: stretch;
+        background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.22) 18%,
+            rgba(255, 255, 255, 0.22) 82%,
+            rgba(255, 255, 255, 0) 100%
+        );
+    }
+    @media (max-width: 460px) {
         .referral-invite-split {
-            grid-template-columns: 1fr;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .referral-invite-split-divider {
+            width: 100%;
+            height: 1px;
+            flex: 0 0 1px;
+            align-self: stretch;
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.2) 18%,
+                rgba(255, 255, 255, 0.2) 82%,
+                rgba(255, 255, 255, 0) 100%
+            );
         }
     }
     .referral-invite-col {
+        flex: 1 1 0;
         min-width: 0;
-        border-radius: 12px;
-        background: rgba(0, 0, 0, 0.28);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding: 14px 12px 12px;
+        box-sizing: border-box;
     }
     .referral-invite-col--fc {
-        border-top: 3px solid rgba(168, 85, 247, 0.75);
+        background: linear-gradient(180deg, rgba(88, 28, 135, 0.22) 0%, rgba(2, 6, 23, 0.05) 55%, rgba(2, 6, 23, 0) 100%);
     }
     .referral-invite-col--base {
-        border-top: 3px solid rgba(0, 82, 255, 0.75);
+        background: linear-gradient(180deg, rgba(30, 64, 175, 0.22) 0%, rgba(2, 6, 23, 0.05) 55%, rgba(2, 6, 23, 0) 100%);
     }
     .referral-invite-col-head {
-        padding: 8px 10px;
-        font-size: 10px;
-        font-weight: 800;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: rgba(226, 232, 240, 0.95);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        margin: 0 0 10px;
+        text-align: center;
+        font-size: clamp(17px, 4.2vw, 22px);
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+        color: #f8fafc;
+        text-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
     }
     .referral-invite-col--fc .referral-invite-col-head {
-        color: rgba(216, 180, 254, 0.98);
+        color: rgba(233, 213, 255, 0.98);
     }
     .referral-invite-col--base .referral-invite-col-head {
-        color: rgba(147, 197, 253, 0.98);
+        color: rgba(191, 219, 254, 0.98);
     }
     .referral-invite-col-body {
-        padding: 8px 6px 10px;
-        max-height: min(52vh, 420px);
+        flex: 1 1 auto;
+        min-height: 0;
+        padding: 2px 2px 0;
+        max-height: min(46vh, 380px);
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+    }
+    .referral-invite-empty {
+        margin: 18px 6px 6px;
+        text-align: center;
+        color: rgba(148, 163, 184, 0.82);
+        font-size: 12px;
+        font-style: italic;
+        line-height: 1.45;
     }
     .referral-inv-row {
         display: flex;
@@ -3586,7 +3630,7 @@
 
   function ptgPaintInviteColumnBody(rows) {
       if (!rows.length) {
-          return '<div class="referral-list-empty" style="padding:12px">No one yet</div>';
+          return '<div class="referral-invite-empty">No invites yet</div>';
       }
       let html = "";
       for (let i = 0; i < rows.length; i++) {
@@ -3692,15 +3736,16 @@
           val && typeof val === "object" ? ptgSplitInvitesByVia(val) : { fc: [], base: [] };
       host.innerHTML =
           '<div class="referral-invite-split">' +
+          '<div class="referral-invite-col referral-invite-col--base">' +
+          '<div class="referral-invite-col-head">Base</div>' +
+          '<div class="referral-invite-col-body">' +
+          ptgPaintInviteColumnBody(split.base) +
+          "</div></div>" +
+          '<div class="referral-invite-split-divider" aria-hidden="true"></div>' +
           '<div class="referral-invite-col referral-invite-col--fc">' +
           '<div class="referral-invite-col-head">Farcaster</div>' +
           '<div class="referral-invite-col-body">' +
           ptgPaintInviteColumnBody(split.fc) +
-          "</div></div>" +
-          '<div class="referral-invite-col referral-invite-col--base">' +
-          '<div class="referral-invite-col-head">Base app</div>' +
-          '<div class="referral-invite-col-body">' +
-          ptgPaintInviteColumnBody(split.base) +
           "</div></div></div>";
       void ptgEnrichInviteNameNodes(host);
       void ptgLoadEarningsFromMap().then(() => ptgRefreshEarnedNodes(host));
