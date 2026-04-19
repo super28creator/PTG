@@ -3688,15 +3688,8 @@
       const host = document.getElementById("referralDetailListHost");
       if (!host) return;
       __ptgReferralInviteTiers = ptgTierArrayForViewer();
-      if (!val || typeof val !== "object") {
-          host.innerHTML = '<div class="referral-list-empty">No invites yet</div>';
-          return;
-      }
-      const split = ptgSplitInvitesByVia(val);
-      if (!split.fc.length && !split.base.length) {
-          host.innerHTML = '<div class="referral-list-empty">No invites yet</div>';
-          return;
-      }
+      const split =
+          val && typeof val === "object" ? ptgSplitInvitesByVia(val) : { fc: [], base: [] };
       host.innerHTML =
           '<div class="referral-invite-split">' +
           '<div class="referral-invite-col referral-invite-col--fc">' +
