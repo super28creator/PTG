@@ -225,10 +225,11 @@
         display: flex;
         flex-direction: column;
         width: 100%;
-        max-width: 440px;
+        max-width: 400px;
         overflow: hidden;
-        padding: clamp(14px, 3.5vw, 20px) clamp(14px, 3.5vw, 22px) clamp(16px, 3vw, 22px);
+        padding: clamp(12px, 3vw, 18px) clamp(12px, 3.5vw, 18px) clamp(14px, 2.5vw, 18px);
         box-sizing: border-box;
+        gap: 0;
     }
     .referral-modal-topbar {
         display: flex;
@@ -236,7 +237,7 @@
         justify-content: center;
         position: relative;
         flex-shrink: 0;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
         padding: 0 36px;
     }
     .referral-modal-topbar h2 {
@@ -272,13 +273,21 @@
     }
     .referral-invite-block {
         flex-shrink: 0;
-        margin-bottom: 18px;
+        margin-bottom: 0;
+    }
+    .referral-invite-panel {
+        padding: 12px 12px 14px;
+        border-radius: 16px;
+        background: linear-gradient(165deg, rgba(30, 41, 59, 0.55) 0%, rgba(15, 23, 42, 0.72) 100%);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        margin-bottom: 12px;
     }
     .referral-balance-block {
         text-align: center;
         flex-shrink: 0;
-        margin-bottom: 16px;
-        padding: 6px 0 4px;
+        margin-bottom: 0;
+        padding: 4px 0 2px;
     }
     .referral-balance-label {
         display: block;
@@ -290,12 +299,12 @@
         margin-bottom: 6px;
     }
     .referral-balance-amount {
-        font-size: clamp(2rem, 7vw, 2.35rem);
+        font-size: clamp(1.65rem, 6vw, 2rem);
         font-weight: 800;
         font-variant-numeric: tabular-nums;
         letter-spacing: -0.03em;
         color: #f8fafc;
-        text-shadow: 0 0 28px rgba(60, 138, 255, 0.25);
+        text-shadow: 0 0 20px rgba(96, 165, 250, 0.2);
     }
     .referral-balance-amount span.referral-balance-currency {
         font-size: 0.55em;
@@ -305,63 +314,197 @@
     }
     .referral-activity-toggle-row {
         display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 16px;
+        justify-content: stretch;
+        align-items: stretch;
+        gap: 8px;
         flex-shrink: 0;
     }
     .referral-activity-toggle-row--below-claim {
-        margin-top: 14px;
-        padding-top: 4px;
+        margin-top: 10px;
+        padding-top: 0;
     }
-    .referral-mini-icon-btn {
-        width: 44px;
-        height: 44px;
-        border-radius: 13px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(0, 0, 0, 0.42);
-        color: rgba(226, 232, 240, 0.92);
-        cursor: pointer;
-        display: inline-flex;
+    .referral-bottom-nav {
+        display: flex;
+        width: 100%;
+        gap: 8px;
+        padding: 6px;
+        border-radius: 14px;
+        background: rgba(0, 0, 0, 0.28);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        box-sizing: border-box;
+    }
+    .referral-nav-item {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-        padding: 0;
+        gap: 4px;
+        padding: 8px 6px 10px;
+        border-radius: 11px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        color: rgba(226, 232, 240, 0.95);
+        cursor: pointer;
+        transition: border-color 0.18s ease, background 0.18s ease, transform 0.1s ease;
+        font: inherit;
     }
-    .referral-mini-icon-btn--lg {
-        width: 56px;
-        height: 56px;
-        border-radius: 16px;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+    .referral-nav-item:active {
+        transform: scale(0.98);
     }
-    .referral-mini-icon-btn svg {
+    .referral-nav-item__ic {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.25);
+    }
+    .referral-nav-item__ic svg {
         display: block;
         pointer-events: none;
     }
-    .referral-mini-icon-btn:active {
-        transform: scale(0.96);
+    .referral-nav-item__label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: rgba(148, 163, 184, 0.95);
+        line-height: 1.2;
+        text-align: center;
     }
-    .referral-mini-icon-btn--base {
-        border-color: rgba(0, 82, 255, 0.42);
+    .referral-nav-item--base:hover {
+        border-color: rgba(96, 165, 250, 0.45);
+        background: rgba(0, 82, 255, 0.12);
     }
-    .referral-mini-icon-btn--base:hover {
-        border-color: rgba(96, 165, 250, 0.65);
-        background: rgba(0, 82, 255, 0.18);
+    .referral-nav-item--base:hover .referral-nav-item__ic {
+        background: rgba(0, 82, 255, 0.2);
     }
-    .referral-mini-icon-btn--fc {
-        border-color: rgba(168, 85, 247, 0.42);
+    .referral-nav-item--fc:hover {
+        border-color: rgba(192, 132, 252, 0.45);
+        background: rgba(88, 40, 140, 0.15);
     }
-    .referral-mini-icon-btn--fc:hover {
-        border-color: rgba(192, 132, 252, 0.65);
-        background: rgba(88, 40, 140, 0.22);
+    .referral-nav-item--fc:hover .referral-nav-item__ic {
+        background: rgba(124, 58, 237, 0.22);
     }
-    .referral-mini-icon-btn:focus-visible {
+    .referral-nav-item:focus-visible {
         outline: 2px solid var(--cerulean);
         outline-offset: 2px;
     }
     #referralDetailOverlay {
         z-index: 10080;
+    }
+    #inviteAcceptOverlay {
+        z-index: 10110;
+    }
+    .invite-accept-card {
+        width: 100%;
+        max-width: min(94vw, 420px);
+        padding: clamp(18px, 4vw, 26px);
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        box-sizing: border-box;
+        background: linear-gradient(180deg, rgba(17, 24, 39, 0.95), rgba(9, 14, 26, 0.95));
+        border: 1px solid rgba(60, 138, 255, 0.35);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    }
+    .invite-accept-top {
+        text-align: center;
+    }
+    .invite-accept-title {
+        margin: 0 0 6px;
+        font-size: 22px;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: 0.01em;
+    }
+    .invite-accept-sub {
+        margin: 0;
+        font-size: 13px;
+        color: rgba(203, 213, 225, 0.9);
+        line-height: 1.45;
+    }
+    .invite-accept-hero {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px;
+        border-radius: 16px;
+        background: rgba(60, 138, 255, 0.08);
+        border: 1px solid rgba(60, 138, 255, 0.28);
+    }
+    .invite-accept-avatar {
+        width: 62px;
+        height: 62px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3c8aff, #7c3aed);
+        color: #fff;
+        font-weight: 800;
+        font-size: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        overflow: hidden;
+        border: 2px solid rgba(255, 255, 255, 0.12);
+    }
+    .invite-accept-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .invite-accept-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+    }
+    .invite-accept-nick {
+        font-size: 16px;
+        font-weight: 700;
+        color: #f8fafc;
+        word-break: break-word;
+    }
+    .invite-accept-hint {
+        font-size: 12px;
+        color: rgba(148, 163, 184, 0.9);
+    }
+    .invite-accept-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .invite-accept-btn {
+        width: 100%;
+        height: 46px;
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: transform 0.12s ease, background 0.18s ease, border-color 0.18s ease;
+    }
+    .invite-accept-btn--primary {
+        background: linear-gradient(135deg, #3c8aff, #0052ff);
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+    .invite-accept-btn--primary:hover {
+        transform: translateY(-1px);
+        background: linear-gradient(135deg, #4a95ff, #1a5fff);
+    }
+    .invite-accept-btn--ghost {
+        background: transparent;
+        color: rgba(226, 232, 240, 0.75);
+        border-color: rgba(148, 163, 184, 0.3);
+    }
+    .invite-accept-btn--ghost:hover {
+        color: #f1f5f9;
+        border-color: rgba(148, 163, 184, 0.55);
     }
     .referral-detail-card {
         width: 100%;
@@ -412,19 +555,6 @@
         padding-right: 44px;
         box-sizing: border-box;
     }
-    .referral-detail-tree-strip {
-        flex-shrink: 0;
-        margin-bottom: 10px;
-        padding: 4px 8px;
-        border-radius: 12px;
-        background: rgba(0, 0, 0, 0.25);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-    .referral-detail-tree-svg {
-        width: 100%;
-        height: 36px;
-        display: block;
-    }
     .referral-detail-scroll {
         flex: 1;
         min-height: 0;
@@ -457,37 +587,208 @@
         font-size: 11px;
         font-style: italic;
     }
+    .referral-claim-history-item {
+        padding: 12px 12px;
+        margin-bottom: 8px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .referral-claim-history-item:last-child {
+        margin-bottom: 0;
+    }
+    .referral-claim-history-label {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(148, 163, 184, 0.9);
+        margin-bottom: 4px;
+    }
+    .referral-claim-history-amt {
+        font-size: 1.25rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        color: #ecfdf5;
+        margin-bottom: 6px;
+    }
+    .referral-claim-history-when {
+        font-size: 12px;
+        color: rgba(226, 232, 240, 0.88);
+        font-variant-numeric: tabular-nums;
+    }
+    .referral-invite-split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        align-items: start;
+    }
+    @media (max-width: 420px) {
+        .referral-invite-split {
+            grid-template-columns: 1fr;
+        }
+    }
+    .referral-invite-col {
+        min-width: 0;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.28);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+    }
+    .referral-invite-col--fc {
+        border-top: 3px solid rgba(168, 85, 247, 0.75);
+    }
+    .referral-invite-col--base {
+        border-top: 3px solid rgba(0, 82, 255, 0.75);
+    }
+    .referral-invite-col-head {
+        padding: 8px 10px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(226, 232, 240, 0.95);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .referral-invite-col--fc .referral-invite-col-head {
+        color: rgba(216, 180, 254, 0.98);
+    }
+    .referral-invite-col--base .referral-invite-col-head {
+        color: rgba(147, 197, 253, 0.98);
+    }
+    .referral-invite-col-body {
+        padding: 8px 6px 10px;
+        max-height: min(52vh, 420px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .referral-inv-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 6px;
+        margin-bottom: 8px;
+        padding: 8px 6px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .referral-acc-trigger {
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        border: none;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(226, 232, 240, 0.95);
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+    .referral-acc-trigger:hover:not(:disabled) {
+        background: rgba(60, 138, 255, 0.22);
+    }
+    .referral-acc-trigger:disabled {
+        opacity: 0.4;
+        cursor: default;
+    }
+    .referral-acc-spacer {
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+    }
+    .referral-inv-main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .referral-inv-name {
+        font-weight: 700;
+        font-size: 12px;
+        color: #f1f5f9;
+        word-break: break-word;
+    }
+    .referral-inv-meta {
+        font-size: 10px;
+        color: rgba(148, 163, 184, 0.95);
+    }
+    .referral-inv-earned {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: #86efac;
+        letter-spacing: 0.02em;
+    }
+    .referral-inv-pct {
+        align-self: flex-start;
+        font-size: 11px;
+        font-weight: 800;
+        color: #fbbf24;
+        padding: 2px 8px;
+        border-radius: 8px;
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .referral-inv-nested {
+        width: 100%;
+        flex-basis: 100%;
+        margin-top: 6px;
+        padding-left: 8px;
+        border-left: 2px solid rgba(60, 138, 255, 0.35);
+    }
+    .referral-inv-nested .referral-inv-row {
+        margin-bottom: 6px;
+    }
+    .referral-rewards-panel {
+        margin-top: 4px;
+        padding: 12px 12px 12px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(2, 6, 23, 0.55) 100%);
+        border: 1px solid rgba(52, 211, 153, 0.12);
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+    }
     .referral-footer-sticky {
         flex-shrink: 0;
-        padding-top: 4px;
+        padding-top: 0;
     }
     .referral-claim-row {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
         margin-bottom: 0;
+        margin-top: 8px;
     }
     .referral-claim-btn {
         width: 100%;
-        padding: 14px 16px;
-        border-radius: 14px;
-        border: 1px solid rgba(16, 185, 129, 0.45);
-        background: linear-gradient(180deg, rgba(16, 185, 129, 0.22) 0%, rgba(6, 78, 59, 0.35) 100%);
+        padding: 11px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(52, 211, 153, 0.5);
+        background: linear-gradient(180deg, rgba(16, 185, 129, 0.38) 0%, rgba(5, 100, 72, 0.5) 100%);
         color: #ecfdf5;
         font-weight: 800;
-        font-size: 14px;
+        font-size: 13px;
+        letter-spacing: 0.02em;
         cursor: pointer;
-        transition: filter 0.15s ease, transform 0.12s ease;
+        transition: filter 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+        box-shadow: 0 2px 14px rgba(16, 185, 129, 0.18);
     }
     .referral-claim-btn:hover:not(:disabled) {
-        filter: brightness(1.08);
+        filter: brightness(1.06);
+        box-shadow: 0 4px 18px rgba(16, 185, 129, 0.28);
     }
     .referral-claim-btn:active:not(:disabled) {
-        transform: scale(0.98);
+        transform: scale(0.99);
     }
     .referral-claim-btn:disabled {
-        opacity: 0.45;
+        opacity: 0.36;
         cursor: not-allowed;
+        box-shadow: none;
+        filter: grayscale(0.15);
     }
     .referral-claim-msg {
         min-height: 18px;
@@ -496,89 +797,201 @@
         text-align: center;
     }
     .referral-section-label {
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.1em;
+        color: rgba(148, 163, 184, 0.88);
+        margin: 0 0 10px;
+    }
+    .referral-url-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .referral-url-channel-label {
+        display: block;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 5px;
         color: rgba(148, 163, 184, 0.95);
-        margin: 0 0 8px;
+    }
+    .referral-url-row--fc .referral-url-channel-label {
+        color: rgba(216, 180, 254, 0.98);
+    }
+    .referral-url-row--base .referral-url-channel-label {
+        color: rgba(147, 197, 253, 0.98);
     }
     .referral-url-field {
         display: flex;
         align-items: center;
-        gap: 6px;
-        background: rgba(0, 0, 0, 0.45);
-        border: 1px solid rgba(60, 138, 255, 0.32);
-        border-radius: 12px;
-        padding: 8px 8px 8px 12px;
-        margin-bottom: 12px;
+        gap: 8px;
+        background: rgba(0, 0, 0, 0.38);
+        border: 1px solid rgba(100, 116, 139, 0.35);
+        border-radius: 11px;
+        padding: 5px 6px 5px 10px;
+        min-height: 36px;
+        box-sizing: border-box;
+    }
+    .referral-url-row--fc .referral-url-field {
+        border-color: rgba(139, 92, 246, 0.28);
+    }
+    .referral-url-row--base .referral-url-field {
+        border-color: rgba(59, 130, 246, 0.32);
     }
     .referral-url-text {
         flex: 1;
         min-width: 0;
-        font-size: 11px;
-        line-height: 1.35;
-        word-break: break-all;
+        font-size: 10px;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: normal;
         color: #e2e8f0;
         font-family: "Roboto Mono", ui-monospace, monospace;
-        cursor: text;
+        cursor: default;
+        user-select: all;
+        -webkit-user-select: all;
+    }
+    .referral-url-text.referral-url-text--multiline {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        line-height: 1.35;
+        font-family: inherit;
         user-select: text;
-        -webkit-user-select: text;
     }
     .referral-url-copy-btn {
         flex-shrink: 0;
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         border: none;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.07);
         color: rgba(226, 232, 240, 0.95);
         cursor: pointer;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.15s ease, color 0.15s ease;
+        transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
     }
     .referral-url-copy-btn:hover {
-        background: rgba(60, 138, 255, 0.25);
+        background: rgba(60, 138, 255, 0.28);
         color: #fff;
+    }
+    .referral-url-copy-btn:active {
+        transform: scale(0.96);
     }
     .referral-url-copy-btn svg {
         display: block;
     }
     .referral-share-row {
         display: flex;
-        flex-direction: column;
-        gap: 10px;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 8px;
         margin-bottom: 0;
     }
-    @media (min-width: 360px) {
-        .referral-share-row {
-            flex-direction: row;
-            align-items: stretch;
-        }
-        .referral-share-row .referral-action-btn {
-            flex: 1;
-            min-width: 0;
-        }
+    .referral-elite-editor {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .referral-elite-editor-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+    .referral-elite-editor-label {
+        margin: 0;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(125, 211, 252, 0.92);
+    }
+    .referral-elite-editor-badge {
+        font-size: 9px;
+        font-weight: 800;
+        color: #bae6fd;
+        border: 1px solid rgba(56, 189, 248, 0.38);
+        background: rgba(14, 116, 144, 0.22);
+        border-radius: 999px;
+        padding: 2px 6px;
+    }
+    .referral-elite-textarea {
+        width: 100%;
+        min-height: 58px;
+        resize: vertical;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(2, 6, 23, 0.5);
+        color: #e2e8f0;
+        box-sizing: border-box;
+        padding: 8px 9px;
+        font-size: 11px;
+        line-height: 1.35;
+        font-family: "Roboto Mono", ui-monospace, monospace;
+    }
+    .referral-elite-textarea:focus {
+        outline: 2px solid rgba(56, 189, 248, 0.45);
+        outline-offset: 1px;
+        border-color: rgba(56, 189, 248, 0.55);
+    }
+    .referral-elite-actions {
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+    .referral-elite-save-btn {
+        border: 1px solid rgba(56, 189, 248, 0.45);
+        background: rgba(14, 116, 144, 0.24);
+        color: #e0f2fe;
+        border-radius: 9px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 7px 10px;
+        cursor: pointer;
+    }
+    .referral-elite-save-btn:hover {
+        background: rgba(14, 116, 144, 0.34);
+    }
+    .referral-elite-hint {
+        margin: 0;
+        font-size: 10px;
+        color: rgba(148, 163, 184, 0.9);
+    }
+    .referral-share-row .referral-action-btn {
+        flex: 1;
+        min-width: 0;
     }
     .referral-action-btn {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 6px;
         width: 100%;
-        padding: 12px 14px;
-        border-radius: 12px;
+        padding: 9px 10px;
+        border-radius: 11px;
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: rgba(60, 138, 255, 0.12);
         color: #fff;
         font-weight: 700;
-        font-size: 13px;
+        font-size: 12px;
         text-decoration: none;
         cursor: pointer;
         box-sizing: border-box;
         transition: background 0.15s ease, border-color 0.15s ease;
+        line-height: 1.25;
+        text-align: center;
     }
     .referral-action-btn:hover {
         background: rgba(60, 138, 255, 0.22);
@@ -2306,22 +2719,58 @@
     </div>
 
     <div class="referral-invite-block">
-      <p class="referral-section-label">Your invite link</p>
-      <div class="referral-url-field">
-        <span class="referral-url-text" id="referralUniversalUrl">—</span>
-        <button type="button" class="referral-url-copy-btn" id="referralCopyInlineBtn" aria-label="Copy invite link" title="Copy">
-          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-          </svg>
-        </button>
+      <div class="referral-invite-panel">
+      <p class="referral-section-label">Your invite links</p>
+      <div class="referral-url-rows">
+        <div class="referral-url-row referral-url-row--fc">
+          <span class="referral-url-channel-label">Farcaster</span>
+          <div class="referral-url-field">
+            <span class="referral-url-text" id="referralUniversalUrlFc">—</span>
+            <button type="button" class="referral-url-copy-btn" id="referralCopyFcBtn" aria-label="Copy Farcaster invite link" title="Copy">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="referral-url-row referral-url-row--base">
+          <span class="referral-url-channel-label">Base app</span>
+          <div class="referral-url-field">
+            <span class="referral-url-text" id="referralUniversalUrlBase">—</span>
+            <button type="button" class="referral-url-copy-btn" id="referralCopyBaseBtn" aria-label="Copy Base app invite link" title="Copy">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="referral-share-row">
         <a class="referral-action-btn referral-action-btn--fc" id="referralFarcasterCompose" href="https://warpcast.com" target="_blank" rel="noopener noreferrer">Share on Farcaster</a>
         <a class="referral-action-btn referral-action-btn--base" id="referralBaseAppShare" href="https://base.app" target="_blank" rel="noopener noreferrer">Share on Base app</a>
       </div>
+      <div class="referral-elite-editor">
+        <div class="referral-elite-editor-head">
+          <p class="referral-elite-editor-label">Elite inviters list (50% + 10%x4)</p>
+          <span class="referral-elite-editor-badge" id="referralTierModeBadge">Normal tiers</span>
+        </div>
+        <textarea
+          class="referral-elite-textarea"
+          id="referralEliteListInput"
+          placeholder="One nickname or address per line"
+          spellcheck="false"
+        ></textarea>
+        <div class="referral-elite-actions">
+          <button type="button" class="referral-elite-save-btn" id="referralEliteListSaveBtn">Save list</button>
+          <p class="referral-elite-hint">Accepted: nicknames and 0x addresses.</p>
+        </div>
+      </div>
+      </div>
     </div>
 
+    <div class="referral-rewards-panel">
     <div class="referral-balance-block">
       <span class="referral-balance-label">Available to claim</span>
       <div class="referral-balance-amount" id="referralBalanceDisplay">0.00<span class="referral-balance-currency">$</span></div>
@@ -2332,24 +2781,31 @@
         <button type="button" class="referral-claim-btn" id="referralClaimBtn">Claim referral rewards</button>
         <div class="referral-claim-msg" id="referralClaimMsg" role="status" aria-live="polite"></div>
       </div>
-      <div class="referral-activity-toggle-row referral-activity-toggle-row--below-claim" role="toolbar" aria-label="Open activity in full view">
-        <button type="button" class="referral-mini-icon-btn referral-mini-icon-btn--base referral-mini-icon-btn--lg" id="referralToggleHistoryBtn" title="Claims &amp; withdrawals" aria-label="Open claims and withdrawals in a larger view">
-          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <div class="referral-bottom-nav referral-activity-toggle-row referral-activity-toggle-row--below-claim" role="toolbar" aria-label="Open activity in full view">
+        <button type="button" class="referral-nav-item referral-nav-item--base" id="referralToggleHistoryBtn" title="Claims &amp; withdrawals" aria-label="Open claims and withdrawals in a larger view">
+          <span class="referral-nav-item__ic" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
             <line x1="8" y1="13" x2="16" y2="13"/>
             <line x1="8" y1="17" x2="13" y2="17"/>
           </svg>
+          </span>
+          <span class="referral-nav-item__label">Claims</span>
         </button>
-        <button type="button" class="referral-mini-icon-btn referral-mini-icon-btn--fc referral-mini-icon-btn--lg" id="referralToggleInvitesBtn" title="Who you invited" aria-label="Open invite list in a larger view">
-          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button type="button" class="referral-nav-item referral-nav-item--fc" id="referralToggleInvitesBtn" title="Who you invited" aria-label="Open invite list in a larger view">
+          <span class="referral-nav-item__ic" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
             <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
             <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
+          </span>
+          <span class="referral-nav-item__label">Invites</span>
         </button>
       </div>
+    </div>
     </div>
   </div>
 </div>
@@ -2360,22 +2816,27 @@
       <button type="button" class="referral-detail-back" id="referralDetailBackBtn" aria-label="Back">←</button>
       <h2 id="referralDetailTitle" class="referral-detail-title">—</h2>
     </div>
-    <div class="referral-detail-tree-strip" aria-hidden="true">
-      <svg class="referral-detail-tree-svg" viewBox="0 0 120 36" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="ptgReferralDetailTreeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#38bdf8"/>
-            <stop offset="50%" style="stop-color:#0052ff"/>
-            <stop offset="100%" style="stop-color:#c084fc"/>
-          </linearGradient>
-        </defs>
-        <path d="M8 30 L8 14 L60 14 L112 14 L112 30" stroke="url(#ptgReferralDetailTreeGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M60 14 L60 6" stroke="url(#ptgReferralDetailTreeGrad)" stroke-width="2.5" stroke-linecap="round"/>
-        <path d="M60 14 L42 26" stroke="url(#ptgReferralDetailTreeGrad)" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
-        <path d="M60 14 L78 26" stroke="url(#ptgReferralDetailTreeGrad)" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
-      </svg>
-    </div>
     <div class="referral-detail-scroll" id="referralDetailListHost"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="inviteAcceptOverlay" aria-hidden="true" role="dialog" aria-labelledby="inviteAcceptTitle" aria-modal="true">
+  <div class="mint-card invite-accept-card">
+    <div class="invite-accept-top">
+      <h2 id="inviteAcceptTitle" class="invite-accept-title">You were invited!</h2>
+      <p class="invite-accept-sub">Start playing and your inviter earns a share of your activity.</p>
+    </div>
+    <div class="invite-accept-hero">
+      <div class="invite-accept-avatar" id="inviteAcceptAvatar" aria-hidden="true">?</div>
+      <div class="invite-accept-meta">
+        <div class="invite-accept-nick" id="inviteAcceptNick">Someone on Base</div>
+        <div class="invite-accept-hint">invited you to Phrase To Guess</div>
+      </div>
+    </div>
+    <div class="invite-accept-actions">
+      <button type="button" class="invite-accept-btn invite-accept-btn--primary" id="inviteAcceptBtn">Accept invite</button>
+      <button type="button" class="invite-accept-btn invite-accept-btn--ghost" id="inviteAcceptDismissBtn">Not now</button>
+    </div>
   </div>
 </div>
 
@@ -2423,18 +2884,24 @@
       window.addEventListener("unhandledrejection", function () {
           setTimeout(forceHideLoadingScreen, 0);
       });
-      try {
-          var q = window.location && window.location.search;
-          if (q && q.length > 1) {
-              var p = new URLSearchParams(q.slice(1));
-              var r = p.get("ref");
-              if (r && /^[a-f0-9]{12}$/i.test(String(r).trim())) {
-                  try {
-                      localStorage.setItem("ptg_pending_ref", String(r).trim().toLowerCase());
-                  } catch (e) {}
+          try {
+              var q = window.location && window.location.search;
+              if (q && q.length > 1) {
+                  var p = new URLSearchParams(q.slice(1));
+                  var r = p.get("ref");
+                  if (r && /^[a-f0-9]{12}$/i.test(String(r).trim())) {
+                      try {
+                          localStorage.setItem("ptg_pending_ref", String(r).trim().toLowerCase());
+                          var via = p.get("via");
+                          if (via === "farcaster" || via === "base") {
+                              localStorage.setItem("ptg_pending_via", via);
+                          } else {
+                              localStorage.removeItem("ptg_pending_via");
+                          }
+                      } catch (e) {}
+                  }
               }
-          }
-      } catch (e) {}
+          } catch (e) {}
   })();
 </script>
 
@@ -2900,7 +3367,21 @@
   }
 
   const PTG_REF_INVITE_REWARD = 50;
+  const PTG_REF_TIER_PCT_NORMAL = [25, 5, 5, 5, 5];
+  const PTG_REF_TIER_PCT_ELITE = [50, 10, 10, 10, 10];
+  const PTG_REF_MAX_DEPTH = 5;
+  /** Base amount (cents) used to size MLM payouts per event type. */
+  const PTG_REF_EVENT_BASE_CENTS = {
+      hint: 20,
+      mint: 1, // current mint price = $0.01
+      mint_badge: 1, // current badge mint price = $0.01
+      generic: 25,
+  };
+  let __ptgReferralInviteTiers = PTG_REF_TIER_PCT_NORMAL.slice();
+  let __ptgReferralEliteSet = new Set();
+  let __ptgReferralEliteLoaded = false;
   let referralSummaryUnsubscribe = null;
+  let referralEliteUnsubscribe = null;
   let referralClaimHistoryUnsubscribe = null;
   let referralInviteEntriesUnsubscribe = null;
 
@@ -2911,6 +3392,12 @@
           } catch (_) {}
       }
       referralSummaryUnsubscribe = null;
+      if (typeof referralEliteUnsubscribe === "function") {
+          try {
+              referralEliteUnsubscribe();
+          } catch (_) {}
+      }
+      referralEliteUnsubscribe = null;
       if (typeof referralClaimHistoryUnsubscribe === "function") {
           try {
               referralClaimHistoryUnsubscribe();
@@ -2942,9 +3429,146 @@
   let __ptgLastHistoryVal = null;
   let __ptgLastInvitesVal = null;
 
+  function ptgNormalizeEliteEntry(raw) {
+      const s = String(raw || "").trim().toLowerCase();
+      if (!s) return "";
+      return s.replace(/\s+/g, " ");
+  }
+
+  function ptgParseEliteEntries(raw) {
+      const parts = String(raw || "").split(/\r?\n|,/);
+      const out = [];
+      const seen = new Set();
+      for (let i = 0; i < parts.length; i++) {
+          const n = ptgNormalizeEliteEntry(parts[i]);
+          if (!n || seen.has(n)) continue;
+          seen.add(n);
+          out.push(n);
+      }
+      return out;
+  }
+
+  function ptgEliteEntriesFromMap(val) {
+      const out = [];
+      if (!val || typeof val !== "object") return out;
+      const keys = Object.keys(val);
+      for (let i = 0; i < keys.length; i++) {
+          const k = ptgNormalizeEliteEntry(keys[i]);
+          if (!k) continue;
+          const v = val[keys[i]];
+          const active =
+              v === true ||
+              (v && typeof v === "object" && v.active !== false) ||
+              (typeof v === "string" && v.length > 0);
+          if (active) out.push(k);
+      }
+      return out;
+  }
+
+  async function ptgLoadEliteEntries() {
+      if (!db) {
+          __ptgReferralEliteSet = new Set();
+          __ptgReferralEliteLoaded = false;
+          return;
+      }
+      try {
+          const snap = await get(ref(db, "referrals_v1/elite_inviters"));
+          const val = snap.exists() ? snap.val() : null;
+          __ptgReferralEliteSet = new Set(ptgEliteEntriesFromMap(val));
+          __ptgReferralEliteLoaded = true;
+      } catch (e) {
+          console.warn("elite_inviters load", e);
+          __ptgReferralEliteSet = new Set();
+          __ptgReferralEliteLoaded = false;
+      }
+  }
+
+  function ptgWatchEliteEntries() {
+      if (!db) return;
+      if (typeof referralEliteUnsubscribe === "function") {
+          try {
+              referralEliteUnsubscribe();
+          } catch (_) {}
+      }
+      try {
+          referralEliteUnsubscribe = onValue(ref(db, "referrals_v1/elite_inviters"), (snap) => {
+              const val = snap.exists() ? snap.val() : null;
+              __ptgReferralEliteSet = new Set(ptgEliteEntriesFromMap(val));
+              __ptgReferralEliteLoaded = true;
+              ptgRefreshTierModeBadge();
+          });
+      } catch (e) {
+          console.warn("elite_inviters watch", e);
+      }
+  }
+
+  async function ptgSaveEliteEntries(raw) {
+      const arr = ptgParseEliteEntries(raw);
+      const next = {};
+      for (let i = 0; i < arr.length; i++) next[arr[i]] = true;
+      if (!db) {
+          __ptgReferralEliteSet = new Set(arr);
+          return arr.length;
+      }
+      try {
+          await set(ref(db, "referrals_v1/elite_inviters"), next);
+          __ptgReferralEliteSet = new Set(arr);
+      } catch (e) {
+          console.warn("elite_inviters save", e);
+          throw e;
+      }
+      return arr.length;
+  }
+
+  function ptgEliteInputRaw() {
+      const arr = Array.from(__ptgReferralEliteSet.values());
+      arr.sort();
+      return arr.join("\n");
+  }
+
+  function ptgIsEliteUser(userId, displayName) {
+      const idKey = ptgNormalizeEliteEntry(userId);
+      const nameKey = ptgNormalizeEliteEntry(displayName);
+      if (idKey && __ptgReferralEliteSet.has(idKey)) return true;
+      if (nameKey && __ptgReferralEliteSet.has(nameKey)) return true;
+      return false;
+  }
+
+  function ptgTierArrayForViewer() {
+      const elite = ptgIsEliteUser(myUserId, myUsername);
+      return elite ? PTG_REF_TIER_PCT_ELITE : PTG_REF_TIER_PCT_NORMAL;
+  }
+
+  function ptgRefreshTierModeBadge() {
+      const badge = document.getElementById("referralTierModeBadge");
+      if (!badge) return;
+      const elite = ptgIsEliteUser(myUserId, myUsername);
+      badge.textContent = elite ? "Elite tiers active" : "Normal tiers";
+  }
+
+  async function ptgHydrateEliteInput() {
+      const ta = document.getElementById("referralEliteListInput");
+      if (!__ptgReferralEliteLoaded) {
+          await ptgLoadEliteEntries();
+      }
+      if (ta) ta.value = ptgEliteInputRaw();
+      ptgRefreshTierModeBadge();
+  }
+
   function ptgReferralDetailIsOpen() {
       const o = document.getElementById("referralDetailOverlay");
       return !!(o && o.classList.contains("show"));
+  }
+
+  function ptgClaimHistoryWhen(ts) {
+      try {
+          return new Date(ts).toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "medium",
+          });
+      } catch (_) {
+          return "—";
+      }
   }
 
   function ptgPaintReferralHistoryList(val) {
@@ -2963,23 +3587,18 @@
           host.innerHTML = '<div class="referral-list-empty">No claims yet</div>';
           return;
       }
-      const fmt = (ts) => {
-          try {
-              return new Date(ts).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-          } catch (_) {
-              return "—";
-          }
-      };
       host.innerHTML = rows
           .map((r) => {
               const amt = ptgFormatReferralCents(typeof r.v.amount === "number" ? r.v.amount : 0);
               return (
-                  '<div class="referral-list-row">' +
-                  '<div>+' +
+                  '<div class="referral-claim-history-item">' +
+                  '<div class="referral-claim-history-label">Claim amount</div>' +
+                  '<div class="referral-claim-history-amt">+' +
                   ptgEscapeReferralHtml(amt) +
                   " $</div>" +
-                  '<div class="referral-list-meta">' +
-                  ptgEscapeReferralHtml(fmt(r.v.ts)) +
+                  '<div class="referral-claim-history-label">Date &amp; time</div>' +
+                  '<div class="referral-claim-history-when">' +
+                  ptgEscapeReferralHtml(ptgClaimHistoryWhen(r.v.ts)) +
                   "</div></div>"
               );
           })
@@ -2992,52 +3611,247 @@
       ptgPaintReferralHistoryList(val);
   }
 
-  function ptgPaintReferralInvitesList(val) {
-      const host = document.getElementById("referralDetailListHost");
-      if (!host) return;
-      if (!val || typeof val !== "object") {
-          host.innerHTML = '<div class="referral-list-empty">No invites yet</div>';
-          return;
-      }
+  function ptgTierPctLabel(depth) {
+      const tiers = Array.isArray(__ptgReferralInviteTiers) && __ptgReferralInviteTiers.length
+          ? __ptgReferralInviteTiers
+          : PTG_REF_TIER_PCT_NORMAL;
+      const i = Math.min(Math.max(0, depth), tiers.length - 1);
+      return tiers[i] + "%";
+  }
+
+  function ptgFormatInviteeIdForRow(inviteeId) {
+      const id = String(inviteeId || "").trim();
+      if (!id) return "—";
+      return formatLeaderboardDisplayName(id, {});
+  }
+
+  function ptgSplitInvitesByVia(val) {
+      const fc = [];
+      const base = [];
+      if (!val || typeof val !== "object") return { fc, base };
       const rows = Object.entries(val)
           .map(([k, v]) => ({ k, v: v && typeof v === "object" ? v : {} }))
           .filter((r) => r.v.invitee)
           .sort((a, b) => (b.v.ts || 0) - (a.v.ts || 0))
           .slice(0, 80);
+      for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          const via = String(r.v.via || "browser").toLowerCase();
+          if (via === "farcaster") fc.push(r);
+          else base.push(r);
+      }
+      return { fc, base };
+  }
+
+  let __ptgEarningsFromMap = {};
+
+  function ptgEarnedFromCents(inviteeId) {
+      const k = String(inviteeId || "").toLowerCase();
+      if (!k) return 0;
+      const v = __ptgEarningsFromMap[k];
+      return typeof v === "number" && v > 0 ? v : 0;
+  }
+
+  async function ptgLoadEarningsFromMap() {
+      __ptgEarningsFromMap = {};
+      if (!db || !isLoggedIn() || myUserId === "guest") return;
+      try {
+          const snap = await get(ref(db, "referrals_v1/earnings_from/" + myUserId));
+          if (!snap.exists()) return;
+          const raw = snap.val();
+          if (!raw || typeof raw !== "object") return;
+          const out = {};
+          const keys = Object.keys(raw);
+          for (let i = 0; i < keys.length; i++) {
+              const v = raw[keys[i]];
+              if (typeof v === "number") out[String(keys[i]).toLowerCase()] = v;
+          }
+          __ptgEarningsFromMap = out;
+      } catch (e) {
+          console.warn("ptgLoadEarningsFromMap", e);
+      }
+  }
+
+  function ptgInviteRowHtml(inviteeId, depth, edgeKey) {
+      const inv = String(inviteeId || "").trim();
+      const maxDepth = __ptgReferralInviteTiers.length - 1;
+      const showExpand = depth < maxDepth;
+      const nameDisp = ptgFormatInviteeIdForRow(inv);
+      const safeName = ptgEscapeReferralHtml(nameDisp);
+      const safeInv = ptgEscapeReferralHtml(inv);
+      const btn = showExpand
+          ? '<button type="button" class="referral-acc-trigger" aria-expanded="false" aria-label="Show invites" data-invitee="' +
+            safeInv +
+            '" data-depth="' +
+            depth +
+            '">▶</button>'
+          : '<span class="referral-acc-spacer" aria-hidden="true"></span>';
+      const earnedCents = ptgEarnedFromCents(inv);
+      const earnedStr = ptgFormatReferralCents(earnedCents);
+      return (
+          '<div class="referral-inv-row" data-edge="' +
+          ptgEscapeReferralHtml(String(edgeKey || "")) +
+          '" data-invid="' +
+          safeInv +
+          '">' +
+          btn +
+          '<div class="referral-inv-main">' +
+          '<div class="referral-inv-name" data-wallet="' +
+          safeInv +
+          '">' +
+          safeName +
+          "</div>" +
+          '<div class="referral-inv-earned" data-invid="' +
+          safeInv +
+          '">Earned ' +
+          ptgEscapeReferralHtml(earnedStr) +
+          "$</div>" +
+          "</div>" +
+          '<span class="referral-inv-pct">' +
+          ptgEscapeReferralHtml(ptgTierPctLabel(depth)) +
+          "</span>" +
+          '<div class="referral-inv-nested" hidden></div>' +
+          "</div>"
+      );
+  }
+
+  function ptgPaintInviteColumnBody(rows) {
       if (!rows.length) {
+          return '<div class="referral-list-empty" style="padding:12px">No one yet</div>';
+      }
+      let html = "";
+      for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          html += ptgInviteRowHtml(r.v.invitee, 0, r.k);
+      }
+      return html;
+  }
+
+  async function ptgEnrichInviteNameNodes(rootEl) {
+      if (!rootEl) return;
+      const nodes = rootEl.querySelectorAll(".referral-inv-name[data-wallet]");
+      const need = [];
+      const seen = new Set();
+      for (let i = 0; i < nodes.length; i++) {
+          const w = String(nodes[i].getAttribute("data-wallet") || "").trim();
+          if (!/^0x[a-fA-F0-9]{40}$/.test(w)) continue;
+          const k = w.toLowerCase();
+          if (seen.has(k)) continue;
+          seen.add(k);
+          need.push(w);
+      }
+      if (!need.length) return;
+      let map = await resolveDisplayNamesBatch(need);
+      if (!map || typeof map !== "object") map = {};
+      for (let j = 0; j < need.length; j++) {
+          const addr = need[j];
+          const k = addr.toLowerCase();
+          if (!map[k] || !String(map[k]).trim()) {
+              try {
+                  const fb = await resolveBasenameForAddress(addr);
+                  if (fb && String(fb).trim()) map[k] = String(fb).trim();
+              } catch (_) {}
+          }
+      }
+      for (let i = 0; i < nodes.length; i++) {
+          const el = nodes[i];
+          const w = String(el.getAttribute("data-wallet") || "").trim();
+          if (!/^0x[a-fA-F0-9]{40}$/.test(w)) continue;
+          const k = w.toLowerCase();
+          let label = map[k] && String(map[k]).trim() ? String(map[k]).trim() : "";
+          if (!label) label = ptgFormatInviteeIdForRow(w);
+          el.textContent = label;
+          if (isBetterDisplayName(label)) void persistPlayerDisplayNameToRtdb(w, label);
+      }
+  }
+
+  async function ptgToggleReferralInviteNested(btn) {
+      if (!btn || btn.tagName !== "BUTTON" || btn.disabled) return;
+      const row = btn.closest(".referral-inv-row");
+      if (!row) return;
+      const nested = row.querySelector(".referral-inv-nested");
+      if (!nested) return;
+      const invitee = btn.getAttribute("data-invitee");
+      const depth = parseInt(btn.getAttribute("data-depth") || "0", 10) || 0;
+      if (!invitee || !db) return;
+
+      if (btn.getAttribute("data-loaded") === "1") {
+          nested.hidden = !nested.hidden;
+          btn.setAttribute("aria-expanded", nested.hidden ? "false" : "true");
+          btn.textContent = nested.hidden ? "▶" : "▼";
+          return;
+      }
+      btn.disabled = true;
+      try {
+          const snap = await get(ref(db, "referrals_v1/invite_entries/" + invitee));
+          const raw = snap.exists() ? snap.val() : null;
+          const childRows = !raw || typeof raw !== "object" ? [] : Object.entries(raw)
+              .map(([k, v]) => ({ k, v: v && typeof v === "object" ? v : {} }))
+              .filter((r) => r.v.invitee)
+              .sort((a, b) => (b.v.ts || 0) - (a.v.ts || 0));
+          if (!childRows.length) {
+              nested.innerHTML =
+                  '<div class="referral-list-empty" style="padding:8px;font-size:11px">No invites yet</div>';
+          } else {
+              let html = "";
+              for (let i = 0; i < childRows.length; i++) {
+                  const r = childRows[i];
+                  html += ptgInviteRowHtml(r.v.invitee, depth + 1, r.k);
+              }
+              nested.innerHTML = html;
+              void ptgEnrichInviteNameNodes(nested);
+              ptgRefreshEarnedNodes(nested);
+          }
+          btn.setAttribute("data-loaded", "1");
+          nested.hidden = false;
+          btn.setAttribute("aria-expanded", "true");
+          btn.textContent = "▼";
+      } catch (e) {
+          console.warn("referral nested invites", e);
+          nested.innerHTML = '<div class="referral-list-empty">Could not load.</div>';
+          nested.hidden = false;
+      } finally {
+          btn.disabled = false;
+      }
+  }
+
+  function ptgPaintReferralInvitesList(val) {
+      const host = document.getElementById("referralDetailListHost");
+      if (!host) return;
+      __ptgReferralInviteTiers = ptgTierArrayForViewer();
+      if (!val || typeof val !== "object") {
           host.innerHTML = '<div class="referral-list-empty">No invites yet</div>';
           return;
       }
-      const viaLabel = (via) => {
-          const v = String(via || "browser").toLowerCase();
-          if (v === "base") return "Base";
-          if (v === "farcaster") return "Farcaster";
-          return "Web";
-      };
-      const fmt = (ts) => {
-          try {
-              return new Date(ts).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-          } catch (_) {
-              return "—";
-          }
-      };
-      host.innerHTML = rows
-          .map((r) => {
-              const inv = ptgEscapeReferralHtml(String(r.v.invitee));
-              const via = ptgEscapeReferralHtml(viaLabel(r.v.via));
-              return (
-                  '<div class="referral-list-row">' +
-                  "<div>" +
-                  inv +
-                  "</div>" +
-                  '<div class="referral-list-meta">' +
-                  via +
-                  " · " +
-                  ptgEscapeReferralHtml(fmt(r.v.ts)) +
-                  "</div></div>"
-              );
-          })
-          .join("");
+      const split = ptgSplitInvitesByVia(val);
+      if (!split.fc.length && !split.base.length) {
+          host.innerHTML = '<div class="referral-list-empty">No invites yet</div>';
+          return;
+      }
+      host.innerHTML =
+          '<div class="referral-invite-split">' +
+          '<div class="referral-invite-col referral-invite-col--fc">' +
+          '<div class="referral-invite-col-head">Farcaster</div>' +
+          '<div class="referral-invite-col-body">' +
+          ptgPaintInviteColumnBody(split.fc) +
+          "</div></div>" +
+          '<div class="referral-invite-col referral-invite-col--base">' +
+          '<div class="referral-invite-col-head">Base app</div>' +
+          '<div class="referral-invite-col-body">' +
+          ptgPaintInviteColumnBody(split.base) +
+          "</div></div></div>";
+      void ptgEnrichInviteNameNodes(host);
+      void ptgLoadEarningsFromMap().then(() => ptgRefreshEarnedNodes(host));
+  }
+
+  function ptgRefreshEarnedNodes(rootEl) {
+      if (!rootEl) return;
+      const nodes = rootEl.querySelectorAll(".referral-inv-earned[data-invid]");
+      for (let i = 0; i < nodes.length; i++) {
+          const inv = String(nodes[i].getAttribute("data-invid") || "").trim();
+          const cents = ptgEarnedFromCents(inv);
+          nodes[i].textContent = "Earned " + ptgFormatReferralCents(cents) + "$";
+      }
   }
 
   function ptgRenderReferralInvitesList(val) {
@@ -3133,6 +3947,15 @@
       }
   }
 
+  function ptgClearPendingRefCapture() {
+      try {
+          const keep = localStorage.getItem("ptg_pending_ref");
+          if (keep) localStorage.setItem("ptg_invite_last_ref", keep);
+          localStorage.removeItem("ptg_pending_ref");
+          localStorage.removeItem("ptg_pending_via");
+      } catch (_) {}
+  }
+
   async function tryProcessReferralAttribution() {
       if (!db || !isLoggedIn() || myUserId === "guest") return;
       let pending = null;
@@ -3142,16 +3965,12 @@
       if (!pending) return;
       const refCode = String(pending).trim().toLowerCase();
       if (!/^[a-f0-9]{12}$/.test(refCode)) {
-          try {
-              localStorage.removeItem("ptg_pending_ref");
-          } catch (_) {}
+          ptgClearPendingRefCapture();
           return;
       }
       const myCode = await ptgRefCodeFromUserId(myUserId);
       if (refCode === myCode) {
-          try {
-              localStorage.removeItem("ptg_pending_ref");
-          } catch (_) {}
+          ptgClearPendingRefCapture();
           return;
       }
       let idxSnap;
@@ -3162,36 +3981,46 @@
           return;
       }
       if (!idxSnap.exists()) {
-          try {
-              localStorage.removeItem("ptg_pending_ref");
-          } catch (_) {}
+          ptgClearPendingRefCapture();
           return;
       }
       const ownerId = idxSnap.val().ownerId;
       if (!ownerId || ownerId === myUserId) {
-          try {
-              localStorage.removeItem("ptg_pending_ref");
-          } catch (_) {}
+          ptgClearPendingRefCapture();
           return;
       }
       const vis = String(myUserId).replace(/[^a-zA-Z0-9_]/g, "_");
       const edgeKey = refCode + "_" + vis.slice(0, 72);
       const edgeRef = ref(db, "referrals_v1/edges/" + edgeKey);
+      let viaHost = "browser";
+      try {
+          const pv = localStorage.getItem("ptg_pending_via");
+          if (pv === "farcaster" || pv === "base") viaHost = pv;
+          else if (ptgHost === "base" || ptgHost === "farcaster") viaHost = ptgHost;
+      } catch (_) {
+          if (ptgHost === "base" || ptgHost === "farcaster") viaHost = ptgHost;
+      }
       try {
           const edgeSnap = await get(edgeRef);
           if (edgeSnap.exists()) {
-              try {
-                  localStorage.removeItem("ptg_pending_ref");
-              } catch (_) {}
+              ptgClearPendingRefCapture();
               return;
           }
-          const viaHost = ptgHost === "base" || ptgHost === "farcaster" ? ptgHost : "browser";
           await set(edgeRef, { ts: Date.now(), invitee: myUserId, via: viaHost });
           await set(ref(db, "referrals_v1/invite_entries/" + ownerId + "/" + edgeKey), {
               invitee: myUserId,
               ts: Date.now(),
               via: viaHost,
           });
+          try {
+              const parentRef = ref(db, "referrals_v1/parent_of/" + myUserId);
+              const prevSnap = await get(parentRef);
+              if (!prevSnap.exists()) {
+                  await set(parentRef, { inviterId: ownerId, via: viaHost, ts: Date.now() });
+              }
+          } catch (eParent) {
+              console.warn("referral parent_of", eParent);
+          }
       } catch (e) {
           console.warn("referral edge", e);
           return;
@@ -3206,9 +4035,7 @@
       } catch (e) {
           console.warn("referral summary tx", e);
       }
-      try {
-          localStorage.removeItem("ptg_pending_ref");
-      } catch (_) {}
+      ptgClearPendingRefCapture();
   }
 
   function ptgUpdateReferralUiFromSnapshot(d) {
@@ -3255,6 +4082,123 @@
       await ensureReferralSelfIndex();
       await tryProcessReferralAttribution();
       bindReferralSummaryListener();
+      if (!__ptgReferralEliteLoaded) {
+          try { await ptgLoadEliteEntries(); } catch (_) {}
+          ptgRefreshTierModeBadge();
+      }
+      if (typeof referralEliteUnsubscribe !== "function") {
+          ptgWatchEliteEntries();
+      }
+  }
+
+  function ptgInviterAvatarMarkup(displayName, address) {
+      const letter = (String(displayName || address || "?").replace(/^0x/, "").charAt(0) || "?").toUpperCase();
+      return ptgEscapeReferralHtml(letter);
+  }
+
+  async function ptgResolveInviterPreview(ownerId) {
+      const preview = { id: ownerId, name: "", avatarUrl: "" };
+      if (!ownerId) return preview;
+      try {
+          const pSnap = await get(playerDocRef(ownerId));
+          if (pSnap.exists()) {
+              const v = pSnap.val() || {};
+              if (typeof v.name === "string" && v.name.trim()) preview.name = v.name.trim();
+              if (typeof v.pfpUrl === "string" && /^https?:\/\//.test(v.pfpUrl)) preview.avatarUrl = v.pfpUrl;
+              else if (typeof v.avatarUrl === "string" && /^https?:\/\//.test(v.avatarUrl)) preview.avatarUrl = v.avatarUrl;
+          }
+      } catch (_) {}
+      if (!preview.name && /^0x[a-fA-F0-9]{40}$/.test(String(ownerId || ""))) {
+          try {
+              const m = await resolveDisplayNamesBatch([ownerId]);
+              const v = m && m[String(ownerId).toLowerCase()];
+              if (v && String(v).trim()) preview.name = String(v).trim();
+          } catch (_) {}
+          if (!preview.name) {
+              try {
+                  const bn = await resolveBasenameForAddress(ownerId);
+                  if (bn && String(bn).trim()) preview.name = String(bn).trim();
+              } catch (_) {}
+          }
+      }
+      if (!preview.name) preview.name = formatLeaderboardDisplayName(ownerId, {});
+      return preview;
+  }
+
+  function ptgHideInviteAcceptOverlay() {
+      const o = document.getElementById("inviteAcceptOverlay");
+      if (!o) return;
+      o.classList.remove("show");
+      o.setAttribute("aria-hidden", "true");
+  }
+
+  async function ptgMaybeShowInviteAcceptOverlay() {
+      let pending = null;
+      try {
+          pending = localStorage.getItem("ptg_pending_ref") || localStorage.getItem("ptg_invite_last_ref");
+      } catch (_) {}
+      if (!pending) return;
+      const refCode = String(pending).trim().toLowerCase();
+      if (!/^[a-f0-9]{12}$/.test(refCode)) return;
+      let seenKey = "ptg_invite_accept_seen_" + refCode;
+      try {
+          if (localStorage.getItem(seenKey)) return;
+      } catch (_) {}
+      if (!db) return;
+      let ownerId = null;
+      try {
+          const s = await get(ref(db, "referrals_v1/index/" + refCode));
+          if (s.exists()) ownerId = s.val() && s.val().ownerId;
+      } catch (_) {}
+      if (!ownerId) return;
+      if (isLoggedIn() && ownerId === myUserId) return;
+      const overlay = document.getElementById("inviteAcceptOverlay");
+      if (!overlay) return;
+      const nickEl = document.getElementById("inviteAcceptNick");
+      const avEl = document.getElementById("inviteAcceptAvatar");
+      if (nickEl) nickEl.textContent = formatLeaderboardDisplayName(ownerId, {});
+      if (avEl) {
+          avEl.innerHTML = ptgInviterAvatarMarkup("", ownerId);
+      }
+      overlay.classList.add("show");
+      overlay.setAttribute("aria-hidden", "false");
+      try {
+          const preview = await ptgResolveInviterPreview(ownerId);
+          if (nickEl && preview.name) nickEl.textContent = preview.name;
+          if (avEl) {
+              if (preview.avatarUrl) {
+                  const fallback = ptgInviterAvatarMarkup(preview.name, ownerId);
+                  avEl.innerHTML = fallback;
+                  const img = document.createElement("img");
+                  img.alt = "";
+                  img.loading = "lazy";
+                  img.decoding = "async";
+                  img.addEventListener("error", function () {
+                      avEl.innerHTML = fallback;
+                  }, { once: true });
+                  img.addEventListener("load", function () {
+                      avEl.innerHTML = "";
+                      avEl.appendChild(img);
+                  }, { once: true });
+                  img.src = preview.avatarUrl;
+              } else {
+                  avEl.innerHTML = ptgInviterAvatarMarkup(preview.name, ownerId);
+              }
+          }
+      } catch (_) {}
+  }
+
+  function ptgMarkInviteAcceptSeen() {
+      let pending = null;
+      try {
+          pending = localStorage.getItem("ptg_pending_ref") || localStorage.getItem("ptg_invite_last_ref");
+      } catch (_) {}
+      if (!pending) return;
+      const refCode = String(pending).trim().toLowerCase();
+      if (!/^[a-f0-9]{12}$/.test(refCode)) return;
+      try {
+          localStorage.setItem("ptg_invite_accept_seen_" + refCode, String(Date.now()));
+      } catch (_) {}
   }
 
   async function claimReferralRewardsFromUi() {
@@ -3316,28 +4260,188 @@
       }
   }
 
+  /**
+   * Multi-level referral reward distribution (L1..L5).
+   * Walks up `referrals_v1/parent_of/{childId}` chain and credits each
+   * ancestor with a tier % of `baseCents`. Idempotent per `eventId`.
+   *
+   * Tier array per beneficiary:
+   *   - elite (listed in `referrals_v1/elite_inviters`): [50,10,10,10,10]
+   *   - normal:                                         [25, 5, 5, 5, 5]
+   *
+   * @param {string} spenderId       user whose action triggered the event
+   * @param {number} baseCents       base amount in USD cents used to size splits
+   * @param {string} eventId         idempotency key (e.g. txHash or `hint:<tx>`)
+   * @param {string} [eventKind]     'hint' | 'mint' | 'mint_badge' | 'generic'
+   */
+  async function ptgDistributeReferralReward(spenderId, baseCents, eventId, eventKind) {
+      if (!db || !spenderId || !eventId) return null;
+      const amt = Math.floor(Number(baseCents) || 0);
+      if (!(amt > 0)) return null;
+      const kind = typeof eventKind === "string" && eventKind ? eventKind : "generic";
+
+      const evRef = ref(db, "referrals_v1/reward_events/" + eventId);
+      try {
+          const pre = await get(evRef);
+          if (pre.exists()) return pre.val();
+      } catch (e) {
+          console.warn("ptgDistributeReferralReward pre-check", e);
+          return null;
+      }
+
+      if (!__ptgReferralEliteLoaded) {
+          try {
+              await ptgLoadEliteEntries();
+          } catch (_) {}
+      }
+
+      const splits = [];
+      const walked = new Set([String(spenderId).toLowerCase()]);
+      let current = spenderId;
+
+      for (let level = 1; level <= PTG_REF_MAX_DEPTH; level++) {
+          let parentVal = null;
+          try {
+              const s = await get(ref(db, "referrals_v1/parent_of/" + current));
+              parentVal = s.exists() ? s.val() : null;
+          } catch (e) {
+              console.warn("ptgDistributeReferralReward parent_of", e);
+              break;
+          }
+          const inviterId =
+              parentVal && typeof parentVal === "object"
+                  ? parentVal.inviterId
+                  : typeof parentVal === "string"
+                      ? parentVal
+                      : null;
+          if (!inviterId) break;
+          const lowId = String(inviterId).toLowerCase();
+          if (walked.has(lowId)) break;
+          walked.add(lowId);
+
+          let nameKey = "";
+          try {
+              const pSnap = await get(playerDocRef(inviterId));
+              if (pSnap.exists()) {
+                  const nm = pSnap.val() && pSnap.val().name;
+                  if (typeof nm === "string") nameKey = ptgNormalizeEliteEntry(nm);
+              }
+          } catch (_) {}
+
+          const elite = ptgIsEliteUser(inviterId, nameKey);
+          const tiers = elite ? PTG_REF_TIER_PCT_ELITE : PTG_REF_TIER_PCT_NORMAL;
+          const pct = tiers[level - 1] || 0;
+          const reward = Math.floor((amt * pct) / 100);
+
+          if (reward > 0) {
+              try {
+                  await runTransaction(
+                      ref(db, "referrals_v1/summary/" + inviterId),
+                      (cur) => {
+                          const o = cur && typeof cur === "object" ? cur : {};
+                          const prev = typeof o.pendingReward === "number" ? o.pendingReward : 0;
+                          const earned = typeof o.earnedTotal === "number" ? o.earnedTotal : 0;
+                          return {
+                              ...o,
+                              pendingReward: prev + reward,
+                              earnedTotal: earned + reward,
+                              lastRewardAt: Date.now(),
+                          };
+                      }
+                  );
+                  try {
+                      await runTransaction(
+                          ref(db, "referrals_v1/earnings_from/" + inviterId + "/" + spenderId),
+                          (curVal) => {
+                              const n = typeof curVal === "number" ? curVal : 0;
+                              return n + reward;
+                          }
+                      );
+                  } catch (eFrom) {
+                      console.warn("ptgDistributeReferralReward earnings_from L" + level, eFrom);
+                  }
+                  splits.push({ level, beneficiaryId: inviterId, pct, amount: reward, elite: !!elite });
+              } catch (eTx) {
+                  console.warn("ptgDistributeReferralReward tx L" + level, eTx);
+              }
+          }
+
+          current = inviterId;
+      }
+
+      try {
+          await set(evRef, {
+              spenderId,
+              baseCents: amt,
+              kind,
+              ts: Date.now(),
+              splits,
+          });
+      } catch (e) {
+          console.warn("ptgDistributeReferralReward event log", e);
+      }
+      return { spenderId, baseCents: amt, kind, splits };
+  }
+
+  /** Convenience wrapper: safe to call from event handlers; never throws. */
+  function ptgTriggerReferralReward(kind, eventId, overrideCents) {
+      try {
+          if (!isLoggedIn() || myUserId === "guest") return;
+          const base =
+              typeof overrideCents === "number" && overrideCents > 0
+                  ? Math.floor(overrideCents)
+                  : PTG_REF_EVENT_BASE_CENTS[kind] || PTG_REF_EVENT_BASE_CENTS.generic;
+          void ptgDistributeReferralReward(myUserId, base, eventId, kind);
+      } catch (e) {
+          console.warn("ptgTriggerReferralReward", e);
+      }
+  }
+
   async function refreshReferralModalContent() {
-      const universalUrlEl = document.getElementById("referralUniversalUrl");
+      const urlFcEl = document.getElementById("referralUniversalUrlFc");
+      const urlBaseEl = document.getElementById("referralUniversalUrlBase");
       const fcCompose = document.getElementById("referralFarcasterCompose");
       const baseShare = document.getElementById("referralBaseAppShare");
       const origin = ptgReferralInviteOrigin();
       const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
       if (!isLoggedIn() || myUserId === "guest") {
-          if (universalUrlEl) universalUrlEl.textContent = "Connect to get your invite link.";
-          const guestShare = "Play Phrase To Guess on Base — " + siteUrl;
-          if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(guestShare);
-          if (baseShare) baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(siteUrl);
+          const guestMsg = "Connect to get your invite links.";
+          if (urlFcEl) {
+              urlFcEl.textContent = guestMsg;
+              urlFcEl.classList.add("referral-url-text--multiline");
+              urlFcEl.removeAttribute("title");
+          }
+          if (urlBaseEl) {
+              urlBaseEl.textContent = guestMsg;
+              urlBaseEl.classList.add("referral-url-text--multiline");
+              urlBaseEl.removeAttribute("title");
+          }
+          const guestShareFc = "Play Phrase To Guess on Base — " + siteUrl + "?via=farcaster";
+          const guestShareBase = siteUrl + "?via=base";
+          if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(guestShareFc);
+          if (baseShare) baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(guestShareBase);
           ptgUpdateReferralUiFromSnapshot(null);
           const btn = document.getElementById("referralClaimBtn");
           if (btn) btn.disabled = true;
           return;
       }
       const code = await ptgRefCodeFromUserId(myUserId);
-      const u = origin + "/?ref=" + encodeURIComponent(code);
-      if (universalUrlEl) universalUrlEl.textContent = u;
-      const shareText = "Play Phrase To Guess on Base — " + u;
-      if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareText);
-      if (baseShare) baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(u);
+      const uFc = origin + "/?ref=" + encodeURIComponent(code) + "&via=farcaster";
+      const uBase = origin + "/?ref=" + encodeURIComponent(code) + "&via=base";
+      if (urlFcEl) {
+          urlFcEl.textContent = uFc;
+          urlFcEl.classList.remove("referral-url-text--multiline");
+          urlFcEl.title = uFc;
+      }
+      if (urlBaseEl) {
+          urlBaseEl.textContent = uBase;
+          urlBaseEl.classList.remove("referral-url-text--multiline");
+          urlBaseEl.title = uBase;
+      }
+      const shareTextFc = "Play Phrase To Guess on Base — " + uFc;
+      const shareTextBase = "Play Phrase To Guess on Base — " + uBase;
+      if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareTextFc);
+      if (baseShare) baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(uBase);
       try {
           const sRef = ref(db, "referrals_v1/summary/" + myUserId);
           const snap = await get(sRef);
@@ -3354,6 +4458,7 @@
       el.setAttribute("aria-hidden", "false");
       const msg = document.getElementById("referralClaimMsg");
       if (msg) msg.textContent = "";
+      void ptgHydrateEliteInput();
       await refreshReferralModalContent();
   }
 
@@ -3365,8 +4470,8 @@
       ptgCloseReferralDetailPanel();
   }
 
-  async function copyReferralInviteLink() {
-      const el = document.getElementById("referralUniversalUrl");
+  async function copyReferralInviteLinkFromEl(spanId) {
+      const el = document.getElementById(spanId);
       const msg = document.getElementById("referralClaimMsg");
       const t = el && el.textContent ? el.textContent.trim() : "";
       if (!t || t.indexOf("http") !== 0) {
@@ -3393,6 +4498,8 @@
           }
       }
   }
+
+  /** Loaded + watched once `db` exists (see ptgEnsureReferralPipeline below). */
 
   /** Po sync profilu: jeśli w RTDB jest tylko skrót adresu / brak nicku — dociągnij i zapisz (na bieżąco). */
   async function refreshMyDisplayNameInRtdb() {
@@ -4563,6 +5670,7 @@
           clearTimeout(safeLoad);
           if (typeof window.__ptgForceHideLoading === "function") window.__ptgForceHideLoading();
           else document.getElementById("loadingScreen").style.display = "none";
+          void ptgMaybeShowInviteAcceptOverlay();
 
           if (isLoggedIn()) {
               setAuthGateVisible(false);
@@ -5652,6 +6760,8 @@
           if (!receipt || receipt.status !== 1) {
               throw new Error("Hint transaction reverted on-chain.");
           }
+
+          ptgTriggerReferralReward("hint", "hint:" + String(txHash).toLowerCase());
 
           const letter = revealRandomHiddenLetter();
           if (!letter) {
@@ -7304,6 +8414,9 @@
               }
           }
           profileBadgesMinted[key] = true;
+          if (txHash && txHash !== "already_minted") {
+              ptgTriggerReferralReward("mint_badge", "mint_badge:" + (key || "x") + ":" + String(txHash).toLowerCase());
+          }
           console.info("badge mint tx", h);
           setBadgeMintFeedback(txHash === "already_minted" ? "Badge already claimed!" : "Success.", "#86efac");
           await refreshBadgeOnchainBalances();
@@ -7346,6 +8459,9 @@
               }
           }
           profileBadgesMinted.og = true;
+          if (txHash && txHash !== "already_minted") {
+              ptgTriggerReferralReward("mint_badge", "mint_badge:og:" + String(txHash).toLowerCase());
+          }
           console.info("OG badge mint tx", h);
           setBadgeMintFeedback(txHash === "already_minted" ? "Badge already claimed!" : "Success.", "#86efac");
           await refreshBadgeOnchainBalances();
@@ -7425,6 +8541,10 @@
               statusDiv.style.color = "#94a3b8";
           },
       });
+
+      if (txHash && txHash !== "already_minted") {
+          ptgTriggerReferralReward("mint", "mint:" + String(txHash).toLowerCase());
+      }
 
       // SUCCESS — dopiero po receipt + balance; Firebase: tylko przy pendingMint + unikalny tx (brak farmy +2)
       const hadPendingMint = pendingMint;
@@ -7736,8 +8856,30 @@
   document.getElementById("referralModalCloseBtn")?.addEventListener("click", function () {
       closeReferralModal();
   });
-  document.getElementById("referralCopyInlineBtn")?.addEventListener("click", function () {
-      void copyReferralInviteLink();
+  document.getElementById("referralCopyFcBtn")?.addEventListener("click", function () {
+      void copyReferralInviteLinkFromEl("referralUniversalUrlFc");
+  });
+  document.getElementById("referralCopyBaseBtn")?.addEventListener("click", function () {
+      void copyReferralInviteLinkFromEl("referralUniversalUrlBase");
+  });
+  document.getElementById("referralEliteListSaveBtn")?.addEventListener("click", async function () {
+      const ta = document.getElementById("referralEliteListInput");
+      const msg = document.getElementById("referralClaimMsg");
+      const btn = document.getElementById("referralEliteListSaveBtn");
+      const raw = ta && typeof ta.value === "string" ? ta.value : "";
+      if (btn) btn.disabled = true;
+      try {
+          const count = await ptgSaveEliteEntries(raw);
+          ptgRefreshTierModeBadge();
+          if (msg) msg.textContent = "Saved elite list (" + count + ").";
+          if (ptgReferralDetailIsOpen() && __ptgReferralDetailMode === "invites" && __ptgLastInvitesVal) {
+              ptgPaintReferralInvitesList(__ptgLastInvitesVal);
+          }
+      } catch (_) {
+          if (msg) msg.textContent = "Couldn't save elite list. Try again.";
+      } finally {
+          if (btn) btn.disabled = false;
+      }
   });
   document.getElementById("referralToggleHistoryBtn")?.addEventListener("click", function () {
       void ptgOpenReferralDetail("history");
@@ -7749,6 +8891,12 @@
       ptgCloseReferralDetailPanel();
   });
   document.getElementById("referralDetailOverlay")?.addEventListener("click", function (ev) {
+      const acc = ev.target && ev.target.closest && ev.target.closest(".referral-acc-trigger");
+      if (acc && acc.tagName === "BUTTON" && !acc.disabled) {
+          ev.preventDefault();
+          void ptgToggleReferralInviteNested(acc);
+          return;
+      }
       if (ev.target === ev.currentTarget) ptgCloseReferralDetailPanel();
   });
   document.getElementById("referralClaimBtn")?.addEventListener("click", function () {
@@ -7756,6 +8904,25 @@
   });
   document.getElementById("referralOverlay")?.addEventListener("click", function (ev) {
       if (ev.target === ev.currentTarget) closeReferralModal();
+  });
+  document.getElementById("inviteAcceptBtn")?.addEventListener("click", function () {
+      ptgMarkInviteAcceptSeen();
+      ptgHideInviteAcceptOverlay();
+      if (!isLoggedIn() || myUserId === "guest") {
+          setAuthGateVisible(true);
+      } else {
+          void tryProcessReferralAttribution();
+      }
+  });
+  document.getElementById("inviteAcceptDismissBtn")?.addEventListener("click", function () {
+      ptgMarkInviteAcceptSeen();
+      ptgHideInviteAcceptOverlay();
+  });
+  document.getElementById("inviteAcceptOverlay")?.addEventListener("click", function (ev) {
+      if (ev.target === ev.currentTarget) {
+          ptgMarkInviteAcceptSeen();
+          ptgHideInviteAcceptOverlay();
+      }
   });
 
   let __ptgNameRefreshLastMs = 0;
