@@ -3345,7 +3345,7 @@
    * Zwiększ po resecie rankingu (nowe drzewo w RTDB: players_s{N}).
    * Zasady punktów bez zmian; stare sezony zostają w bazie jako archiwum.
    */
-  const LEADERBOARD_SEASON = 2;
+  const LEADERBOARD_SEASON = 3;
   function playerDocRef(userId) {
     return ref(db, `players_s${LEADERBOARD_SEASON}/` + userId);
   }
