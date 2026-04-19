@@ -896,19 +896,16 @@
         gap: 8px;
         margin-bottom: 0;
     }
-    .referral-elite-editor {
+    .referral-tier-strip {
         margin-top: 10px;
         padding-top: 10px;
         border-top: 1px solid rgba(148, 163, 184, 0.2);
-    }
-    .referral-elite-editor-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 8px;
-        margin-bottom: 6px;
     }
-    .referral-elite-editor-label {
+    .referral-tier-strip-label {
         margin: 0;
         font-size: 9px;
         font-weight: 800;
@@ -916,7 +913,7 @@
         text-transform: uppercase;
         color: rgba(125, 211, 252, 0.92);
     }
-    .referral-elite-editor-badge {
+    .referral-tier-strip-badge {
         font-size: 9px;
         font-weight: 800;
         color: #bae6fd;
@@ -924,50 +921,7 @@
         background: rgba(14, 116, 144, 0.22);
         border-radius: 999px;
         padding: 2px 6px;
-    }
-    .referral-elite-textarea {
-        width: 100%;
-        min-height: 58px;
-        resize: vertical;
-        border-radius: 10px;
-        border: 1px solid rgba(148, 163, 184, 0.3);
-        background: rgba(2, 6, 23, 0.5);
-        color: #e2e8f0;
-        box-sizing: border-box;
-        padding: 8px 9px;
-        font-size: 11px;
-        line-height: 1.35;
-        font-family: "Roboto Mono", ui-monospace, monospace;
-    }
-    .referral-elite-textarea:focus {
-        outline: 2px solid rgba(56, 189, 248, 0.45);
-        outline-offset: 1px;
-        border-color: rgba(56, 189, 248, 0.55);
-    }
-    .referral-elite-actions {
-        margin-top: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-    }
-    .referral-elite-save-btn {
-        border: 1px solid rgba(56, 189, 248, 0.45);
-        background: rgba(14, 116, 144, 0.24);
-        color: #e0f2fe;
-        border-radius: 9px;
-        font-size: 11px;
-        font-weight: 700;
-        padding: 7px 10px;
-        cursor: pointer;
-    }
-    .referral-elite-save-btn:hover {
-        background: rgba(14, 116, 144, 0.34);
-    }
-    .referral-elite-hint {
-        margin: 0;
-        font-size: 10px;
-        color: rgba(148, 163, 184, 0.9);
+        white-space: nowrap;
     }
     .referral-share-row .referral-action-btn {
         flex: 1;
@@ -2751,21 +2705,9 @@
         <a class="referral-action-btn referral-action-btn--fc" id="referralFarcasterCompose" href="https://warpcast.com" target="_blank" rel="noopener noreferrer">Share on Farcaster</a>
         <a class="referral-action-btn referral-action-btn--base" id="referralBaseAppShare" href="https://base.app" target="_blank" rel="noopener noreferrer">Share on Base app</a>
       </div>
-      <div class="referral-elite-editor">
-        <div class="referral-elite-editor-head">
-          <p class="referral-elite-editor-label">Elite inviters list (50% + 10%x4)</p>
-          <span class="referral-elite-editor-badge" id="referralTierModeBadge">Normal tiers</span>
-        </div>
-        <textarea
-          class="referral-elite-textarea"
-          id="referralEliteListInput"
-          placeholder="One nickname or address per line"
-          spellcheck="false"
-        ></textarea>
-        <div class="referral-elite-actions">
-          <button type="button" class="referral-elite-save-btn" id="referralEliteListSaveBtn">Save list</button>
-          <p class="referral-elite-hint">Accepted: nicknames and 0x addresses.</p>
-        </div>
+      <div class="referral-tier-strip">
+        <p class="referral-tier-strip-label">Your tier mode</p>
+        <span class="referral-tier-strip-badge" id="referralTierModeBadge">Normal tiers</span>
       </div>
       </div>
     </div>
@@ -3337,6 +3279,7 @@
       if (!basename) basename = await resolveBasenameForAddress(myUserId);
       if (!basename) return;
       myUsername = basename;
+      ptgRefreshTierModeBadge();
       let chipCore = basename;
       if (hostKind === "base") chipCore = "Base · " + basename;
       else if (hostKind === "farcaster") chipCore = "FC · " + basename;
@@ -3382,11 +3325,17 @@
       mint_badge: 1, // current badge mint price = $0.01
       generic: 25,
   };
+  /**
+   * Elite inviters — edytujesz TYLKO tutaj w repo (deploy). Nie ma zapisu z UI.
+   * Wpisuj nicki lub adresy 0x (wielkość liter nie ma znaczenia).
+   */
+  const PTG_REF_ELITE_CODE_ENTRIES = [
+      // "0xabc...",
+      // "supercreator",
+  ];
   let __ptgReferralInviteTiers = PTG_REF_TIER_PCT_NORMAL.slice();
   let __ptgReferralEliteSet = new Set();
-  let __ptgReferralEliteLoaded = false;
   let referralSummaryUnsubscribe = null;
-  let referralEliteUnsubscribe = null;
   let referralClaimHistoryUnsubscribe = null;
   let referralInviteEntriesUnsubscribe = null;
 
@@ -3397,12 +3346,6 @@
           } catch (_) {}
       }
       referralSummaryUnsubscribe = null;
-      if (typeof referralEliteUnsubscribe === "function") {
-          try {
-              referralEliteUnsubscribe();
-          } catch (_) {}
-      }
-      referralEliteUnsubscribe = null;
       if (typeof referralClaimHistoryUnsubscribe === "function") {
           try {
               referralClaimHistoryUnsubscribe();
@@ -3453,83 +3396,13 @@
       return out;
   }
 
-  function ptgEliteEntriesFromMap(val) {
-      const out = [];
-      if (!val || typeof val !== "object") return out;
-      const keys = Object.keys(val);
-      for (let i = 0; i < keys.length; i++) {
-          const k = ptgNormalizeEliteEntry(keys[i]);
-          if (!k) continue;
-          const v = val[keys[i]];
-          const active =
-              v === true ||
-              (v && typeof v === "object" && v.active !== false) ||
-              (typeof v === "string" && v.length > 0);
-          if (active) out.push(k);
-      }
-      return out;
+  function ptgRebuildEliteSetFromCode() {
+      const arr = Array.isArray(PTG_REF_ELITE_CODE_ENTRIES) ? PTG_REF_ELITE_CODE_ENTRIES : [];
+      const lines = arr.map((x) => String(x || "")).join("\n");
+      __ptgReferralEliteSet = new Set(ptgParseEliteEntries(lines));
   }
 
-  async function ptgLoadEliteEntries() {
-      if (!db) {
-          __ptgReferralEliteSet = new Set();
-          __ptgReferralEliteLoaded = false;
-          return;
-      }
-      try {
-          const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/elite_inviters"));
-          const val = snap.exists() ? snap.val() : null;
-          __ptgReferralEliteSet = new Set(ptgEliteEntriesFromMap(val));
-          __ptgReferralEliteLoaded = true;
-      } catch (e) {
-          console.warn("elite_inviters load", e);
-          __ptgReferralEliteSet = new Set();
-          __ptgReferralEliteLoaded = false;
-      }
-  }
-
-  function ptgWatchEliteEntries() {
-      if (!db) return;
-      if (typeof referralEliteUnsubscribe === "function") {
-          try {
-              referralEliteUnsubscribe();
-          } catch (_) {}
-      }
-      try {
-          referralEliteUnsubscribe = onValue(ref(db, ptgReferralsRtdbRoot() + "/elite_inviters"), (snap) => {
-              const val = snap.exists() ? snap.val() : null;
-              __ptgReferralEliteSet = new Set(ptgEliteEntriesFromMap(val));
-              __ptgReferralEliteLoaded = true;
-              ptgRefreshTierModeBadge();
-          });
-      } catch (e) {
-          console.warn("elite_inviters watch", e);
-      }
-  }
-
-  async function ptgSaveEliteEntries(raw) {
-      const arr = ptgParseEliteEntries(raw);
-      const next = {};
-      for (let i = 0; i < arr.length; i++) next[arr[i]] = true;
-      if (!db) {
-          __ptgReferralEliteSet = new Set(arr);
-          return arr.length;
-      }
-      try {
-          await set(ref(db, ptgReferralsRtdbRoot() + "/elite_inviters"), next);
-          __ptgReferralEliteSet = new Set(arr);
-      } catch (e) {
-          console.warn("elite_inviters save", e);
-          throw e;
-      }
-      return arr.length;
-  }
-
-  function ptgEliteInputRaw() {
-      const arr = Array.from(__ptgReferralEliteSet.values());
-      arr.sort();
-      return arr.join("\n");
-  }
+  ptgRebuildEliteSetFromCode();
 
   function ptgIsEliteUser(userId, displayName) {
       const idKey = ptgNormalizeEliteEntry(userId);
@@ -3549,15 +3422,6 @@
       if (!badge) return;
       const elite = ptgIsEliteUser(myUserId, myUsername);
       badge.textContent = elite ? "Elite tiers active" : "Normal tiers";
-  }
-
-  async function ptgHydrateEliteInput() {
-      const ta = document.getElementById("referralEliteListInput");
-      if (!__ptgReferralEliteLoaded) {
-          await ptgLoadEliteEntries();
-      }
-      if (ta) ta.value = ptgEliteInputRaw();
-      ptgRefreshTierModeBadge();
   }
 
   function ptgReferralDetailIsOpen() {
@@ -4087,13 +3951,8 @@
       await ensureReferralSelfIndex();
       await tryProcessReferralAttribution();
       bindReferralSummaryListener();
-      if (!__ptgReferralEliteLoaded) {
-          try { await ptgLoadEliteEntries(); } catch (_) {}
-          ptgRefreshTierModeBadge();
-      }
-      if (typeof referralEliteUnsubscribe !== "function") {
-          ptgWatchEliteEntries();
-      }
+      ptgRebuildEliteSetFromCode();
+      ptgRefreshTierModeBadge();
   }
 
   function ptgInviterAvatarMarkup(displayName, address) {
@@ -4271,7 +4130,7 @@
    * ancestor with a tier % of `baseCents`. Idempotent per `eventId`.
    *
    * Tier array per beneficiary:
-   *   - elite (listed in `{ptgReferralsRtdbRoot()}/elite_inviters`): [50,10,10,10,10]
+   *   - elite (listed in `PTG_REF_ELITE_CODE_ENTRIES` in index.html): [50,10,10,10,10]
    *   - normal:                                         [25, 5, 5, 5, 5]
    *
    * @param {string} spenderId       user whose action triggered the event
@@ -4294,11 +4153,7 @@
           return null;
       }
 
-      if (!__ptgReferralEliteLoaded) {
-          try {
-              await ptgLoadEliteEntries();
-          } catch (_) {}
-      }
+      ptgRebuildEliteSetFromCode();
 
       const splits = [];
       const walked = new Set([String(spenderId).toLowerCase()]);
@@ -4463,7 +4318,8 @@
       el.setAttribute("aria-hidden", "false");
       const msg = document.getElementById("referralClaimMsg");
       if (msg) msg.textContent = "";
-      void ptgHydrateEliteInput();
+      ptgRebuildEliteSetFromCode();
+      ptgRefreshTierModeBadge();
       await refreshReferralModalContent();
   }
 
@@ -4541,6 +4397,7 @@
       }
       if (!isBetterDisplayName(resolved)) return;
       myUsername = resolved;
+      ptgRefreshTierModeBadge();
       let chipCore = resolved;
       if (ptgHost === "base") chipCore = "Base · " + resolved;
       else if (ptgHost === "farcaster") chipCore = "FC · " + resolved;
@@ -4662,6 +4519,7 @@
       if (!/^0x[a-fA-F0-9]{40}$/.test(a)) return false;
       myUsername = a.substring(0, 6) + "..." + a.substring(38);
       myUserId = a.toLowerCase();
+      ptgRefreshTierModeBadge();
       if (hostKind === "base") {
           setPlayerChip("Base · " + myUsername, "base");
       } else if (hostKind === "farcaster") {
@@ -4681,6 +4539,7 @@
       if (u.username) {
           myUsername = "@" + u.username;
           myUserId = myUsername.replace(/[^a-zA-Z0-9]/g, "");
+          ptgRefreshTierModeBadge();
           const label = viaBase ? "Base · " + myUsername : myUsername;
           setPlayerChip(label, chipVariant);
           const chip = document.getElementById("playerDisplay");
@@ -4691,6 +4550,7 @@
           const fidStr = String(u.fid);
           myUsername = "FID " + fidStr;
           myUserId = "fcfid" + fidStr.replace(/\D/g, "");
+          ptgRefreshTierModeBadge();
           const label = viaBase ? "Base · FID " + fidStr : "FC · FID " + fidStr;
           setPlayerChip(label, chipVariant);
           const chip = document.getElementById("playerDisplay");
@@ -8866,25 +8726,6 @@
   });
   document.getElementById("referralCopyBaseBtn")?.addEventListener("click", function () {
       void copyReferralInviteLinkFromEl("referralUniversalUrlBase");
-  });
-  document.getElementById("referralEliteListSaveBtn")?.addEventListener("click", async function () {
-      const ta = document.getElementById("referralEliteListInput");
-      const msg = document.getElementById("referralClaimMsg");
-      const btn = document.getElementById("referralEliteListSaveBtn");
-      const raw = ta && typeof ta.value === "string" ? ta.value : "";
-      if (btn) btn.disabled = true;
-      try {
-          const count = await ptgSaveEliteEntries(raw);
-          ptgRefreshTierModeBadge();
-          if (msg) msg.textContent = "Saved elite list (" + count + ").";
-          if (ptgReferralDetailIsOpen() && __ptgReferralDetailMode === "invites" && __ptgLastInvitesVal) {
-              ptgPaintReferralInvitesList(__ptgLastInvitesVal);
-          }
-      } catch (_) {
-          if (msg) msg.textContent = "Couldn't save elite list. Try again.";
-      } finally {
-          if (btn) btn.disabled = false;
-      }
   });
   document.getElementById("referralToggleHistoryBtn")?.addEventListener("click", function () {
       void ptgOpenReferralDetail("history");

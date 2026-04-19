@@ -41,6 +41,10 @@
       "$season": {
         ".read": true,
         ".write": true,
+        "elite_inviters": {
+          ".read": true,
+          ".write": false
+        },
         "summary": {
           ".indexOn": ["pendingReward", "earnedTotal", "lastRewardAt"]
         },
