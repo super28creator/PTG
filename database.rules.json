@@ -38,15 +38,19 @@
     "referrals_v1": {
       ".read": true,
       ".write": true,
-      "summary": {
-        ".indexOn": ["pendingReward", "earnedTotal", "lastRewardAt"]
-      },
-      "reward_events": {
-        ".indexOn": ["ts", "kind", "spenderId"]
-      },
-      "claim_history": {
-        "$userId": {
-          ".indexOn": ["ts"]
+      "$season": {
+        ".read": true,
+        ".write": true,
+        "summary": {
+          ".indexOn": ["pendingReward", "earnedTotal", "lastRewardAt"]
+        },
+        "reward_events": {
+          ".indexOn": ["ts", "kind", "spenderId"]
+        },
+        "claim_history": {
+          "$userId": {
+            ".indexOn": ["ts"]
+          }
         }
       }
     }

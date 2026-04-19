@@ -3366,6 +3366,11 @@
     return ref(db, `players_s${LEADERBOARD_SEASON}`);
   }
 
+  /** Wszystkie dane referrali są per sezon (jak `players_s{N}`). */
+  function ptgReferralsRtdbRoot() {
+      return "referrals_v1/s" + LEADERBOARD_SEASON;
+  }
+
   const PTG_REF_INVITE_REWARD = 50;
   const PTG_REF_TIER_PCT_NORMAL = [25, 5, 5, 5, 5];
   const PTG_REF_TIER_PCT_ELITE = [50, 10, 10, 10, 10];
@@ -3472,7 +3477,7 @@
           return;
       }
       try {
-          const snap = await get(ref(db, "referrals_v1/elite_inviters"));
+          const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/elite_inviters"));
           const val = snap.exists() ? snap.val() : null;
           __ptgReferralEliteSet = new Set(ptgEliteEntriesFromMap(val));
           __ptgReferralEliteLoaded = true;
@@ -3491,7 +3496,7 @@
           } catch (_) {}
       }
       try {
-          referralEliteUnsubscribe = onValue(ref(db, "referrals_v1/elite_inviters"), (snap) => {
+          referralEliteUnsubscribe = onValue(ref(db, ptgReferralsRtdbRoot() + "/elite_inviters"), (snap) => {
               const val = snap.exists() ? snap.val() : null;
               __ptgReferralEliteSet = new Set(ptgEliteEntriesFromMap(val));
               __ptgReferralEliteLoaded = true;
@@ -3511,7 +3516,7 @@
           return arr.length;
       }
       try {
-          await set(ref(db, "referrals_v1/elite_inviters"), next);
+          await set(ref(db, ptgReferralsRtdbRoot() + "/elite_inviters"), next);
           __ptgReferralEliteSet = new Set(arr);
       } catch (e) {
           console.warn("elite_inviters save", e);
@@ -3656,7 +3661,7 @@
       __ptgEarningsFromMap = {};
       if (!db || !isLoggedIn() || myUserId === "guest") return;
       try {
-          const snap = await get(ref(db, "referrals_v1/earnings_from/" + myUserId));
+          const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/earnings_from/" + myUserId));
           if (!snap.exists()) return;
           const raw = snap.val();
           if (!raw || typeof raw !== "object") return;
@@ -3783,7 +3788,7 @@
       }
       btn.disabled = true;
       try {
-          const snap = await get(ref(db, "referrals_v1/invite_entries/" + invitee));
+          const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + invitee));
           const raw = snap.exists() ? snap.val() : null;
           const childRows = !raw || typeof raw !== "object" ? [] : Object.entries(raw)
               .map(([k, v]) => ({ k, v: v && typeof v === "object" ? v : {} }))
@@ -3877,11 +3882,11 @@
       }
       try {
           if (mode === "history") {
-              const snap = await get(ref(db, "referrals_v1/claim_history/" + myUserId));
+              const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/claim_history/" + myUserId));
               __ptgLastHistoryVal = snap.exists() ? snap.val() : null;
               ptgPaintReferralHistoryList(__ptgLastHistoryVal);
           } else {
-              const snap = await get(ref(db, "referrals_v1/invite_entries/" + myUserId));
+              const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + myUserId));
               __ptgLastInvitesVal = snap.exists() ? snap.val() : null;
               ptgPaintReferralInvitesList(__ptgLastInvitesVal);
           }
@@ -3931,7 +3936,7 @@
       if (!db || !isLoggedIn() || myUserId === "guest") return;
       const code = await ptgRefCodeFromUserId(myUserId);
       if (!/^[a-f0-9]{12}$/.test(code)) return;
-      const idxRef = ref(db, "referrals_v1/index/" + code);
+      const idxRef = ref(db, ptgReferralsRtdbRoot() + "/index/" + code);
       try {
           const snap = await get(idxRef);
           if (!snap.exists()) {
@@ -3975,7 +3980,7 @@
       }
       let idxSnap;
       try {
-          idxSnap = await get(ref(db, "referrals_v1/index/" + refCode));
+          idxSnap = await get(ref(db, ptgReferralsRtdbRoot() + "/index/" + refCode));
       } catch (e) {
           console.warn("referral index lookup", e);
           return;
@@ -3991,7 +3996,7 @@
       }
       const vis = String(myUserId).replace(/[^a-zA-Z0-9_]/g, "_");
       const edgeKey = refCode + "_" + vis.slice(0, 72);
-      const edgeRef = ref(db, "referrals_v1/edges/" + edgeKey);
+      const edgeRef = ref(db, ptgReferralsRtdbRoot() + "/edges/" + edgeKey);
       let viaHost = "browser";
       try {
           const pv = localStorage.getItem("ptg_pending_via");
@@ -4007,13 +4012,13 @@
               return;
           }
           await set(edgeRef, { ts: Date.now(), invitee: myUserId, via: viaHost });
-          await set(ref(db, "referrals_v1/invite_entries/" + ownerId + "/" + edgeKey), {
+          await set(ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + ownerId + "/" + edgeKey), {
               invitee: myUserId,
               ts: Date.now(),
               via: viaHost,
           });
           try {
-              const parentRef = ref(db, "referrals_v1/parent_of/" + myUserId);
+              const parentRef = ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + myUserId);
               const prevSnap = await get(parentRef);
               if (!prevSnap.exists()) {
                   await set(parentRef, { inviterId: ownerId, via: viaHost, ts: Date.now() });
@@ -4026,7 +4031,7 @@
           return;
       }
       try {
-          await runTransaction(ref(db, "referrals_v1/summary/" + ownerId), (cur) => {
+          await runTransaction(ref(db, ptgReferralsRtdbRoot() + "/summary/" + ownerId), (cur) => {
               const o = cur && typeof cur === "object" ? cur : {};
               const invites = (typeof o.invites === "number" ? o.invites : 0) + 1;
               const pendingReward = (typeof o.pendingReward === "number" ? o.pendingReward : 0) + PTG_REF_INVITE_REWARD;
@@ -4063,16 +4068,16 @@
           }
           return;
       }
-      const sRef = ref(db, "referrals_v1/summary/" + myUserId);
+      const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId);
       referralSummaryUnsubscribe = onValue(sRef, (snap) => {
           const d = snap.exists() ? snap.val() : null;
           ptgUpdateReferralUiFromSnapshot(d);
       });
-      const hRef = ref(db, "referrals_v1/claim_history/" + myUserId);
+      const hRef = ref(db, ptgReferralsRtdbRoot() + "/claim_history/" + myUserId);
       referralClaimHistoryUnsubscribe = onValue(hRef, (snap) => {
           ptgRenderReferralHistoryList(snap.exists() ? snap.val() : null);
       });
-      const iRef = ref(db, "referrals_v1/invite_entries/" + myUserId);
+      const iRef = ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + myUserId);
       referralInviteEntriesUnsubscribe = onValue(iRef, (snap) => {
           ptgRenderReferralInvitesList(snap.exists() ? snap.val() : null);
       });
@@ -4147,7 +4152,7 @@
       if (!db) return;
       let ownerId = null;
       try {
-          const s = await get(ref(db, "referrals_v1/index/" + refCode));
+          const s = await get(ref(db, ptgReferralsRtdbRoot() + "/index/" + refCode));
           if (s.exists()) ownerId = s.val() && s.val().ownerId;
       } catch (_) {}
       if (!ownerId) return;
@@ -4210,7 +4215,7 @@
       }
       let claimAmount = 0;
       try {
-          const pre = await get(ref(db, "referrals_v1/summary/" + myUserId));
+          const pre = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId));
           if (pre.exists() && typeof pre.val().pendingReward === "number") {
               claimAmount = pre.val().pendingReward;
           }
@@ -4221,7 +4226,7 @@
       }
       if (btn) btn.disabled = true;
       try {
-          await runTransaction(ref(db, "referrals_v1/summary/" + myUserId), (cur) => {
+          await runTransaction(ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId), (cur) => {
               const o = cur && typeof cur === "object" ? cur : {};
               const pr = typeof o.pendingReward === "number" ? o.pendingReward : 0;
               if (pr <= 0) return o;
@@ -4233,7 +4238,7 @@
               };
           });
           try {
-              await push(ref(db, "referrals_v1/claim_history/" + myUserId), {
+              await push(ref(db, ptgReferralsRtdbRoot() + "/claim_history/" + myUserId), {
                   amount: claimAmount,
                   ts: Date.now(),
               });
@@ -4246,7 +4251,7 @@
           if (msg) msg.textContent = "Could not claim. Try again.";
       } finally {
           if (btn) {
-              const sRef = ref(db, "referrals_v1/summary/" + myUserId);
+              const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId);
               get(sRef)
                   .then((snap) => {
                       const d = snap.exists() ? snap.val() : null;
@@ -4262,11 +4267,11 @@
 
   /**
    * Multi-level referral reward distribution (L1..L5).
-   * Walks up `referrals_v1/parent_of/{childId}` chain and credits each
+   * Walks up `{ptgReferralsRtdbRoot()}/parent_of/{childId}` chain and credits each
    * ancestor with a tier % of `baseCents`. Idempotent per `eventId`.
    *
    * Tier array per beneficiary:
-   *   - elite (listed in `referrals_v1/elite_inviters`): [50,10,10,10,10]
+   *   - elite (listed in `{ptgReferralsRtdbRoot()}/elite_inviters`): [50,10,10,10,10]
    *   - normal:                                         [25, 5, 5, 5, 5]
    *
    * @param {string} spenderId       user whose action triggered the event
@@ -4280,7 +4285,7 @@
       if (!(amt > 0)) return null;
       const kind = typeof eventKind === "string" && eventKind ? eventKind : "generic";
 
-      const evRef = ref(db, "referrals_v1/reward_events/" + eventId);
+      const evRef = ref(db, ptgReferralsRtdbRoot() + "/reward_events/" + eventId);
       try {
           const pre = await get(evRef);
           if (pre.exists()) return pre.val();
@@ -4302,7 +4307,7 @@
       for (let level = 1; level <= PTG_REF_MAX_DEPTH; level++) {
           let parentVal = null;
           try {
-              const s = await get(ref(db, "referrals_v1/parent_of/" + current));
+              const s = await get(ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + current));
               parentVal = s.exists() ? s.val() : null;
           } catch (e) {
               console.warn("ptgDistributeReferralReward parent_of", e);
@@ -4336,7 +4341,7 @@
           if (reward > 0) {
               try {
                   await runTransaction(
-                      ref(db, "referrals_v1/summary/" + inviterId),
+                      ref(db, ptgReferralsRtdbRoot() + "/summary/" + inviterId),
                       (cur) => {
                           const o = cur && typeof cur === "object" ? cur : {};
                           const prev = typeof o.pendingReward === "number" ? o.pendingReward : 0;
@@ -4351,7 +4356,7 @@
                   );
                   try {
                       await runTransaction(
-                          ref(db, "referrals_v1/earnings_from/" + inviterId + "/" + spenderId),
+                          ref(db, ptgReferralsRtdbRoot() + "/earnings_from/" + inviterId + "/" + spenderId),
                           (curVal) => {
                               const n = typeof curVal === "number" ? curVal : 0;
                               return n + reward;
@@ -4443,7 +4448,7 @@
       if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareTextFc);
       if (baseShare) baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(uBase);
       try {
-          const sRef = ref(db, "referrals_v1/summary/" + myUserId);
+          const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId);
           const snap = await get(sRef);
           ptgUpdateReferralUiFromSnapshot(snap.exists() ? snap.val() : null);
       } catch (_) {
