@@ -4250,14 +4250,6 @@
       }
   }
 
-  function ptgIsLikelyBaseAppHost() {
-      try {
-          if (ptgHost === "base") return true;
-          if (typeof ptgNotifDetectBaseSurface === "function" && ptgNotifDetectBaseSurface()) return true;
-      } catch (_) {}
-      return false;
-  }
-
   async function ptgShareReferralBaseInviteFromUi() {
       const msg = document.getElementById("referralClaimMsg");
       const urlBaseEl = document.getElementById("referralUniversalUrlBase");
@@ -4306,7 +4298,7 @@
           const guestShareBase = siteUrl + "?via=base";
           if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(guestShareFc);
           if (baseShare) {
-              if (ptgIsLikelyBaseAppHost() && navigator.share) {
+              if (navigator.share) {
                   baseShare.href = "#";
                   try {
                       baseShare.removeAttribute("target");
@@ -4337,7 +4329,7 @@
       const shareTextFc = "Play Phrase To Guess on Base — " + uFc;
       if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareTextFc);
       if (baseShare) {
-          if (ptgIsLikelyBaseAppHost() && navigator.share) {
+          if (navigator.share) {
               baseShare.href = "#";
               try {
                   baseShare.removeAttribute("target");
@@ -8773,7 +8765,7 @@
       void copyReferralInviteLinkFromEl("referralUniversalUrlBase");
   });
   document.getElementById("referralBaseAppShare")?.addEventListener("click", function (ev) {
-      if (ptgIsLikelyBaseAppHost() && navigator.share) {
+      if (navigator.share) {
           ev.preventDefault();
           void ptgShareReferralBaseInviteFromUi();
       }
