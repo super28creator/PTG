@@ -2703,7 +2703,7 @@
       </div>
       <div class="referral-share-row">
         <a class="referral-action-btn referral-action-btn--fc" id="referralFarcasterCompose" href="https://warpcast.com" target="_blank" rel="noopener noreferrer">Share on Farcaster</a>
-        <a class="referral-action-btn referral-action-btn--base" id="referralBaseAppShare" href="https://base.app" target="_blank" rel="noopener noreferrer">Share on Base app</a>
+        <a class="referral-action-btn referral-action-btn--base" id="referralBaseAppShare" href="#" rel="noopener noreferrer">Share on Base app</a>
       </div>
       <div class="referral-tier-strip">
         <p class="referral-tier-strip-label">Your tier mode</p>
@@ -4250,6 +4250,39 @@
       }
   }
 
+  function ptgIsLikelyBaseAppHost() {
+      try {
+          if (ptgHost === "base") return true;
+          if (typeof ptgNotifDetectBaseSurface === "function" && ptgNotifDetectBaseSurface()) return true;
+      } catch (_) {}
+      return false;
+  }
+
+  async function ptgShareReferralBaseInviteFromUi() {
+      const msg = document.getElementById("referralClaimMsg");
+      const urlBaseEl = document.getElementById("referralUniversalUrlBase");
+      const raw = urlBaseEl && typeof urlBaseEl.textContent === "string" ? urlBaseEl.textContent.trim() : "";
+      const shareUrl =
+          raw && !/^connect to get your invite links\.?$/i.test(raw) && /^https?:\/\//i.test(raw) ? raw : ptgReferralInviteOrigin() + "/?via=base";
+      const title = "Phrase To Guess";
+      const text = "Play Phrase To Guess on Base — " + shareUrl;
+      try {
+          if (navigator.share) {
+              await navigator.share({ title, text, url: shareUrl });
+              if (msg) msg.textContent = "Share sheet opened.";
+              return true;
+          }
+      } catch (e) {
+          if (e && e.name === "AbortError") {
+              if (msg) msg.textContent = "";
+              return false;
+          }
+          console.warn("navigator.share referral base", e);
+      }
+      if (msg) msg.textContent = "Sharing not available here — copy the Base link instead.";
+      return false;
+  }
+
   async function refreshReferralModalContent() {
       const urlFcEl = document.getElementById("referralUniversalUrlFc");
       const urlBaseEl = document.getElementById("referralUniversalUrlBase");
@@ -4272,7 +4305,17 @@
           const guestShareFc = "Play Phrase To Guess on Base — " + siteUrl + "?via=farcaster";
           const guestShareBase = siteUrl + "?via=base";
           if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(guestShareFc);
-          if (baseShare) baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(guestShareBase);
+          if (baseShare) {
+              if (ptgIsLikelyBaseAppHost() && navigator.share) {
+                  baseShare.href = "#";
+                  try {
+                      baseShare.removeAttribute("target");
+                  } catch (_) {}
+              } else {
+                  baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(guestShareBase);
+                  baseShare.target = "_blank";
+              }
+          }
           ptgUpdateReferralUiFromSnapshot(null);
           const btn = document.getElementById("referralClaimBtn");
           if (btn) btn.disabled = true;
@@ -4292,9 +4335,18 @@
           urlBaseEl.title = uBase;
       }
       const shareTextFc = "Play Phrase To Guess on Base — " + uFc;
-      const shareTextBase = "Play Phrase To Guess on Base — " + uBase;
       if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareTextFc);
-      if (baseShare) baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(uBase);
+      if (baseShare) {
+          if (ptgIsLikelyBaseAppHost() && navigator.share) {
+              baseShare.href = "#";
+              try {
+                  baseShare.removeAttribute("target");
+              } catch (_) {}
+          } else {
+              baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(uBase);
+              baseShare.target = "_blank";
+          }
+      }
       try {
           const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId);
           const snap = await get(sRef);
@@ -8719,6 +8771,12 @@
   });
   document.getElementById("referralCopyBaseBtn")?.addEventListener("click", function () {
       void copyReferralInviteLinkFromEl("referralUniversalUrlBase");
+  });
+  document.getElementById("referralBaseAppShare")?.addEventListener("click", function (ev) {
+      if (ptgIsLikelyBaseAppHost() && navigator.share) {
+          ev.preventDefault();
+          void ptgShareReferralBaseInviteFromUi();
+      }
   });
   document.getElementById("referralToggleHistoryBtn")?.addEventListener("click", function () {
       void ptgOpenReferralDetail("history");
