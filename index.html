@@ -674,6 +674,9 @@
     .referral-invite-col--base {
         background: linear-gradient(180deg, rgba(30, 64, 175, 0.22) 0%, rgba(2, 6, 23, 0.05) 55%, rgba(2, 6, 23, 0) 100%);
     }
+    .referral-invite-col--web {
+        background: linear-gradient(180deg, rgba(14, 116, 144, 0.22) 0%, rgba(2, 6, 23, 0.05) 55%, rgba(2, 6, 23, 0) 100%);
+    }
     .referral-invite-col-head {
         margin: 0 0 10px;
         text-align: center;
@@ -689,6 +692,9 @@
     }
     .referral-invite-col--base .referral-invite-col-head {
         color: rgba(191, 219, 254, 0.98);
+    }
+    .referral-invite-col--web .referral-invite-col-head {
+        color: rgba(165, 243, 252, 0.98);
     }
     .referral-invite-col-body {
         flex: 1 1 auto;
@@ -716,6 +722,9 @@
         border-radius: 10px;
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .referral-inv-row--merged-flat {
+        border-left: 2px solid rgba(45, 212, 191, 0.45);
     }
     .referral-acc-trigger {
         flex-shrink: 0;
@@ -869,6 +878,9 @@
     .referral-url-row--base .referral-url-channel-label {
         color: rgba(147, 197, 253, 0.98);
     }
+    .referral-url-row--web .referral-url-channel-label {
+        color: rgba(125, 211, 252, 0.98);
+    }
     .referral-url-field {
         display: flex;
         align-items: center;
@@ -885,6 +897,9 @@
     }
     .referral-url-row--base .referral-url-field {
         border-color: rgba(59, 130, 246, 0.32);
+    }
+    .referral-url-row--web .referral-url-field {
+        border-color: rgba(6, 182, 212, 0.32);
     }
     .referral-url-text {
         flex: 1;
@@ -1010,6 +1025,14 @@
     .referral-action-btn--base:hover {
         background: linear-gradient(180deg, rgba(0, 100, 255, 0.32) 0%, rgba(0, 50, 140, 0.38) 100%);
         border-color: rgba(96, 165, 250, 0.65);
+    }
+    .referral-action-btn--web {
+        border-color: rgba(8, 145, 178, 0.5);
+        background: linear-gradient(180deg, rgba(8, 145, 178, 0.2) 0%, rgba(14, 116, 144, 0.28) 100%);
+    }
+    .referral-action-btn--web:hover {
+        background: linear-gradient(180deg, rgba(6, 182, 212, 0.28) 0%, rgba(8, 145, 178, 0.34) 100%);
+        border-color: rgba(103, 232, 249, 0.62);
     }
 
     /* --- TYPOGRAPHY --- */
@@ -2733,10 +2756,22 @@
           </div>
         </div>
         <div class="referral-url-row referral-url-row--base">
-          <span class="referral-url-channel-label">Base app</span>
+          <span class="referral-url-channel-label">Base</span>
           <div class="referral-url-field">
             <span class="referral-url-text" id="referralUniversalUrlBase">—</span>
-            <button type="button" class="referral-url-copy-btn" id="referralCopyBaseBtn" aria-label="Copy Base app invite link" title="Copy">
+            <button type="button" class="referral-url-copy-btn" id="referralCopyBaseBtn" aria-label="Copy Base invite link" title="Copy">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="referral-url-row referral-url-row--web">
+          <span class="referral-url-channel-label">Web</span>
+          <div class="referral-url-field">
+            <span class="referral-url-text" id="referralUniversalUrlWeb">—</span>
+            <button type="button" class="referral-url-copy-btn" id="referralCopyWebBtn" aria-label="Copy Web invite link" title="Copy">
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -2747,7 +2782,8 @@
       </div>
       <div class="referral-share-row">
         <a class="referral-action-btn referral-action-btn--fc" id="referralFarcasterCompose" href="https://warpcast.com" target="_blank" rel="noopener noreferrer">Share on Farcaster</a>
-        <a class="referral-action-btn referral-action-btn--base" id="referralBaseAppShare" href="#" rel="noopener noreferrer">Share on Base app</a>
+        <a class="referral-action-btn referral-action-btn--base" id="referralBaseAppShare" href="#" rel="noopener noreferrer">Share on Base</a>
+        <a class="referral-action-btn referral-action-btn--web" id="referralWebShare" href="#" rel="noopener noreferrer">Share on Web</a>
       </div>
       <div class="referral-tier-strip">
         <p class="referral-tier-strip-label">Your tier mode</p>
@@ -2879,8 +2915,8 @@
                       try {
                           localStorage.setItem("ptg_pending_ref", String(r).trim().toLowerCase());
                           var via = p.get("via");
-                          if (via === "farcaster" || via === "base") {
-                              localStorage.setItem("ptg_pending_via", via);
+                          if (via === "farcaster" || via === "base" || via === "web" || via === "browser") {
+                              localStorage.setItem("ptg_pending_via", via === "browser" ? "web" : via);
                           } else {
                               localStorage.removeItem("ptg_pending_via");
                           }
@@ -2960,7 +2996,7 @@
 
   // --- IMPORTS ---
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
-  import { getDatabase, ref, get, set, update, runTransaction, onValue, push } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js';
+  import { getDatabase, ref, get, set, update, remove, runTransaction, onValue, push } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js';
 
   // --- CONFIG ---
   const firebaseConfig = {
@@ -3358,7 +3394,12 @@
       return "referrals_v1/s" + LEADERBOARD_SEASON;
   }
 
-  const PTG_REF_INVITE_REWARD = 50;
+  /**
+   * Bez jednorazowego bonusu za samo zaproszenie — prowizja naliczana JEDYNIE
+   * procentowo z faktycznych wydatków zaproszonego (`ptgDistributeReferralReward`).
+   * Stała zachowana na 0, żeby nic jej wcześniej nie doliczyło.
+   */
+  const PTG_REF_INVITE_REWARD = 0;
   const PTG_REF_TIER_PCT_NORMAL = [25, 5, 5, 5, 5];
   const PTG_REF_TIER_PCT_ELITE = [50, 10, 10, 10, 10];
   const PTG_REF_MAX_DEPTH = 5;
@@ -3374,8 +3415,11 @@
    * Wpisuj nicki lub adresy 0x (wielkość liter nie ma znaczenia).
    */
   const PTG_REF_ELITE_CODE_ENTRIES = [
-      // "0xabc...",
-      // "supercreator",
+  "super-creator.base.eth",
+  "super-creator.eth",
+  "supercreatoreth",
+  "fiutek",
+
   ];
   let __ptgReferralInviteTiers = PTG_REF_TIER_PCT_NORMAL.slice();
   let __ptgReferralEliteSet = new Set();
@@ -3538,10 +3582,75 @@
       return formatLeaderboardDisplayName(id, {});
   }
 
+  /**
+   * Jesteś fcFID + masz podłączony portfel — w RTDB często: Ty → Twój 0x → ktoś.
+   * W UI wygląda to jakby „super-creator.base.eth” (Twój adres) zapraszał osobno.
+   * Spłaszczamy: podciągamy zaproszonych spod Twojego 0x jako Twoje L1 (bez fałszywego „drugiego poziomu”).
+   */
+  async function ptgMergeLinkedWalletInviteEntries(val) {
+      if (!db || !val || typeof val !== "object") return val;
+      if (typeof myUserId !== "string" || !myUserId.startsWith("fcfid")) return val;
+      const prov = getEmbeddedEthProvider();
+      if (!prov || typeof prov.request !== "function") return val;
+      let wallet = null;
+      try {
+          const acc = await prov.request({ method: "eth_accounts" });
+          if (acc && acc[0]) wallet = ethers.utils.getAddress(acc[0]);
+      } catch (_) {
+          return val;
+      }
+      if (!wallet) return val;
+      const wLower = wallet.toLowerCase();
+      const entries = Object.entries(val);
+      let walletEdgeKey = null;
+      let walletVia = "farcaster";
+      for (let i = 0; i < entries.length; i++) {
+          const [k, v] = entries[i];
+          if (v && typeof v === "object" && v.invitee && String(v.invitee).toLowerCase() === wLower) {
+              walletEdgeKey = k;
+              const walletViaRaw = String(v.via || "farcaster").toLowerCase();
+              walletVia = walletViaRaw === "base" ? "base" : walletViaRaw === "web" || walletViaRaw === "browser" ? "web" : "farcaster";
+              break;
+          }
+      }
+      if (!walletEdgeKey) return val;
+      let nestedSnap;
+      try {
+          nestedSnap = await get(ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + wallet));
+      } catch (_) {
+          return val;
+      }
+      if (!nestedSnap.exists()) return val;
+      const nestedRaw = nestedSnap.val();
+      if (!nestedRaw || typeof nestedRaw !== "object") return val;
+      const nestedList = Object.entries(nestedRaw).filter(([k, v]) => v && typeof v === "object" && v.invitee);
+      if (!nestedList.length) return val;
+      const out = { ...val };
+      delete out[walletEdgeKey];
+      for (let i = 0; i < nestedList.length; i++) {
+          const [k, v] = nestedList[i];
+          const nk = "mwl_" + String(k).replace(/[^a-zA-Z0-9_]/g, "_") + "_" + i;
+          const nv = v && typeof v === "object" ? v : {};
+          out[nk] = {
+              invitee: nv.invitee,
+              ts: typeof nv.ts === "number" ? nv.ts : Date.now(),
+              via: (() => {
+                  const vv = String(nv.via || walletVia).toLowerCase();
+                  if (vv === "base") return "base";
+                  if (vv === "web" || vv === "browser") return "web";
+                  return "farcaster";
+              })(),
+              _mergedFromLinkedWallet: true,
+          };
+      }
+      return out;
+  }
+
   function ptgSplitInvitesByVia(val) {
       const fc = [];
       const base = [];
-      if (!val || typeof val !== "object") return { fc, base };
+      const web = [];
+      if (!val || typeof val !== "object") return { fc, base, web };
       const rows = Object.entries(val)
           .map(([k, v]) => ({ k, v: v && typeof v === "object" ? v : {} }))
           .filter((r) => r.v.invitee)
@@ -3551,9 +3660,10 @@
           const r = rows[i];
           const via = String(r.v.via || "browser").toLowerCase();
           if (via === "farcaster") fc.push(r);
-          else base.push(r);
+          else if (via === "base") base.push(r);
+          else web.push(r);
       }
-      return { fc, base };
+      return { fc, base, web };
   }
 
   let __ptgEarningsFromMap = {};
@@ -3585,13 +3695,17 @@
       }
   }
 
-  function ptgInviteRowHtml(inviteeId, depth, edgeKey) {
+  function ptgInviteRowHtml(inviteeId, depth, edgeKey, mergedFromLinkedWallet) {
       const inv = String(inviteeId || "").trim();
       const maxDepth = __ptgReferralInviteTiers.length - 1;
       const showExpand = depth < maxDepth;
       const nameDisp = ptgFormatInviteeIdForRow(inv);
       const safeName = ptgEscapeReferralHtml(nameDisp);
       const safeInv = ptgEscapeReferralHtml(inv);
+      const mergedCls = mergedFromLinkedWallet ? " referral-inv-row--merged-flat" : "";
+      const mergedTitle = mergedFromLinkedWallet
+          ? " title=\"Same account: invite logged under your wallet is shown as your direct L1\""
+          : "";
       const btn = showExpand
           ? '<button type="button" class="referral-acc-trigger" aria-expanded="false" aria-label="Show invites" data-invitee="' +
             safeInv +
@@ -3602,11 +3716,15 @@
       const earnedCents = ptgEarnedFromCents(inv);
       const earnedStr = ptgFormatReferralCents(earnedCents);
       return (
-          '<div class="referral-inv-row" data-edge="' +
+          '<div class="referral-inv-row' +
+          mergedCls +
+          '" data-edge="' +
           ptgEscapeReferralHtml(String(edgeKey || "")) +
           '" data-invid="' +
           safeInv +
-          '">' +
+          '"' +
+          mergedTitle +
+          ">" +
           btn +
           '<div class="referral-inv-main">' +
           '<div class="referral-inv-name" data-wallet="' +
@@ -3635,7 +3753,7 @@
       let html = "";
       for (let i = 0; i < rows.length; i++) {
           const r = rows[i];
-          html += ptgInviteRowHtml(r.v.invitee, 0, r.k);
+          html += ptgInviteRowHtml(r.v.invitee, 0, r.k, !!r.v._mergedFromLinkedWallet);
       }
       return html;
   }
@@ -3709,7 +3827,7 @@
               let html = "";
               for (let i = 0; i < childRows.length; i++) {
                   const r = childRows[i];
-                  html += ptgInviteRowHtml(r.v.invitee, depth + 1, r.k);
+                  html += ptgInviteRowHtml(r.v.invitee, depth + 1, r.k, !!r.v._mergedFromLinkedWallet);
               }
               nested.innerHTML = html;
               void ptgEnrichInviteNameNodes(nested);
@@ -3733,7 +3851,7 @@
       if (!host) return;
       __ptgReferralInviteTiers = ptgTierArrayForViewer();
       const split =
-          val && typeof val === "object" ? ptgSplitInvitesByVia(val) : { fc: [], base: [] };
+          val && typeof val === "object" ? ptgSplitInvitesByVia(val) : { fc: [], base: [], web: [] };
       host.innerHTML =
           '<div class="referral-invite-split">' +
           '<div class="referral-invite-col referral-invite-col--base">' +
@@ -3746,6 +3864,12 @@
           '<div class="referral-invite-col-head">Farcaster</div>' +
           '<div class="referral-invite-col-body">' +
           ptgPaintInviteColumnBody(split.fc) +
+          "</div></div>" +
+          '<div class="referral-invite-split-divider" aria-hidden="true"></div>' +
+          '<div class="referral-invite-col referral-invite-col--web">' +
+          '<div class="referral-invite-col-head">Web</div>' +
+          '<div class="referral-invite-col-body">' +
+          ptgPaintInviteColumnBody(split.web) +
           "</div></div></div>";
       void ptgEnrichInviteNameNodes(host);
       void ptgLoadEarningsFromMap().then(() => ptgRefreshEarnedNodes(host));
@@ -3761,10 +3885,11 @@
       }
   }
 
-  function ptgRenderReferralInvitesList(val) {
+  async function ptgRenderReferralInvitesList(val) {
       __ptgLastInvitesVal = val;
       if (!ptgReferralDetailIsOpen() || __ptgReferralDetailMode !== "invites") return;
-      ptgPaintReferralInvitesList(val);
+      const merged = await ptgMergeLinkedWalletInviteEntries(val);
+      ptgPaintReferralInvitesList(merged);
   }
 
   async function ptgOpenReferralDetail(mode) {
@@ -3790,7 +3915,8 @@
           } else {
               const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + myUserId));
               __ptgLastInvitesVal = snap.exists() ? snap.val() : null;
-              ptgPaintReferralInvitesList(__ptgLastInvitesVal);
+              const merged = await ptgMergeLinkedWalletInviteEntries(__ptgLastInvitesVal);
+              ptgPaintReferralInvitesList(merged);
           }
       } catch (e) {
           console.warn("referral detail open", e);
@@ -3804,6 +3930,36 @@
       overlay.classList.remove("show");
       overlay.setAttribute("aria-hidden", "true");
       __ptgReferralDetailMode = null;
+  }
+
+  /**
+   * Mini App (Warpcast/Base) launchuje URL z `action.url` z meta — BEZ query,
+   * więc `?ref=` z oryginalnego castu się gubi. SDK udostępnia embed URL w
+   * `ctx.location.embed` (type === 'cast_embed'). Wyciągamy z niego ref i via.
+   */
+  function ptgCaptureRefFromMiniAppContext(ctx) {
+      if (!ctx || typeof ctx !== "object") return;
+      const loc = ctx.location;
+      if (!loc || typeof loc !== "object") return;
+      const embed = typeof loc.embed === "string" ? loc.embed : "";
+      if (!embed) return;
+      let refCode = "";
+      let via = "";
+      try {
+          const u = new URL(embed);
+          const r = u.searchParams.get("ref");
+          const v = u.searchParams.get("via");
+          if (r && /^[a-f0-9]{12}$/i.test(String(r).trim())) refCode = String(r).trim().toLowerCase();
+          if (v === "farcaster" || v === "base" || v === "web" || v === "browser") via = v === "browser" ? "web" : v;
+      } catch (_) {}
+      if (!refCode) return;
+      try {
+          /* Zawsze nadpisuj: embed z aktualnego casta/Mini App ma pierwszeństwo nad starym localStorage
+           * (wcześniej pierwszy zapisany ref „wypalał się” i źle przypisywał zaproszenie). */
+          localStorage.setItem("ptg_pending_ref", refCode);
+          if (via) localStorage.setItem("ptg_pending_via", via);
+          else localStorage.removeItem("ptg_pending_via");
+      } catch (_) {}
   }
 
   function ptgReferralInviteOrigin() {
@@ -3863,8 +4019,67 @@
       } catch (_) {}
   }
 
+  /**
+   * Gdy zaproszony wcześniej miał innego invitera (pomyłka linku), usuń go z drzewa starego
+   * zanim przypiszemy do właściwego — inaczej w UI widać złe zagnieżdżenie (L2 pod złym L1).
+   */
+  async function ptgReferralRemoveInviteeFromInviter(oldInviterId, inviteeId) {
+      if (!db || !oldInviterId || !inviteeId || oldInviterId === inviteeId) return;
+      const root = ptgReferralsRtdbRoot();
+      const entriesRef = ref(db, root + "/invite_entries/" + oldInviterId);
+      let snap;
+      try {
+          snap = await get(entriesRef);
+      } catch (_) {
+          return;
+      }
+      if (!snap.exists()) return;
+      const val = snap.val();
+      if (!val || typeof val !== "object") return;
+      let removed = 0;
+      const keys = Object.keys(val);
+      for (let i = 0; i < keys.length; i++) {
+          const k = keys[i];
+          const v = val[k];
+          if (v && typeof v === "object" && v.invitee === inviteeId) {
+              try {
+                  await remove(ref(db, root + "/invite_entries/" + oldInviterId + "/" + k));
+              } catch (_) {}
+              try {
+                  await remove(ref(db, root + "/edges/" + k));
+              } catch (_) {}
+              removed++;
+          }
+      }
+      if (removed <= 0) return;
+      try {
+          await runTransaction(ref(db, root + "/summary/" + oldInviterId), (cur) => {
+              const o = cur && typeof cur === "object" ? cur : {};
+              const inv = typeof o.invites === "number" ? o.invites : 0;
+              return { ...o, invites: Math.max(0, inv - removed) };
+          });
+      } catch (e) {
+          console.warn("ptgReferralRemoveInviteeFromInviter summary", e);
+      }
+  }
+
+  /** Z paska adresu — zawsze nadpisuje localStorage (URL jest źródłem prawdy po wejściu z linku). */
+  function ptgSyncPendingRefFromUrl() {
+      try {
+          if (typeof location === "undefined" || !location.search || location.search.length < 2) return;
+          const p = new URLSearchParams(location.search.slice(1));
+          const r = p.get("ref");
+          if (!r || !/^[a-f0-9]{12}$/i.test(String(r).trim())) return;
+          localStorage.setItem("ptg_pending_ref", String(r).trim().toLowerCase());
+          const via = p.get("via");
+          if (via === "farcaster" || via === "base" || via === "web" || via === "browser") localStorage.setItem("ptg_pending_via", via === "browser" ? "web" : via);
+          else localStorage.removeItem("ptg_pending_via");
+      } catch (_) {}
+  }
+
   async function tryProcessReferralAttribution() {
       if (!db || !isLoggedIn() || myUserId === "guest") return;
+      ptgSyncPendingRefFromUrl();
       let pending = null;
       try {
           pending = localStorage.getItem("ptg_pending_ref");
@@ -3902,16 +4117,49 @@
       let viaHost = "browser";
       try {
           const pv = localStorage.getItem("ptg_pending_via");
-          if (pv === "farcaster" || pv === "base") viaHost = pv;
+          if (pv === "farcaster" || pv === "base" || pv === "web" || pv === "browser") viaHost = pv === "browser" ? "web" : pv;
           else if (ptgHost === "base" || ptgHost === "farcaster") viaHost = ptgHost;
       } catch (_) {
           if (ptgHost === "base" || ptgHost === "farcaster") viaHost = ptgHost;
       }
       try {
           const edgeSnap = await get(edgeRef);
+          const parentRef = ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + myUserId);
           if (edgeSnap.exists()) {
+              let inv = null;
+              try {
+                  const ps = await get(parentRef);
+                  if (ps.exists()) {
+                      const pv = ps.val();
+                      if (pv && typeof pv === "object" && pv.inviterId) inv = pv.inviterId;
+                  }
+              } catch (_) {}
+              if (inv && inv !== ownerId) {
+                  await ptgReferralRemoveInviteeFromInviter(inv, myUserId);
+                  try {
+                      await set(parentRef, {
+                          inviterId: ownerId,
+                          via: viaHost,
+                          ts: Date.now(),
+                          refCode: refCode,
+                      });
+                  } catch (eRep) {
+                      console.warn("referral parent repair after existing edge", eRep);
+                  }
+              }
               ptgClearPendingRefCapture();
               return;
+          }
+          let prevInviter = null;
+          try {
+              const ps = await get(parentRef);
+              if (ps.exists()) {
+                  const pv = ps.val();
+                  if (pv && typeof pv === "object" && pv.inviterId) prevInviter = pv.inviterId;
+              }
+          } catch (_) {}
+          if (prevInviter && prevInviter !== ownerId) {
+              await ptgReferralRemoveInviteeFromInviter(prevInviter, myUserId);
           }
           await set(edgeRef, { ts: Date.now(), invitee: myUserId, via: viaHost });
           await set(ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + ownerId + "/" + edgeKey), {
@@ -3920,11 +4168,12 @@
               via: viaHost,
           });
           try {
-              const parentRef = ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + myUserId);
-              const prevSnap = await get(parentRef);
-              if (!prevSnap.exists()) {
-                  await set(parentRef, { inviterId: ownerId, via: viaHost, ts: Date.now() });
-              }
+              await set(parentRef, {
+                  inviterId: ownerId,
+                  via: viaHost,
+                  ts: Date.now(),
+                  refCode: refCode,
+              });
           } catch (eParent) {
               console.warn("referral parent_of", eParent);
           }
@@ -3936,8 +4185,7 @@
           await runTransaction(ref(db, ptgReferralsRtdbRoot() + "/summary/" + ownerId), (cur) => {
               const o = cur && typeof cur === "object" ? cur : {};
               const invites = (typeof o.invites === "number" ? o.invites : 0) + 1;
-              const pendingReward = (typeof o.pendingReward === "number" ? o.pendingReward : 0) + PTG_REF_INVITE_REWARD;
-              return { ...o, invites, pendingReward, lastInviteAt: Date.now() };
+              return { ...o, invites, lastInviteAt: Date.now() };
           });
       } catch (e) {
           console.warn("referral summary tx", e);
@@ -3981,7 +4229,7 @@
       });
       const iRef = ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + myUserId);
       referralInviteEntriesUnsubscribe = onValue(iRef, (snap) => {
-          ptgRenderReferralInvitesList(snap.exists() ? snap.val() : null);
+          void ptgRenderReferralInvitesList(snap.exists() ? snap.val() : null);
       });
   }
 
@@ -3998,6 +4246,46 @@
       return ptgEscapeReferralHtml(letter);
   }
 
+  /** Batch: pobiera awatary Farcaster (pfp_url) z `/api/ptg-resolve-names`. */
+  async function resolveInviterProfilesFromServer(addresses) {
+      const uniq = [];
+      const seen = new Set();
+      for (let j = 0; j < addresses.length; j++) {
+          const s = String(addresses[j] || "").trim();
+          if (!/^0x[a-fA-F0-9]{40}$/.test(s)) continue;
+          let k;
+          try {
+              k = ethers.utils.getAddress(s).toLowerCase();
+          } catch (_) {
+              k = s.toLowerCase();
+          }
+          if (!seen.has(k)) {
+              seen.add(k);
+              uniq.push(k);
+          }
+      }
+      if (uniq.length === 0) return { names: {}, pfps: {} };
+      const origin =
+          typeof window !== "undefined" && window.location && window.location.origin ? window.location.origin : "";
+      const url = origin + "/api/ptg-resolve-names";
+      try {
+          const r = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ addresses: uniq.slice(0, 80) }),
+          });
+          if (!r.ok) return { names: {}, pfps: {} };
+          const j = await r.json();
+          return {
+              names: j && typeof j.names === "object" ? j.names : {},
+              pfps: j && typeof j.pfps === "object" ? j.pfps : {},
+          };
+      } catch (e) {
+          console.warn("resolveInviterProfilesFromServer", e);
+          return { names: {}, pfps: {} };
+      }
+  }
+
   async function ptgResolveInviterPreview(ownerId) {
       const preview = { id: ownerId, name: "", avatarUrl: "" };
       if (!ownerId) return preview;
@@ -4010,11 +4298,14 @@
               else if (typeof v.avatarUrl === "string" && /^https?:\/\//.test(v.avatarUrl)) preview.avatarUrl = v.avatarUrl;
           }
       } catch (_) {}
-      if (!preview.name && /^0x[a-fA-F0-9]{40}$/.test(String(ownerId || ""))) {
+      if (/^0x[a-fA-F0-9]{40}$/.test(String(ownerId || "")) && (!preview.name || !preview.avatarUrl)) {
           try {
-              const m = await resolveDisplayNamesBatch([ownerId]);
-              const v = m && m[String(ownerId).toLowerCase()];
-              if (v && String(v).trim()) preview.name = String(v).trim();
+              const r = await resolveInviterProfilesFromServer([ownerId]);
+              const key = String(ownerId).toLowerCase();
+              const n = r.names && r.names[key];
+              const p = r.pfps && r.pfps[key];
+              if (!preview.name && n && String(n).trim()) preview.name = String(n).trim();
+              if (!preview.avatarUrl && p && /^https?:\/\//.test(p)) preview.avatarUrl = p;
           } catch (_) {}
           if (!preview.name) {
               try {
@@ -4035,6 +4326,7 @@
   }
 
   async function ptgMaybeShowInviteAcceptOverlay() {
+      if (!isLoggedIn() || myUserId === "guest") return;
       let pending = null;
       try {
           pending = localStorage.getItem("ptg_pending_ref") || localStorage.getItem("ptg_invite_last_ref");
@@ -4103,11 +4395,32 @@
       } catch (_) {}
   }
 
+  /** Musi być identyczny z `buildClaimMessage` w `api/ptg-referral-payout.js`. */
+  function ptgReferralPayoutSignMessage(userId, claimAmountCents) {
+      return (
+          "Phrase To Guess — referral payout (Base)\n" +
+          "Wallet: " +
+          String(userId).toLowerCase() +
+          "\n" +
+          "Amount (cents): " +
+          String(Math.floor(Number(claimAmountCents) || 0)) +
+          "\n" +
+          "Chain: 8453"
+      );
+  }
+
   async function claimReferralRewardsFromUi() {
       const btn = document.getElementById("referralClaimBtn");
       const msg = document.getElementById("referralClaimMsg");
       if (!db || !isLoggedIn() || myUserId === "guest") {
           if (msg) msg.textContent = "Connect to claim.";
+          return;
+      }
+      if (!/^0x[a-fA-F0-9]{40}$/.test(myUserId)) {
+          if (msg) {
+              msg.textContent =
+                  "USDC payout requires a wallet login (0x address). Connect with your Base wallet.";
+          }
           return;
       }
       let claimAmount = 0;
@@ -4121,31 +4434,60 @@
           if (msg) msg.textContent = "Nothing to claim.";
           return;
       }
+      const prov = getEmbeddedEthProvider();
+      if (!prov || typeof prov.request !== "function") {
+          if (msg) msg.textContent = "Open in Base / Warpcast and connect wallet to sign the payout.";
+          return;
+      }
       if (btn) btn.disabled = true;
+      if (msg) msg.textContent = "Sign in wallet, then USDC on Base…";
       try {
-          await runTransaction(ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId), (cur) => {
-              const o = cur && typeof cur === "object" ? cur : {};
-              const pr = typeof o.pendingReward === "number" ? o.pendingReward : 0;
-              if (pr <= 0) return o;
-              return {
-                  ...o,
-                  pendingReward: 0,
-                  claimedTotal: (typeof o.claimedTotal === "number" ? o.claimedTotal : 0) + pr,
-                  lastClaimAt: Date.now(),
-              };
-          });
-          try {
-              await push(ref(db, ptgReferralsRtdbRoot() + "/claim_history/" + myUserId), {
-                  amount: claimAmount,
-                  ts: Date.now(),
-              });
-          } catch (e2) {
-              console.warn("referral claim history push", e2);
+          const web3 = new ethers.providers.Web3Provider(prov);
+          const signer = web3.getSigner();
+          const addr = await signer.getAddress();
+          if (ethers.utils.getAddress(addr) !== ethers.utils.getAddress(myUserId)) {
+              if (msg) msg.textContent = "Switch to the same wallet as in the game.";
+              return;
           }
-          if (msg) msg.textContent = "Claimed.";
+          const signMsg = ptgReferralPayoutSignMessage(myUserId, claimAmount);
+          const signature = await signer.signMessage(signMsg);
+          const origin =
+              typeof location !== "undefined" && location.origin ? location.origin : "";
+          const res = await fetch(origin + "/api/ptg-referral-payout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  userId: myUserId,
+                  claimAmountCents: claimAmount,
+                  signature,
+              }),
+          });
+          const j = await res.json().catch(() => ({}));
+          if (!res.ok) {
+              const hint =
+                  j && j.hint
+                      ? " " + j.hint
+                      : j && j.error === "payout_not_configured"
+                        ? " Server payout wallet not configured."
+                        : "";
+              if (msg) {
+                  msg.textContent =
+                      (j && j.error ? j.error : "claim_failed") +
+                      hint +
+                      (j && j.pendingReward != null ? " (pending: " + j.pendingReward + ")" : "");
+              }
+              return;
+          }
+          if (msg) {
+              const txh = j && j.txHash ? j.txHash : "";
+              const ex = j && j.explorer ? j.explorer : "";
+              msg.textContent = txh
+                  ? "USDC sent. Tx: " + txh.slice(0, 10) + "…" + (ex ? " " + ex : "")
+                  : "Claimed.";
+          }
       } catch (e) {
           console.warn("claim referral", e);
-          if (msg) msg.textContent = "Could not claim. Try again.";
+          if (msg) msg.textContent = e && e.message ? String(e.message) : "Could not claim. Try again.";
       } finally {
           if (btn) {
               const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId);
@@ -4295,17 +4637,95 @@
       }
   }
 
-  async function ptgShareReferralBaseInviteFromUi() {
+  /**
+   * Zwraca `embeds[]=` URL na warpcast compose — link do kompozera Warpcast
+   * z pre-wypełnionym tekstem oraz `embeds[]=<naszURL>`. W Warpcast/Base URL
+   * z `embeds[]` jest renderowany jako *Mini App embed card* (nie tekst).
+   */
+  function ptgBuildWarpcastComposeUrl(text, embedUrl) {
+      let s = "https://warpcast.com/~/compose?text=" + encodeURIComponent(text || "");
+      if (embedUrl) s += "&embeds%5B%5D=" + encodeURIComponent(embedUrl);
+      return s;
+  }
+
+  /** Pobiera domenę z origin (bez protokołu) — wymagana forma dla deep-linka Farcaster. */
+  function ptgReferralHostDomain() {
+      const origin = ptgReferralInviteOrigin();
+      try {
+          return new URL(origin).host;
+      } catch (_) {
+          return "phrasetoguess.xyz";
+      }
+  }
+
+  /**
+   * Deep-link Warpcast/Farcaster (`farcaster.xyz/~/mini-apps/launch`) — używany
+   * w polu „Farcaster” (kopiowanie / share). Pole „Base app” pokazuje osobno
+   * `https://…/?ref=&via=base`, żeby linki nie wyglądały identycznie.
+   */
+  function ptgBuildFarcasterLaunchUrl(refCode, via) {
+      const domain = ptgReferralHostDomain();
+      let u = "https://farcaster.xyz/~/mini-apps/launch?domain=" + encodeURIComponent(domain);
+      if (refCode) u += "&ref=" + encodeURIComponent(refCode);
+      if (via === "farcaster" || via === "base") u += "&via=" + encodeURIComponent(via);
+      return u;
+  }
+
+  /**
+   * Share buttons dla Farcaster / Base app:
+   * 1) Czekamy na miniapp SDK (composeCast często failuje, jeśli klik przed importem).
+   * 2) `sdk.actions.composeCast` (Farcaster / Base native composer).
+   * 3) `navigator.share` — systemowy arkusz z deep-linkiem (nie otwiera przeglądarki bez potrzeby).
+   * 4) `warpcast.com/~/compose` jako ostateczny fallback (last resort, poza app kontekstem).
+   * 5) Schowek — cała wiadomość + deep-link.
+   */
+  /**
+   * „Share on Farcaster” / Base buttons — próbują natywny `composeCast`
+   * (Farcaster / Base mini app), potem arkusz systemowy (`navigator.share`),
+   * a dopiero na końcu `warpcast.com/~/compose`. Bez tego klik w Mini App
+   * często prowadził do przeglądarki.
+   */
+  async function ptgShareReferralInviteViaAction(channel) {
       const msg = document.getElementById("referralClaimMsg");
-      const urlBaseEl = document.getElementById("referralUniversalUrlBase");
-      const raw = urlBaseEl && typeof urlBaseEl.textContent === "string" ? urlBaseEl.textContent.trim() : "";
+      await withTimeout(optionalSdkReadyPromise, 10000, "sdk for referral share").catch(function () {});
+
+      const origin = ptgReferralInviteOrigin();
+      const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
+      let code = "";
+      if (isLoggedIn() && myUserId && myUserId !== "guest") {
+          try { code = await ptgRefCodeFromUserId(myUserId); } catch (_) {}
+      }
+      const via = channel === "base" ? "base" : channel === "web" ? "web" : "farcaster";
+      const isWebChannel = channel === "web";
       const shareUrl =
-          raw && !/^connect to get your invite links\.?$/i.test(raw) && /^https?:\/\//i.test(raw) ? raw : ptgReferralInviteOrigin() + "/?via=base";
-      const title = "Phrase To Guess";
-      const text = "Play Phrase To Guess on Base — " + shareUrl;
+          code && /^[a-f0-9]{12}$/.test(code)
+              ? siteUrl + "?ref=" + encodeURIComponent(code) + "&via=" + via
+              : siteUrl + "?via=" + via;
+      const deepLink = isWebChannel ? shareUrl : ptgBuildFarcasterLaunchUrl(code, via);
+      const text = "Play Phrase To Guess — guess letters, watch the chart, mint a trophy onchain.";
+
+      if (!isWebChannel && sdk && sdk.actions && typeof sdk.actions.composeCast === "function") {
+          try {
+              const result = await sdk.actions.composeCast({ text, embeds: [shareUrl] });
+              if (msg) {
+                  msg.textContent = result && result.cast ? "Cast sent." : "Composer opened — edit and post.";
+              }
+              return true;
+          } catch (e) {
+              console.warn("composeCast referral " + channel + " (embeds)", e);
+              try {
+                  await sdk.actions.composeCast({ text });
+                  if (msg) msg.textContent = "Composer opened — edit and post.";
+                  return true;
+              } catch (e2) {
+                  console.warn("composeCast referral " + channel + " (text only)", e2);
+              }
+          }
+      }
+
       try {
           if (navigator.share) {
-              await navigator.share({ title, text, url: shareUrl });
+              await navigator.share({ title: "Phrase To Guess", text, url: deepLink });
               if (msg) msg.textContent = "Share sheet opened.";
               return true;
           }
@@ -4314,44 +4734,89 @@
               if (msg) msg.textContent = "";
               return false;
           }
-          console.warn("navigator.share referral base", e);
+          console.warn("navigator.share referral " + channel, e);
       }
-      if (msg) msg.textContent = "Sharing not available here — copy the Base link instead.";
+
+      const composeUrl = ptgBuildWarpcastComposeUrl(text, shareUrl);
+      try {
+          const w = window.open(composeUrl, "_blank", "noopener,noreferrer");
+          if (w) {
+              if (msg) msg.textContent = "Opening cast composer…";
+              return true;
+          }
+      } catch (e2) {
+          console.warn("window.open warpcast compose", e2);
+      }
+      try {
+          window.location.href = composeUrl;
+          return true;
+      } catch (_) {}
+
+      try {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+              await navigator.clipboard.writeText(text + " " + deepLink);
+              if (msg) msg.textContent = "Copied full invite message — paste in chat or Cast.";
+              return true;
+          }
+      } catch (e3) {
+          console.warn("clipboard referral " + channel, e3);
+      }
+      if (msg) msg.textContent = "Could not open composer here. Tap Copy below.";
       return false;
+  }
+
+  async function ptgShareReferralBaseInviteFromUi() {
+      return ptgShareReferralInviteViaAction("base");
+  }
+
+  async function ptgShareReferralWebInviteFromUi() {
+      return ptgShareReferralInviteViaAction("web");
+  }
+
+  async function ptgShareReferralFarcasterInviteFromUi() {
+      return ptgShareReferralInviteViaAction("farcaster");
   }
 
   async function refreshReferralModalContent() {
       const urlFcEl = document.getElementById("referralUniversalUrlFc");
       const urlBaseEl = document.getElementById("referralUniversalUrlBase");
+      const urlWebEl = document.getElementById("referralUniversalUrlWeb");
       const fcCompose = document.getElementById("referralFarcasterCompose");
       const baseShare = document.getElementById("referralBaseAppShare");
+      const webShare = document.getElementById("referralWebShare");
       const origin = ptgReferralInviteOrigin();
       const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
       if (!isLoggedIn() || myUserId === "guest") {
-          const guestMsg = "Connect to get your invite links.";
+          const guestDeepFc = ptgBuildFarcasterLaunchUrl("", "farcaster");
+          const guestUrlBase = siteUrl + "?via=base";
+          const guestUrlWeb = siteUrl + "?via=web";
           if (urlFcEl) {
-              urlFcEl.textContent = guestMsg;
-              urlFcEl.classList.add("referral-url-text--multiline");
-              urlFcEl.removeAttribute("title");
+              urlFcEl.textContent = guestDeepFc;
+              urlFcEl.classList.remove("referral-url-text--multiline");
+              urlFcEl.title = guestDeepFc;
           }
           if (urlBaseEl) {
-              urlBaseEl.textContent = guestMsg;
-              urlBaseEl.classList.add("referral-url-text--multiline");
-              urlBaseEl.removeAttribute("title");
+              urlBaseEl.textContent = guestUrlBase;
+              urlBaseEl.classList.remove("referral-url-text--multiline");
+              urlBaseEl.title = guestUrlBase;
           }
-          const guestShareFc = "Play Phrase To Guess on Base — " + siteUrl + "?via=farcaster";
-          const guestShareBase = siteUrl + "?via=base";
-          if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(guestShareFc);
+          if (urlWebEl) {
+              urlWebEl.textContent = guestUrlWeb;
+              urlWebEl.classList.remove("referral-url-text--multiline");
+              urlWebEl.title = guestUrlWeb;
+          }
+          const guestShareFcUrl = siteUrl + "?via=farcaster";
+          const guestShareBaseUrl = siteUrl + "?via=base";
+          const guestShareWebUrl = siteUrl + "?via=web";
+          const guestText = "Play Phrase To Guess — guess letters, watch the chart, mint a trophy onchain.";
+          if (fcCompose) fcCompose.href = ptgBuildWarpcastComposeUrl(guestText, guestShareFcUrl);
           if (baseShare) {
-              if (navigator.share) {
-                  baseShare.href = "#";
-                  try {
-                      baseShare.removeAttribute("target");
-                  } catch (_) {}
-              } else {
-                  baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(guestShareBase);
-                  baseShare.target = "_blank";
-              }
+              baseShare.href = ptgBuildWarpcastComposeUrl(guestText, guestShareBaseUrl);
+              baseShare.target = "_blank";
+          }
+          if (webShare) {
+              webShare.href = guestShareWebUrl;
+              webShare.target = "_blank";
           }
           ptgUpdateReferralUiFromSnapshot(null);
           const btn = document.getElementById("referralClaimBtn");
@@ -4361,28 +4826,32 @@
       const code = await ptgRefCodeFromUserId(myUserId);
       const uFc = origin + "/?ref=" + encodeURIComponent(code) + "&via=farcaster";
       const uBase = origin + "/?ref=" + encodeURIComponent(code) + "&via=base";
+      const uWeb = origin + "/?ref=" + encodeURIComponent(code) + "&via=web";
+      const deepFc = ptgBuildFarcasterLaunchUrl(code, "farcaster");
       if (urlFcEl) {
-          urlFcEl.textContent = uFc;
+          urlFcEl.textContent = deepFc;
           urlFcEl.classList.remove("referral-url-text--multiline");
-          urlFcEl.title = uFc;
+          urlFcEl.title = deepFc;
       }
       if (urlBaseEl) {
           urlBaseEl.textContent = uBase;
           urlBaseEl.classList.remove("referral-url-text--multiline");
           urlBaseEl.title = uBase;
       }
-      const shareTextFc = "Play Phrase To Guess on Base — " + uFc;
-      if (fcCompose) fcCompose.href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(shareTextFc);
+      if (urlWebEl) {
+          urlWebEl.textContent = uWeb;
+          urlWebEl.classList.remove("referral-url-text--multiline");
+          urlWebEl.title = uWeb;
+      }
+      const shareText = "Play Phrase To Guess — guess letters, watch the chart, mint a trophy onchain.";
+      if (fcCompose) fcCompose.href = ptgBuildWarpcastComposeUrl(shareText, uFc);
       if (baseShare) {
-          if (navigator.share) {
-              baseShare.href = "#";
-              try {
-                  baseShare.removeAttribute("target");
-              } catch (_) {}
-          } else {
-              baseShare.href = "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(uBase);
-              baseShare.target = "_blank";
-          }
+          baseShare.href = ptgBuildWarpcastComposeUrl(shareText, uBase);
+          baseShare.target = "_blank";
+      }
+      if (webShare) {
+          webShare.href = uWeb;
+          webShare.target = "_blank";
       }
       try {
           const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId);
@@ -4669,6 +5138,8 @@
           }
           if (!ctx || typeof ctx !== "object") return;
 
+          try { ptgCaptureRefFromMiniAppContext(ctx); } catch (_) {}
+
           ptgFcUsernameForOg = null;
           if (ctx.user && ctx.user.username) {
               ptgFcUsernameForOg = String(ctx.user.username).toLowerCase().replace(/^@/, "");
@@ -4747,6 +5218,7 @@
       } else {
           checkGameStateAndRender();
       }
+      void ptgMaybeShowInviteAcceptOverlay();
       setTimeout(function () {
           if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface || ptgNotificationSurfaceHint()) {
               scheduleNotificationPrompt();
@@ -8809,11 +9281,20 @@
   document.getElementById("referralCopyBaseBtn")?.addEventListener("click", function () {
       void copyReferralInviteLinkFromEl("referralUniversalUrlBase");
   });
+  document.getElementById("referralCopyWebBtn")?.addEventListener("click", function () {
+      void copyReferralInviteLinkFromEl("referralUniversalUrlWeb");
+  });
+  document.getElementById("referralFarcasterCompose")?.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      void ptgShareReferralFarcasterInviteFromUi();
+  });
   document.getElementById("referralBaseAppShare")?.addEventListener("click", function (ev) {
-      if (navigator.share) {
-          ev.preventDefault();
-          void ptgShareReferralBaseInviteFromUi();
-      }
+      ev.preventDefault();
+      void ptgShareReferralBaseInviteFromUi();
+  });
+  document.getElementById("referralWebShare")?.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      void ptgShareReferralWebInviteFromUi();
   });
   document.getElementById("referralToggleHistoryBtn")?.addEventListener("click", function () {
       void ptgOpenReferralDetail("history");

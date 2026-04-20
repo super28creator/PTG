@@ -99,11 +99,12 @@ async function resolveOnchainNames(addr) {
   return "";
 }
 
-/** Jedno żądanie Neynar dla wielu adresów (mapa lowercase → label). */
-async function fetchNeynarNamesForAddresses(list) {
+/** Jedno żądanie Neynar dla wielu adresów → { names, pfps } (oba lowercase keys). */
+async function fetchNeynarForAddresses(list) {
   const nk = process.env.NEYNAR_API_KEY;
-  const out = {};
-  if (!nk || typeof nk !== "string" || nk.length < 5 || !list.length) return out;
+  const names = {};
+  const pfps = {};
+  if (!nk || typeof nk !== "string" || nk.length < 5 || !list.length) return { names, pfps };
   try {
     const qs = list.map((a) => `addresses=${encodeURIComponent(a)}`).join("&");
     const url = `https://api.neynar.com/v2/farcaster/user/bulk-by-address?${qs}`;
@@ -113,10 +114,10 @@ async function fetchNeynarNamesForAddresses(list) {
         "x-api-key": nk,
       },
     });
-    if (!r.ok) return out;
+    if (!r.ok) return { names, pfps };
     const j = await r.json();
     const users = j.users || (j.result && j.result.users) || [];
-    if (!Array.isArray(users)) return out;
+    if (!Array.isArray(users)) return { names, pfps };
     const want = new Set(list.map((x) => String(x).toLowerCase()));
     for (const u of users) {
       let label = "";
@@ -125,7 +126,10 @@ async function fetchNeynarNamesForAddresses(list) {
       } else if (u.display_name && String(u.display_name).trim()) {
         label = String(u.display_name).trim();
       }
-      if (!label) continue;
+      let pfp = "";
+      if (typeof u.pfp_url === "string" && /^https?:\/\//i.test(u.pfp_url)) pfp = u.pfp_url.trim();
+      else if (u.pfp && typeof u.pfp.url === "string" && /^https?:\/\//i.test(u.pfp.url)) pfp = u.pfp.url.trim();
+
       const ethList = [];
       if (typeof u.custody_address === "string") ethList.push(u.custody_address);
       if (Array.isArray(u.verifications)) ethList.push(...u.verifications);
@@ -135,14 +139,16 @@ async function fetchNeynarNamesForAddresses(list) {
       for (const raw of ethList) {
         try {
           const a = ethers.getAddress(String(raw)).toLowerCase();
-          if (want.has(a)) out[a] = label;
+          if (!want.has(a)) continue;
+          if (label && !names[a]) names[a] = label;
+          if (pfp && !pfps[a]) pfps[a] = pfp;
         } catch (_) {}
       }
     }
   } catch (e) {
     console.warn("neynar batch", e && e.message);
   }
-  return out;
+  return { names, pfps };
 }
 
 module.exports = async (req, res) => {
@@ -178,21 +184,21 @@ module.exports = async (req, res) => {
       if (list.indexOf(k) === -1) list.push(k);
     }
 
-    const neynarMap = await fetchNeynarNamesForAddresses(list);
+    const { names: neynarNames, pfps } = await fetchNeynarForAddresses(list);
     for (const k of list) {
       try {
         let n = await resolveOnchainNames(k);
-        if (!n && neynarMap[k]) n = neynarMap[k];
+        if (!n && neynarNames[k]) n = neynarNames[k];
         names[k] = n || "";
       } catch (e) {
         console.warn("ptg-resolve-names", k, e && e.message);
-        names[k] = neynarMap[k] || "";
+        names[k] = neynarNames[k] || "";
       }
     }
 
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=120, s-maxage=120");
-    return res.status(200).json({ names });
+    return res.status(200).json({ names, pfps });
   } catch (err) {
     console.error("ptg-resolve-names", err);
     setCors(req, res);
