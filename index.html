@@ -399,35 +399,122 @@
     #inviteAcceptOverlay {
         z-index: 10110;
     }
+    /**
+     * Invite accept modal — stylowanie zależne od kanału zaproszenia:
+     *  - web      → cyan/turkus (spójnie z `via=web`)
+     *  - farcaster → fiolet (Farcaster brand)
+     *  - base     → niebieski (Base brand #0052ff)
+     * Klasa modyfikatora `.invite-accept-card--{web|fc|base}` dodawana z JS
+     * na podstawie `ptg_pending_via` / hosta przy otwieraniu overlaya.
+     */
     .invite-accept-card {
+        position: relative;
         width: 100%;
-        max-width: min(94vw, 420px);
+        max-width: min(94vw, 440px);
         padding: clamp(18px, 4vw, 26px);
         display: flex;
         flex-direction: column;
         gap: 18px;
         box-sizing: border-box;
-        background: linear-gradient(180deg, rgba(17, 24, 39, 0.95), rgba(9, 14, 26, 0.95));
+        background:
+            radial-gradient(120% 80% at 50% 0%, rgba(60, 138, 255, 0.22), rgba(0, 0, 0, 0)) ,
+            linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(9, 14, 26, 0.96));
         border: 1px solid rgba(60, 138, 255, 0.35);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+        overflow: hidden;
+    }
+    .invite-accept-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(80% 50% at 50% -10%, rgba(60, 138, 255, 0.28), rgba(0, 0, 0, 0) 60%);
+        opacity: 0.6;
+    }
+    .invite-accept-card--fc {
+        background:
+            radial-gradient(120% 80% at 50% 0%, rgba(124, 58, 237, 0.28), rgba(0, 0, 0, 0)) ,
+            linear-gradient(180deg, rgba(24, 12, 40, 0.96), rgba(9, 6, 20, 0.96));
+        border-color: rgba(168, 85, 247, 0.42);
+    }
+    .invite-accept-card--fc::before {
+        background: radial-gradient(80% 50% at 50% -10%, rgba(168, 85, 247, 0.32), rgba(0, 0, 0, 0) 60%);
+    }
+    .invite-accept-card--web {
+        background:
+            radial-gradient(120% 80% at 50% 0%, rgba(6, 182, 212, 0.28), rgba(0, 0, 0, 0)) ,
+            linear-gradient(180deg, rgba(4, 26, 32, 0.96), rgba(4, 14, 18, 0.96));
+        border-color: rgba(34, 211, 238, 0.4);
+    }
+    .invite-accept-card--web::before {
+        background: radial-gradient(80% 50% at 50% -10%, rgba(34, 211, 238, 0.3), rgba(0, 0, 0, 0) 60%);
+    }
+    .invite-accept-card--base {
+        background:
+            radial-gradient(120% 80% at 50% 0%, rgba(0, 82, 255, 0.28), rgba(0, 0, 0, 0)) ,
+            linear-gradient(180deg, rgba(6, 14, 44, 0.96), rgba(3, 8, 26, 0.96));
+        border-color: rgba(60, 138, 255, 0.5);
+    }
+    .invite-accept-card--base::before {
+        background: radial-gradient(80% 50% at 50% -10%, rgba(60, 138, 255, 0.32), rgba(0, 0, 0, 0) 60%);
     }
     .invite-accept-top {
+        position: relative;
         text-align: center;
+    }
+    .invite-accept-channel-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 10px;
+        padding: 5px 11px;
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        border-radius: 999px;
+        background: rgba(60, 138, 255, 0.18);
+        color: rgba(191, 219, 254, 0.98);
+        border: 1px solid rgba(96, 165, 250, 0.45);
+    }
+    .invite-accept-card--fc .invite-accept-channel-pill {
+        background: rgba(168, 85, 247, 0.18);
+        color: rgba(233, 213, 255, 0.98);
+        border-color: rgba(168, 85, 247, 0.55);
+    }
+    .invite-accept-card--web .invite-accept-channel-pill {
+        background: rgba(6, 182, 212, 0.18);
+        color: rgba(165, 243, 252, 0.98);
+        border-color: rgba(34, 211, 238, 0.55);
+    }
+    .invite-accept-card--base .invite-accept-channel-pill {
+        background: rgba(0, 82, 255, 0.22);
+        color: rgba(191, 219, 254, 0.98);
+        border-color: rgba(96, 165, 250, 0.55);
+    }
+    .invite-accept-channel-pill-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.9;
+        box-shadow: 0 0 8px currentColor;
     }
     .invite-accept-title {
         margin: 0 0 6px;
         font-size: 22px;
         font-weight: 800;
         color: #fff;
-        letter-spacing: 0.01em;
+        letter-spacing: -0.01em;
     }
     .invite-accept-sub {
         margin: 0;
         font-size: 13px;
-        color: rgba(203, 213, 225, 0.9);
-        line-height: 1.45;
+        color: rgba(203, 213, 225, 0.92);
+        line-height: 1.5;
     }
     .invite-accept-hero {
+        position: relative;
         display: flex;
         align-items: center;
         gap: 14px;
@@ -436,26 +523,82 @@
         background: rgba(60, 138, 255, 0.08);
         border: 1px solid rgba(60, 138, 255, 0.28);
     }
+    .invite-accept-card--fc .invite-accept-hero {
+        background: rgba(124, 58, 237, 0.12);
+        border-color: rgba(168, 85, 247, 0.34);
+    }
+    .invite-accept-card--web .invite-accept-hero {
+        background: rgba(6, 182, 212, 0.12);
+        border-color: rgba(34, 211, 238, 0.34);
+    }
+    .invite-accept-card--base .invite-accept-hero {
+        background: rgba(0, 82, 255, 0.12);
+        border-color: rgba(60, 138, 255, 0.38);
+    }
     .invite-accept-avatar {
-        width: 62px;
-        height: 62px;
+        position: relative;
+        width: 66px;
+        height: 66px;
         border-radius: 50%;
         background: linear-gradient(135deg, #3c8aff, #7c3aed);
         color: #fff;
         font-weight: 800;
-        font-size: 22px;
+        font-size: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
         overflow: hidden;
-        border: 2px solid rgba(255, 255, 255, 0.12);
+        border: 2px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(255, 255, 255, 0.04) inset;
+    }
+    .invite-accept-card--fc .invite-accept-avatar {
+        box-shadow: 0 10px 24px rgba(168, 85, 247, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.04) inset;
+        border-color: rgba(168, 85, 247, 0.55);
+    }
+    .invite-accept-card--web .invite-accept-avatar {
+        box-shadow: 0 10px 24px rgba(34, 211, 238, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.04) inset;
+        border-color: rgba(34, 211, 238, 0.55);
+    }
+    .invite-accept-card--base .invite-accept-avatar {
+        box-shadow: 0 10px 24px rgba(60, 138, 255, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.04) inset;
+        border-color: rgba(96, 165, 250, 0.6);
     }
     .invite-accept-avatar img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
+    }
+    .invite-accept-avatar-badge {
+        position: absolute;
+        right: -4px;
+        bottom: -4px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #0a0e1b;
+        border: 2px solid rgba(255, 255, 255, 0.14);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        line-height: 1;
+    }
+    .invite-accept-card--fc .invite-accept-avatar-badge {
+        background: #2a0f52;
+        border-color: rgba(168, 85, 247, 0.6);
+        color: #d8b4fe;
+    }
+    .invite-accept-card--web .invite-accept-avatar-badge {
+        background: #032a33;
+        border-color: rgba(34, 211, 238, 0.6);
+        color: #a5f3fc;
+    }
+    .invite-accept-card--base .invite-accept-avatar-badge {
+        background: #071033;
+        border-color: rgba(60, 138, 255, 0.65);
+        color: #bfdbfe;
     }
     .invite-accept-meta {
         display: flex;
@@ -471,7 +614,7 @@
     }
     .invite-accept-hint {
         font-size: 12px;
-        color: rgba(148, 163, 184, 0.9);
+        color: rgba(148, 163, 184, 0.92);
     }
     .invite-accept-actions {
         display: flex;
@@ -486,16 +629,35 @@
         font-weight: 700;
         cursor: pointer;
         border: 1px solid transparent;
-        transition: transform 0.12s ease, background 0.18s ease, border-color 0.18s ease;
+        transition: transform 0.12s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
     }
     .invite-accept-btn--primary {
         background: linear-gradient(135deg, #3c8aff, #0052ff);
         color: #fff;
         border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 22px rgba(0, 82, 255, 0.35);
     }
     .invite-accept-btn--primary:hover {
         transform: translateY(-1px);
         background: linear-gradient(135deg, #4a95ff, #1a5fff);
+    }
+    .invite-accept-card--fc .invite-accept-btn--primary {
+        background: linear-gradient(135deg, #a855f7, #7c3aed);
+        box-shadow: 0 8px 22px rgba(124, 58, 237, 0.4);
+    }
+    .invite-accept-card--fc .invite-accept-btn--primary:hover {
+        background: linear-gradient(135deg, #b575f7, #8c4cff);
+    }
+    .invite-accept-card--web .invite-accept-btn--primary {
+        background: linear-gradient(135deg, #22d3ee, #0891b2);
+        box-shadow: 0 8px 22px rgba(8, 145, 178, 0.4);
+    }
+    .invite-accept-card--web .invite-accept-btn--primary:hover {
+        background: linear-gradient(135deg, #3de0f7, #0aa8c6);
+    }
+    .invite-accept-card--base .invite-accept-btn--primary {
+        background: linear-gradient(135deg, #3c8aff, #0052ff);
+        box-shadow: 0 8px 22px rgba(0, 82, 255, 0.45);
     }
     .invite-accept-btn--ghost {
         background: transparent;
@@ -2982,13 +3144,20 @@
 </div>
 
 <div class="modal-overlay" id="inviteAcceptOverlay" aria-hidden="true" role="dialog" aria-labelledby="inviteAcceptTitle" aria-modal="true">
-  <div class="mint-card invite-accept-card">
+  <div class="mint-card invite-accept-card" id="inviteAcceptCard">
     <div class="invite-accept-top">
+      <span class="invite-accept-channel-pill" id="inviteAcceptChannelPill" aria-hidden="true">
+        <span class="invite-accept-channel-pill-dot"></span>
+        <span id="inviteAcceptChannelLabel">Invite</span>
+      </span>
       <h2 id="inviteAcceptTitle" class="invite-accept-title">You were invited!</h2>
       <p class="invite-accept-sub">Start playing and your inviter earns a share of your activity.</p>
     </div>
     <div class="invite-accept-hero">
-      <div class="invite-accept-avatar" id="inviteAcceptAvatar" aria-hidden="true">?</div>
+      <div class="invite-accept-avatar" id="inviteAcceptAvatar" aria-hidden="true">
+        <span id="inviteAcceptAvatarFallback">?</span>
+        <span class="invite-accept-avatar-badge" id="inviteAcceptAvatarBadge" aria-hidden="true">★</span>
+      </div>
       <div class="invite-accept-meta">
         <div class="invite-accept-nick" id="inviteAcceptNick">Someone on Base</div>
         <div class="invite-accept-hint">invited you to Phrase To Guess</div>
@@ -3774,10 +3943,14 @@
               invitee: nv.invitee,
               ts: typeof nv.ts === "number" ? nv.ts : Date.now(),
               via: (() => {
-                  const vv = String(nv.via || walletVia).toLowerCase();
-                  if (vv === "base") return "base";
-                  if (vv === "web" || vv === "browser") return "web";
-                  return "farcaster";
+                  /* Kanał z DZIECKA ma pierwszeństwo (wpis nadaje via przy atrybucji).
+                   * Brak via → NIE dziedziczymy z wallet edge (inaczej zaproszenie przez
+                   * web trafiało do Base gdy fcFID połączył portfel w Base app). */
+                  const raw = String(nv.via || "").toLowerCase();
+                  if (raw === "base") return "base";
+                  if (raw === "web" || raw === "browser") return "web";
+                  if (raw === "farcaster") return "farcaster";
+                  return "web";
               })(),
               _mergedFromLinkedWallet: true,
           };
@@ -4223,11 +4396,22 @@
       } catch (_) {}
       if (!refCode) return;
       try {
-          /* Zawsze nadpisuj: embed z aktualnego casta/Mini App ma pierwszeństwo nad starym localStorage
+          /* Zawsze nadpisuj ref: embed z aktualnego casta/Mini App ma pierwszeństwo nad starym localStorage
            * (wcześniej pierwszy zapisany ref „wypalał się” i źle przypisywał zaproszenie). */
+          const prevRef = localStorage.getItem("ptg_pending_ref");
+          const prevVia = localStorage.getItem("ptg_pending_via");
           localStorage.setItem("ptg_pending_ref", refCode);
-          if (via) localStorage.setItem("ptg_pending_via", via);
-          else localStorage.removeItem("ptg_pending_via");
+          if (via) {
+              /* embed miał jawne via → ono wygrywa (np. ktoś przekazał linka z `via=web`
+               * dalej w Farcasterze — chcemy zachować web). */
+              localStorage.setItem("ptg_pending_via", via);
+          } else if (prevRef === refCode && (prevVia === "farcaster" || prevVia === "base" || prevVia === "web" || prevVia === "browser")) {
+              /* Embed bez via, ale mamy już zapisane via dla tego samego refa
+               * (z paska adresu, np. `?ref=X&via=web`) → NIE czyścić, inaczej
+               * host Base/FC błędnie nadpisze kanał na siebie. */
+          } else {
+              localStorage.removeItem("ptg_pending_via");
+          }
       } catch (_) {}
   }
 
@@ -4555,9 +4739,19 @@
       }
   }
 
+  /**
+   * Kolejność rozwiązywania avatara/nazwy invitera (najbogatszy wygrywa):
+   *   1) Avatar + nazwa z Farcasterowego profilu (Neynar przez /api/ptg-resolve-names).
+   *   2) Basename (Base) → nazwa + avatar ENS (avatar.textRecord lookup via znany CDN).
+   *   3) ENS mainnet — nazwa + avatar (metadata.ens.domains).
+   *   4) Cached RTDB (`players_s{N}/{uid}.pfpUrl/avatarUrl/name`) jako fallback.
+   *   5) Skrócony 0x / fcFID + pierwsza litera jako letter fallback.
+   * Uwaga: zwracamy od razu wartości co znajdziemy; UI potrafi odświeżyć avatar po wgraniu większego.
+   */
   async function ptgResolveInviterPreview(ownerId) {
-      const preview = { id: ownerId, name: "", avatarUrl: "" };
+      const preview = { id: ownerId, name: "", avatarUrl: "", ensName: "", basename: "" };
       if (!ownerId) return preview;
+
       try {
           const pSnap = await get(playerDocRef(ownerId));
           if (pSnap.exists()) {
@@ -4567,24 +4761,73 @@
               else if (typeof v.avatarUrl === "string" && /^https?:\/\//.test(v.avatarUrl)) preview.avatarUrl = v.avatarUrl;
           }
       } catch (_) {}
-      if (/^0x[a-fA-F0-9]{40}$/.test(String(ownerId || "")) && (!preview.name || !preview.avatarUrl)) {
+
+      if (/^0x[a-fA-F0-9]{40}$/.test(String(ownerId || ""))) {
           try {
               const r = await resolveInviterProfilesFromServer([ownerId]);
               const key = String(ownerId).toLowerCase();
               const n = r.names && r.names[key];
               const p = r.pfps && r.pfps[key];
-              if (!preview.name && n && String(n).trim()) preview.name = String(n).trim();
-              if (!preview.avatarUrl && p && /^https?:\/\//.test(p)) preview.avatarUrl = p;
+              if (n && String(n).trim()) {
+                  if (!preview.name || /^0x/i.test(preview.name)) preview.name = String(n).trim();
+                  const nt = String(n).trim();
+                  if (/\.base\.eth$/i.test(nt)) preview.basename = nt;
+                  else if (/\.eth$/i.test(nt)) preview.ensName = nt;
+              }
+              if (p && /^https?:\/\//.test(p)) {
+                  if (!preview.avatarUrl) preview.avatarUrl = p;
+              }
           } catch (_) {}
-          if (!preview.name) {
+
+          if (!preview.name || /^0x/i.test(preview.name)) {
               try {
                   const bn = await resolveBasenameForAddress(ownerId);
-                  if (bn && String(bn).trim()) preview.name = String(bn).trim();
+                  if (bn && String(bn).trim()) {
+                      preview.name = String(bn).trim();
+                      preview.basename = preview.basename || String(bn).trim();
+                  }
               } catch (_) {}
           }
+
+          if (!preview.avatarUrl && preview.ensName) {
+              preview.avatarUrl = "https://metadata.ens.domains/mainnet/avatar/" + encodeURIComponent(preview.ensName);
+          }
       }
+
       if (!preview.name) preview.name = formatLeaderboardDisplayName(ownerId, {});
       return preview;
+  }
+
+  function ptgInviteChannelFromStorage() {
+      try {
+          const pv = localStorage.getItem("ptg_pending_via");
+          if (pv === "farcaster" || pv === "base" || pv === "web") return pv;
+          if (pv === "browser") return "web";
+      } catch (_) {}
+      if (typeof ptgHost === "string") {
+          if (ptgHost === "farcaster") return "farcaster";
+          if (ptgHost === "base") return "base";
+      }
+      return "web";
+  }
+
+  function ptgApplyInviteAcceptChannelStyling(channel) {
+      const card = document.getElementById("inviteAcceptCard");
+      const label = document.getElementById("inviteAcceptChannelLabel");
+      const badge = document.getElementById("inviteAcceptAvatarBadge");
+      if (!card) return;
+      card.classList.remove("invite-accept-card--fc", "invite-accept-card--web", "invite-accept-card--base");
+      const ch = channel === "farcaster" ? "fc" : channel === "base" ? "base" : "web";
+      card.classList.add("invite-accept-card--" + ch);
+      if (label) {
+          label.textContent =
+              ch === "fc" ? "Invited via Farcaster" : ch === "base" ? "Invited via Base" : "Invited via Web";
+      }
+      if (badge) {
+          badge.textContent = ch === "fc" ? "✦" : ch === "base" ? "◆" : "●";
+          badge.title =
+              ch === "fc" ? "Farcaster invite" : ch === "base" ? "Base app invite" : "Web invite";
+      }
   }
 
   function ptgHideInviteAcceptOverlay() {
@@ -4619,34 +4862,50 @@
       if (!overlay) return;
       const nickEl = document.getElementById("inviteAcceptNick");
       const avEl = document.getElementById("inviteAcceptAvatar");
+      const fallbackEl = document.getElementById("inviteAcceptAvatarFallback");
+      const badgeEl = document.getElementById("inviteAcceptAvatarBadge");
+
+      ptgApplyInviteAcceptChannelStyling(ptgInviteChannelFromStorage());
+
+      const initialLetter = ptgInviterAvatarMarkup("", ownerId);
+      if (fallbackEl) fallbackEl.textContent = initialLetter || "?";
       if (nickEl) nickEl.textContent = formatLeaderboardDisplayName(ownerId, {});
-      if (avEl) {
-          avEl.innerHTML = ptgInviterAvatarMarkup("", ownerId);
-      }
+
       overlay.classList.add("show");
       overlay.setAttribute("aria-hidden", "false");
+
       try {
           const preview = await ptgResolveInviterPreview(ownerId);
           if (nickEl && preview.name) nickEl.textContent = preview.name;
-          if (avEl) {
-              if (preview.avatarUrl) {
-                  const fallback = ptgInviterAvatarMarkup(preview.name, ownerId);
-                  avEl.innerHTML = fallback;
-                  const img = document.createElement("img");
-                  img.alt = "";
-                  img.loading = "lazy";
-                  img.decoding = "async";
-                  img.addEventListener("error", function () {
-                      avEl.innerHTML = fallback;
-                  }, { once: true });
-                  img.addEventListener("load", function () {
-                      avEl.innerHTML = "";
-                      avEl.appendChild(img);
-                  }, { once: true });
-                  img.src = preview.avatarUrl;
-              } else {
-                  avEl.innerHTML = ptgInviterAvatarMarkup(preview.name, ownerId);
-              }
+          if (fallbackEl) {
+              fallbackEl.textContent = ptgInviterAvatarMarkup(preview.name, ownerId) || "?";
+          }
+          if (avEl && preview.avatarUrl) {
+              const existingImg = avEl.querySelector("img");
+              const img = document.createElement("img");
+              img.alt = "";
+              img.loading = "lazy";
+              img.decoding = "async";
+              img.referrerPolicy = "no-referrer";
+              img.addEventListener(
+                  "error",
+                  function () {
+                      if (img.parentNode) img.parentNode.removeChild(img);
+                      if (fallbackEl) fallbackEl.style.display = "";
+                      if (badgeEl) badgeEl.style.display = "";
+                  },
+                  { once: true },
+              );
+              img.addEventListener(
+                  "load",
+                  function () {
+                      if (existingImg && existingImg.parentNode) existingImg.parentNode.removeChild(existingImg);
+                      if (fallbackEl) fallbackEl.style.display = "none";
+                  },
+                  { once: true },
+              );
+              img.src = preview.avatarUrl;
+              if (!avEl.contains(img)) avEl.appendChild(img);
           }
       } catch (_) {}
   }
