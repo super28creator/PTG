@@ -4564,6 +4564,31 @@
           ptgClearPendingRefCapture();
           return;
       }
+
+      /* Twardy block self-invite — obejmuje też lowercase / fcFID ↔ wallet.
+       * Bez tego zaproszenie siebie się „liczyło" w Mini Appie, gdy user kliknął
+       * własny link zalogowany drugą tożsamością. */
+      if (await ptgIsSelfInviteCandidate(ownerId, refCode)) {
+          ptgClearPendingRefCapture();
+          return;
+      }
+
+      /* Policy "first invite wins" — jeśli w `parent_of/{me}` siedzi już KTOŚ inny,
+       * nowe linki są ignorowane. Nie nadpisujemy drzewa, nie usuwamy starego wpisu
+       * z invite_entries poprzedniego invitera. */
+      try {
+          const existingParentSnap = await get(ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + myUserId));
+          if (existingParentSnap.exists()) {
+              const pv = existingParentSnap.val();
+              const existingInviter = pv && typeof pv === "object" ? pv.inviterId : null;
+              if (existingInviter && existingInviter !== ownerId) {
+                  ptgClearPendingRefCapture();
+                  return;
+              }
+          }
+      } catch (e) {
+          console.warn("referral parent_of preflight", e);
+      }
       const vis = String(myUserId).replace(/[^a-zA-Z0-9_]/g, "_");
       const edgeKey = refCode + "_" + vis.slice(0, 72);
       const edgeRef = ref(db, ptgReferralsRtdbRoot() + "/edges/" + edgeKey);
@@ -4837,6 +4862,55 @@
       o.setAttribute("aria-hidden", "true");
   }
 
+  /**
+   * Prawda jeśli `ownerId` to tak naprawdę ja (zapobiega zapraszaniu siebie).
+   * Sprawdzamy:
+   *   1) dokładne dopasowanie myUserId,
+   *   2) lowercase (gdy zapis w indeksie miał checksumowany 0x),
+   *   3) mój ref-code (hash myUserId) względem refCode — to wyłapuje przypadek,
+   *      gdy ktoś kliknął własny link zalogowany inną tożsamością powiązaną,
+   *   4) dla fcFID: aktualnie połączony wallet (Embedded Provider) vs ownerId.
+   */
+  async function ptgIsSelfInviteCandidate(ownerId, refCode) {
+      if (!ownerId || !myUserId || myUserId === "guest") return false;
+      if (ownerId === myUserId) return true;
+      try {
+          if (String(ownerId).toLowerCase() === String(myUserId).toLowerCase()) return true;
+      } catch (_) {}
+      try {
+          const myCode = await ptgRefCodeFromUserId(myUserId);
+          if (myCode && refCode && String(myCode).toLowerCase() === String(refCode).toLowerCase()) return true;
+      } catch (_) {}
+      if (typeof myUserId === "string" && myUserId.indexOf("fcfid") === 0) {
+          try {
+              const prov = typeof getEmbeddedEthProvider === "function" ? getEmbeddedEthProvider() : null;
+              if (prov && typeof prov.request === "function") {
+                  const acc = await prov.request({ method: "eth_accounts" });
+                  if (acc && acc[0]) {
+                      const w = String(acc[0]).toLowerCase();
+                      if (String(ownerId).toLowerCase() === w) return true;
+                  }
+              }
+          } catch (_) {}
+      }
+      return false;
+  }
+
+  /**
+   * Zwraca inviterId z `parent_of/{me}` jeśli user kiedykolwiek zaakceptował zaproszenie.
+   * Używane do policy "first invite wins" — kolejne linki są ignorowane.
+   */
+  async function ptgGetExistingInviterId() {
+      if (!db || !isLoggedIn() || myUserId === "guest") return null;
+      try {
+          const ps = await get(ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + myUserId));
+          if (!ps.exists()) return null;
+          const pv = ps.val();
+          if (pv && typeof pv === "object" && pv.inviterId) return String(pv.inviterId);
+      } catch (_) {}
+      return null;
+  }
+
   async function ptgMaybeShowInviteAcceptOverlay() {
       if (!isLoggedIn() || myUserId === "guest") return;
       let pending = null;
@@ -4857,7 +4931,35 @@
           if (s.exists()) ownerId = s.val() && s.val().ownerId;
       } catch (_) {}
       if (!ownerId) return;
-      if (isLoggedIn() && ownerId === myUserId) return;
+
+      /* Self-invite block — ktoś kliknął własny link (lub link innej swojej tożsamości).
+       * Czyścimy pending + oznaczamy seen, żeby już nie wracało. */
+      if (await ptgIsSelfInviteCandidate(ownerId, refCode)) {
+          try {
+              localStorage.setItem(seenKey, String(Date.now()));
+          } catch (_) {}
+          ptgClearPendingRefCapture();
+          return;
+      }
+
+      /* Policy "first invite wins" — jeśli user już kiedyś zaakceptował zaproszenie
+       * od KOGOKOLWIEK (dowolny inviter), nie pokazujemy nowego modala ani nie zmieniamy
+       * drzewa. Kolejne linki są po cichu ignorowane. */
+      const existingInviter = await ptgGetExistingInviterId();
+      if (existingInviter && existingInviter !== ownerId) {
+          try {
+              localStorage.setItem(seenKey, String(Date.now()));
+          } catch (_) {}
+          ptgClearPendingRefCapture();
+          return;
+      }
+      if (existingInviter && existingInviter === ownerId) {
+          /* Już zaakceptował od tej samej osoby — nie pokazuj ponownie. */
+          try {
+              localStorage.setItem(seenKey, String(Date.now()));
+          } catch (_) {}
+          return;
+      }
       const overlay = document.getElementById("inviteAcceptOverlay");
       if (!overlay) return;
       const nickEl = document.getElementById("inviteAcceptNick");
