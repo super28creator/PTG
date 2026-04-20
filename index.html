@@ -1237,9 +1237,11 @@
         user-select: text;
     }
     /* Po skopiowaniu: link znika → linia → COPIED jednym „rozkładaniem” (scaleX) → chwilę stoi → zwijanie */
+    /* Nad całym `.referral-url-field` (łącznie ze strefą przycisku), żeby COPIED było na środku paska, nie tylko lewej kolumny */
     .referral-url-copy-celebrate {
         position: absolute;
         inset: 0;
+        z-index: 1;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1390,7 +1392,7 @@
         align-items: center;
         justify-content: center;
         position: relative;
-        z-index: 1;
+        z-index: 2;
         transition:
             background 0.14s ease,
             color 0.14s ease,
@@ -3325,10 +3327,10 @@
           <div class="referral-url-field">
             <div class="referral-url-text-track">
               <span class="referral-url-text" id="referralUniversalUrlFc">—</span>
-              <div class="referral-url-copy-celebrate" aria-hidden="true">
-                <span class="referral-url-copy-celebrate__line"></span>
-                <span class="referral-url-copy-celebrate__letters">COPIED</span>
-              </div>
+            </div>
+            <div class="referral-url-copy-celebrate" aria-hidden="true">
+              <span class="referral-url-copy-celebrate__line"></span>
+              <span class="referral-url-copy-celebrate__letters">COPIED</span>
             </div>
             <button type="button" class="referral-url-copy-btn" id="referralCopyFcBtn" aria-label="Copy Farcaster invite link" title="Copy">
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3343,10 +3345,10 @@
           <div class="referral-url-field">
             <div class="referral-url-text-track">
               <span class="referral-url-text" id="referralUniversalUrlBase">—</span>
-              <div class="referral-url-copy-celebrate" aria-hidden="true">
-                <span class="referral-url-copy-celebrate__line"></span>
-                <span class="referral-url-copy-celebrate__letters">COPIED</span>
-              </div>
+            </div>
+            <div class="referral-url-copy-celebrate" aria-hidden="true">
+              <span class="referral-url-copy-celebrate__line"></span>
+              <span class="referral-url-copy-celebrate__letters">COPIED</span>
             </div>
             <button type="button" class="referral-url-copy-btn" id="referralCopyBaseBtn" aria-label="Copy Base invite link" title="Copy">
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3361,10 +3363,10 @@
           <div class="referral-url-field">
             <div class="referral-url-text-track">
               <span class="referral-url-text" id="referralUniversalUrlWeb">—</span>
-              <div class="referral-url-copy-celebrate" aria-hidden="true">
-                <span class="referral-url-copy-celebrate__line"></span>
-                <span class="referral-url-copy-celebrate__letters">COPIED</span>
-              </div>
+            </div>
+            <div class="referral-url-copy-celebrate" aria-hidden="true">
+              <span class="referral-url-copy-celebrate__line"></span>
+              <span class="referral-url-copy-celebrate__letters">COPIED</span>
             </div>
             <button type="button" class="referral-url-copy-btn" id="referralCopyWebBtn" aria-label="Copy Web invite link" title="Copy">
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
