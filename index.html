@@ -508,7 +508,7 @@
     }
     .referral-detail-card {
         width: 100%;
-        max-width: min(96vw, 540px);
+        max-width: min(98vw, 680px);
         max-height: min(88vh, 640px);
         min-height: min(52vh, 420px);
         display: flex;
@@ -643,21 +643,29 @@
     }
     @media (max-width: 460px) {
         .referral-invite-split {
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             min-height: 0;
         }
         .referral-invite-split-divider {
-            width: 100%;
-            height: 1px;
+            width: 1px;
+            height: auto;
             flex: 0 0 1px;
             align-self: stretch;
             background: linear-gradient(
-                90deg,
+                180deg,
                 rgba(255, 255, 255, 0) 0%,
                 rgba(255, 255, 255, 0.2) 18%,
                 rgba(255, 255, 255, 0.2) 82%,
                 rgba(255, 255, 255, 0) 100%
             );
+        }
+        .referral-invite-col {
+            padding: 10px 8px 10px;
+        }
+        .referral-invite-col-head {
+            font-size: clamp(14px, 4.8vw, 18px);
+            margin-bottom: 8px;
         }
     }
     .referral-invite-col {
@@ -716,9 +724,9 @@
         display: flex;
         flex-wrap: wrap;
         align-items: flex-start;
-        gap: 6px;
+        gap: 6px 5px;
         margin-bottom: 8px;
-        padding: 8px 6px;
+        padding: 9px 7px;
         border-radius: 10px;
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.06);
@@ -756,16 +764,19 @@
     }
     .referral-inv-main {
         flex: 1;
-        min-width: 0;
+        min-width: 56px;
         display: flex;
         flex-direction: column;
         gap: 4px;
     }
     .referral-inv-name {
         font-weight: 700;
-        font-size: 12px;
+        font-size: 13px;
         color: #f1f5f9;
-        word-break: break-word;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: normal;
     }
     .referral-inv-meta {
         font-size: 10px;
@@ -779,10 +790,10 @@
     }
     .referral-inv-pct {
         align-self: flex-start;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 800;
         color: #fbbf24;
-        padding: 2px 8px;
+        padding: 2px 6px;
         border-radius: 8px;
         background: rgba(245, 158, 11, 0.12);
         border: 1px solid rgba(245, 158, 11, 0.3);
