@@ -1203,6 +1203,15 @@
     .referral-url-row--web .referral-url-field {
         border-color: rgba(6, 182, 212, 0.32);
     }
+    .referral-url-text-track {
+        flex: 1;
+        min-width: 0;
+        position: relative;
+        min-height: 2.1em;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+    }
     .referral-url-text {
         flex: 1;
         min-width: 0;
@@ -1217,6 +1226,7 @@
         cursor: default;
         user-select: all;
         -webkit-user-select: all;
+        transition: opacity 0.22s ease, visibility 0.22s ease;
     }
     .referral-url-text.referral-url-text--multiline {
         white-space: normal;
@@ -1226,54 +1236,139 @@
         font-family: inherit;
         user-select: text;
     }
-    /* „Copied” tuż przy ikonie — nie używamy odległego #referralClaimMsg */
-    .referral-url-inline-copied {
-        display: none;
-        flex-shrink: 0;
+    /* Po skopiowaniu: link znika → linia w kolorze kanału → litery COPIED z prawej do lewej → wyjście */
+    .referral-url-copy-celebrate {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: center;
+        gap: 6px;
+        padding: 0 2px;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+    }
+    .referral-url-row--copy-anim .referral-url-text {
+        opacity: 0;
+        visibility: hidden;
+    }
+    .referral-url-row--copy-anim .referral-url-copy-celebrate {
+        opacity: 1;
+        visibility: visible;
+    }
+    .referral-url-copy-celebrate__line {
+        display: block;
+        height: 3px;
+        border-radius: 2px;
+        transform: scaleX(0);
+        transform-origin: left center;
+    }
+    .referral-url-row--copy-anim .referral-url-copy-celebrate__line {
+        animation: referral-url-copy-line-draw 0.42s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .referral-url-row--fc .referral-url-copy-celebrate__line {
+        background: linear-gradient(90deg, rgba(167, 139, 250, 0.95), rgba(124, 58, 237, 0.85));
+        box-shadow: 0 0 12px rgba(124, 58, 237, 0.55);
+    }
+    .referral-url-row--base .referral-url-copy-celebrate__line {
+        background: linear-gradient(90deg, rgba(96, 165, 250, 0.98), rgba(37, 99, 235, 0.9));
+        box-shadow: 0 0 12px rgba(37, 99, 235, 0.5);
+    }
+    .referral-url-row--web .referral-url-copy-celebrate__line {
+        background: linear-gradient(90deg, rgba(34, 211, 238, 0.95), rgba(6, 182, 212, 0.88));
+        box-shadow: 0 0 12px rgba(6, 182, 212, 0.48);
+    }
+    @keyframes referral-url-copy-line-draw {
+        from {
+            transform: scaleX(0);
+        }
+        to {
+            transform: scaleX(1);
+        }
+    }
+    .referral-url-copy-celebrate__letters {
+        display: flex;
+        flex-direction: row;
         align-items: center;
-        font-size: 9px;
-        font-weight: 800;
-        letter-spacing: 0.1em;
+        justify-content: center;
+        gap: 0.04em;
+        font-size: clamp(13px, 3.6vw, 17px);
+        font-weight: 900;
+        letter-spacing: 0.14em;
         text-transform: uppercase;
-        padding: 4px 7px;
-        border-radius: 6px;
-        line-height: 1;
-        color: rgba(240, 253, 250, 0.98);
-        background: rgba(16, 185, 129, 0.35);
-        border: 1px solid rgba(52, 211, 153, 0.55);
-        box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
-        animation: referral-inline-copied-pop 0.35s ease-out;
+        font-family: system-ui, "Segoe UI", sans-serif;
     }
-    @keyframes referral-inline-copied-pop {
-        0% {
-            opacity: 0;
-            transform: scale(0.88);
-        }
-        100% {
-            opacity: 1;
-            transform: scale(1);
-        }
+    .referral-url-row--fc .referral-url-copy-celebrate__ch {
+        color: #f5f3ff;
+        text-shadow: 0 0 18px rgba(167, 139, 250, 0.85), 0 2px 8px rgba(88, 28, 135, 0.6);
     }
-    .referral-url-row--fc .referral-url-inline-copied {
-        color: #faf5ff;
-        background: rgba(88, 28, 135, 0.55);
-        border-color: rgba(167, 139, 250, 0.65);
-        box-shadow: 0 0 16px rgba(124, 58, 237, 0.45);
-    }
-    .referral-url-row--base .referral-url-inline-copied {
+    .referral-url-row--base .referral-url-copy-celebrate__ch {
         color: #eff6ff;
-        background: rgba(30, 58, 138, 0.55);
-        border-color: rgba(96, 165, 250, 0.65);
-        box-shadow: 0 0 16px rgba(37, 99, 235, 0.42);
+        text-shadow: 0 0 18px rgba(59, 130, 246, 0.75), 0 2px 8px rgba(30, 58, 138, 0.55);
     }
-    .referral-url-row--web .referral-url-inline-copied {
+    .referral-url-row--web .referral-url-copy-celebrate__ch {
         color: #ecfeff;
-        background: rgba(6, 78, 59, 0.5);
-        border-color: rgba(45, 212, 191, 0.6);
-        box-shadow: 0 0 16px rgba(6, 182, 212, 0.4);
+        text-shadow: 0 0 18px rgba(34, 211, 238, 0.7), 0 2px 8px rgba(6, 78, 59, 0.45);
     }
-    .referral-url-row--copied .referral-url-inline-copied {
-        display: inline-flex;
+    .referral-url-copy-celebrate__ch {
+        display: inline-block;
+        opacity: 0;
+        transform: translateX(1.1em);
+    }
+    .referral-url-row--copy-anim .referral-url-copy-celebrate__ch {
+        animation: referral-url-copy-ch-in 0.48s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+        animation-delay: calc(0.38s + (5 - var(--rcl-i)) * 0.065s);
+    }
+    @keyframes referral-url-copy-ch-in {
+        from {
+            opacity: 0;
+            transform: translateX(1.15em);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    .referral-url-row--copy-anim-out .referral-url-copy-celebrate__ch {
+        animation: referral-url-copy-ch-out 0.38s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+        animation-delay: calc((5 - var(--rcl-i)) * 0.045s);
+    }
+    @keyframes referral-url-copy-ch-out {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(-1.1em);
+        }
+    }
+    .referral-url-row--copy-anim-out .referral-url-copy-celebrate__line {
+        animation: referral-url-copy-line-out 0.38s ease forwards;
+    }
+    @keyframes referral-url-copy-line-out {
+        to {
+            transform: scaleX(0);
+            transform-origin: right center;
+            opacity: 0.35;
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .referral-url-row--copy-anim .referral-url-copy-celebrate__ch {
+            animation-duration: 0.01s;
+            animation-delay: 0s !important;
+            opacity: 1;
+            transform: none;
+        }
+        .referral-url-row--copy-anim-out .referral-url-copy-celebrate__ch {
+            animation: none;
+            opacity: 0;
+        }
+        .referral-url-row--copy-anim .referral-url-copy-celebrate__line {
+            animation-duration: 0.01s;
+        }
     }
     .referral-url-copy-btn {
         flex-shrink: 0;
@@ -1344,8 +1439,8 @@
         display: block;
         filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.25));
     }
-    /* Feedback po skopiowaniu linku — wiersz + przycisk w kolorze kanału */
-    .referral-url-row--copied .referral-url-field {
+    /* Podczas animacji „COPIED” — pole linku w kolorze kanału */
+    .referral-url-row--copy-anim .referral-url-field {
         animation: referral-copy-row-pulse 0.55s ease-out;
     }
     @keyframes referral-copy-row-pulse {
@@ -1359,17 +1454,17 @@
             box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
         }
     }
-    .referral-url-row--fc.referral-url-row--copied .referral-url-field {
+    .referral-url-row--fc.referral-url-row--copy-anim .referral-url-field {
         border-color: rgba(167, 139, 250, 0.75) !important;
         background: rgba(88, 28, 135, 0.22);
         box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.35), 0 8px 28px rgba(124, 58, 237, 0.2);
     }
-    .referral-url-row--base.referral-url-row--copied .referral-url-field {
+    .referral-url-row--base.referral-url-row--copy-anim .referral-url-field {
         border-color: rgba(96, 165, 250, 0.8) !important;
         background: rgba(30, 58, 138, 0.28);
         box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4), 0 8px 28px rgba(37, 99, 235, 0.22);
     }
-    .referral-url-row--web.referral-url-row--copied .referral-url-field {
+    .referral-url-row--web.referral-url-row--copy-anim .referral-url-field {
         border-color: rgba(34, 211, 238, 0.75) !important;
         background: rgba(6, 78, 59, 0.22);
         box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.38), 0 8px 28px rgba(6, 182, 212, 0.2);
@@ -3221,8 +3316,20 @@
         <div class="referral-url-row referral-url-row--fc">
           <span class="referral-url-channel-label">Farcaster</span>
           <div class="referral-url-field">
-            <span class="referral-url-text" id="referralUniversalUrlFc">—</span>
-            <span class="referral-url-inline-copied" aria-hidden="true">Copied</span>
+            <div class="referral-url-text-track">
+              <span class="referral-url-text" id="referralUniversalUrlFc">—</span>
+              <div class="referral-url-copy-celebrate" aria-hidden="true">
+                <span class="referral-url-copy-celebrate__line"></span>
+                <span class="referral-url-copy-celebrate__letters">
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 0">C</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 1">O</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 2">P</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 3">I</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 4">E</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 5">D</span>
+                </span>
+              </div>
+            </div>
             <button type="button" class="referral-url-copy-btn" id="referralCopyFcBtn" aria-label="Copy Farcaster invite link" title="Copy">
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -3234,8 +3341,20 @@
         <div class="referral-url-row referral-url-row--base">
           <span class="referral-url-channel-label">Base</span>
           <div class="referral-url-field">
-            <span class="referral-url-text" id="referralUniversalUrlBase">—</span>
-            <span class="referral-url-inline-copied" aria-hidden="true">Copied</span>
+            <div class="referral-url-text-track">
+              <span class="referral-url-text" id="referralUniversalUrlBase">—</span>
+              <div class="referral-url-copy-celebrate" aria-hidden="true">
+                <span class="referral-url-copy-celebrate__line"></span>
+                <span class="referral-url-copy-celebrate__letters">
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 0">C</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 1">O</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 2">P</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 3">I</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 4">E</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 5">D</span>
+                </span>
+              </div>
+            </div>
             <button type="button" class="referral-url-copy-btn" id="referralCopyBaseBtn" aria-label="Copy Base invite link" title="Copy">
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -3247,8 +3366,20 @@
         <div class="referral-url-row referral-url-row--web">
           <span class="referral-url-channel-label">Web</span>
           <div class="referral-url-field">
-            <span class="referral-url-text" id="referralUniversalUrlWeb">—</span>
-            <span class="referral-url-inline-copied" aria-hidden="true">Copied</span>
+            <div class="referral-url-text-track">
+              <span class="referral-url-text" id="referralUniversalUrlWeb">—</span>
+              <div class="referral-url-copy-celebrate" aria-hidden="true">
+                <span class="referral-url-copy-celebrate__line"></span>
+                <span class="referral-url-copy-celebrate__letters">
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 0">C</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 1">O</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 2">P</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 3">I</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 4">E</span>
+                  <span class="referral-url-copy-celebrate__ch" style="--rcl-i: 5">D</span>
+                </span>
+              </div>
+            </div>
             <button type="button" class="referral-url-copy-btn" id="referralCopyWebBtn" aria-label="Copy Web invite link" title="Copy">
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -5694,10 +5825,15 @@
       '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 
   function ptgClearReferralCopyFeedback() {
-      document.querySelectorAll(".referral-url-row--copied").forEach(function (row) {
-          row.classList.remove("referral-url-row--copied");
-          const b = row.querySelector(".referral-url-copy-btn");
-          if (!b) return;
+      try {
+          clearTimeout(window.__ptgCopyFeedbackTimer);
+          clearTimeout(window.__ptgCopyAnimT1);
+          clearTimeout(window.__ptgCopyAnimT3);
+      } catch (_) {}
+      document.querySelectorAll(".referral-url-row--copy-anim, .referral-url-row--copy-anim-out").forEach(function (row) {
+          row.classList.remove("referral-url-row--copy-anim", "referral-url-row--copy-anim-out");
+      });
+      document.querySelectorAll(".referral-url-copy-btn--copied").forEach(function (b) {
           b.classList.remove("referral-url-copy-btn--copied");
           if (b.dataset.ptgCopyOriginal) {
               b.innerHTML = b.dataset.ptgCopyOriginal;
@@ -5708,6 +5844,26 @@
               delete b.dataset.ptgAriaOriginal;
           }
       });
+  }
+
+  function ptgFlashReferralCopyButton(copyBtn) {
+      if (!copyBtn) return;
+      copyBtn.dataset.ptgCopyOriginal = copyBtn.innerHTML;
+      copyBtn.dataset.ptgAriaOriginal = copyBtn.getAttribute("aria-label") || "";
+      copyBtn.innerHTML = PTG_COPY_OK_SVG;
+      copyBtn.classList.add("referral-url-copy-btn--copied");
+      copyBtn.setAttribute("aria-label", "Copied to clipboard");
+      window.__ptgCopyAnimT3 = setTimeout(function () {
+          copyBtn.classList.remove("referral-url-copy-btn--copied");
+          if (copyBtn.dataset.ptgCopyOriginal) {
+              copyBtn.innerHTML = copyBtn.dataset.ptgCopyOriginal;
+              delete copyBtn.dataset.ptgCopyOriginal;
+          }
+          if (copyBtn.dataset.ptgAriaOriginal !== undefined) {
+              copyBtn.setAttribute("aria-label", copyBtn.dataset.ptgAriaOriginal);
+              delete copyBtn.dataset.ptgAriaOriginal;
+          }
+      }, 520);
   }
 
   async function copyReferralInviteLinkFromEl(spanId, copyBtn) {
@@ -5742,28 +5898,15 @@
       if (!ok) return;
       if (msg) msg.textContent = "";
       if (row && copyBtn) {
-          try {
-              clearTimeout(window.__ptgCopyFeedbackTimer);
-          } catch (_) {}
           ptgClearReferralCopyFeedback();
-          copyBtn.dataset.ptgCopyOriginal = copyBtn.innerHTML;
-          copyBtn.dataset.ptgAriaOriginal = copyBtn.getAttribute("aria-label") || "";
-          copyBtn.innerHTML = PTG_COPY_OK_SVG;
-          copyBtn.classList.add("referral-url-copy-btn--copied");
-          copyBtn.setAttribute("aria-label", "Copied to clipboard");
-          row.classList.add("referral-url-row--copied");
+          row.classList.add("referral-url-row--copy-anim");
+          window.__ptgCopyAnimT1 = setTimeout(function () {
+              row.classList.add("referral-url-row--copy-anim-out");
+          }, 1180);
           window.__ptgCopyFeedbackTimer = setTimeout(function () {
-              row.classList.remove("referral-url-row--copied");
-              copyBtn.classList.remove("referral-url-copy-btn--copied");
-              if (copyBtn.dataset.ptgCopyOriginal) {
-                  copyBtn.innerHTML = copyBtn.dataset.ptgCopyOriginal;
-                  delete copyBtn.dataset.ptgCopyOriginal;
-              }
-              if (copyBtn.dataset.ptgAriaOriginal !== undefined) {
-                  copyBtn.setAttribute("aria-label", copyBtn.dataset.ptgAriaOriginal);
-                  delete copyBtn.dataset.ptgAriaOriginal;
-              }
-          }, 2400);
+              row.classList.remove("referral-url-row--copy-anim", "referral-url-row--copy-anim-out");
+              ptgFlashReferralCopyButton(copyBtn);
+          }, 1980);
       }
   }
 
