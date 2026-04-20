@@ -741,7 +741,7 @@
         line-height: 1.45;
     }
 
-    /* Who you invited — jedna sekcja naraz (akordeon), pełna szerokość */
+    /* Who you invited — akordeon (Base palette), pełna szerokość */
     .referral-invite-accordion {
         display: flex;
         flex-direction: column;
@@ -753,24 +753,26 @@
     .referral-invite-acc-item {
         border-radius: 14px;
         overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(0, 82, 255, 0.28);
+        border-left: 3px solid rgba(0, 82, 255, 0.85);
+        background: linear-gradient(180deg, rgba(0, 82, 255, 0.1) 0%, rgba(6, 12, 32, 0.94) 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
     .referral-invite-acc-item--fc {
-        background: linear-gradient(180deg, rgba(88, 28, 135, 0.35) 0%, rgba(2, 6, 23, 0.55) 100%);
+        border-left-color: rgba(124, 58, 237, 0.85);
     }
     .referral-invite-acc-item--web {
-        background: linear-gradient(180deg, rgba(14, 116, 144, 0.32) 0%, rgba(2, 6, 23, 0.55) 100%);
+        border-left-color: rgba(6, 182, 212, 0.75);
     }
     .referral-invite-acc-item--base {
-        background: linear-gradient(180deg, rgba(30, 64, 175, 0.32) 0%, rgba(2, 6, 23, 0.55) 100%);
+        border-left-color: rgba(0, 82, 255, 0.95);
     }
     .referral-invite-acc-head {
         width: 100%;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
+        gap: 10px;
         padding: 14px 14px;
         margin: 0;
         border: none;
@@ -783,47 +785,54 @@
         text-align: left;
         box-sizing: border-box;
         -webkit-tap-highlight-color: transparent;
+        background: linear-gradient(180deg, rgba(0, 82, 255, 0.18) 0%, rgba(4, 10, 28, 0.55) 100%);
     }
     .referral-invite-acc-head:hover {
-        filter: brightness(1.06);
+        filter: brightness(1.05);
     }
-    .referral-invite-acc-head-main {
+    .referral-invite-acc-title {
         flex: 1 1 auto;
         min-width: 0;
+        color: #f8fafc;
+        font-weight: 800;
+    }
+    .referral-invite-acc-head-right {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-    }
-    .referral-invite-acc-item--fc .referral-invite-acc-title {
-        color: rgba(233, 213, 255, 0.98);
-    }
-    .referral-invite-acc-item--web .referral-invite-acc-title {
-        color: rgba(165, 243, 252, 0.98);
-    }
-    .referral-invite-acc-item--base .referral-invite-acc-title {
-        color: rgba(191, 219, 254, 0.98);
+        gap: 8px;
+        flex-shrink: 0;
     }
     .referral-invite-acc-meta {
         flex-shrink: 0;
         font-size: 11px;
         font-weight: 800;
         font-variant-numeric: tabular-nums;
-        color: rgba(148, 163, 184, 0.95);
-        padding: 2px 8px;
+        color: rgba(207, 224, 255, 0.95);
+        padding: 3px 8px;
         border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(0, 82, 255, 0.38);
+        background: rgba(0, 36, 110, 0.35);
+    }
+    .referral-invite-acc-lifetime {
+        flex-shrink: 0;
+        font-size: 11px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        color: #a7f3d0;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        background: rgba(6, 78, 59, 0.28);
     }
     .referral-invite-acc-chevron {
         flex-shrink: 0;
-        width: 28px;
+        width: 26px;
         text-align: center;
         font-size: 12px;
-        color: rgba(226, 232, 240, 0.85);
+        color: rgba(191, 219, 254, 0.92);
     }
     .referral-invite-acc-panel {
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        border-top: 1px solid rgba(0, 82, 255, 0.2);
     }
     .referral-invite-acc-panel-inner {
         padding: 10px 12px 14px;
@@ -3797,6 +3806,8 @@
   }
 
   let __ptgEarningsFromMap = {};
+  /** Oryginalne klucze RTDB `earnings_from/{me}/{spender}` (wielkość liter) — potrzebne do `parent_of/{spender}`. */
+  let __ptgEarningsFromEntries = [];
 
   function ptgEarnedFromCents(inviteeId) {
       const k = String(inviteeId || "").toLowerCase();
@@ -3807,6 +3818,7 @@
 
   async function ptgLoadEarningsFromMap() {
       __ptgEarningsFromMap = {};
+      __ptgEarningsFromEntries = [];
       if (!db || !isLoggedIn() || myUserId === "guest") return;
       try {
           const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/earnings_from/" + myUserId));
@@ -3817,12 +3829,84 @@
           const keys = Object.keys(raw);
           for (let i = 0; i < keys.length; i++) {
               const v = raw[keys[i]];
-              if (typeof v === "number") out[String(keys[i]).toLowerCase()] = v;
+              if (typeof v === "number") {
+                  const k = String(keys[i]);
+                  out[k.toLowerCase()] = v;
+                  __ptgEarningsFromEntries.push({ key: k, cents: v });
+              }
           }
           __ptgEarningsFromMap = out;
       } catch (e) {
           console.warn("ptgLoadEarningsFromMap", e);
       }
+  }
+
+  function ptgViaChannelKeyFromInviteVia(v) {
+      const x = String(v || "browser").toLowerCase();
+      if (x === "farcaster") return "fc";
+      if (x === "base") return "base";
+      return "web";
+  }
+
+  function ptgViaForDirectInvitee(inviteEntriesVal, inviteeId) {
+      if (!inviteEntriesVal || typeof inviteEntriesVal !== "object") return "web";
+      const want = String(inviteeId || "").toLowerCase();
+      const rows = Object.entries(inviteEntriesVal)
+          .map(([k, v]) => ({ k, v: v && typeof v === "object" ? v : {} }))
+          .filter((r) => r.v.invitee);
+      for (let i = 0; i < rows.length; i++) {
+          if (String(rows[i].v.invitee).toLowerCase() === want) {
+              return ptgViaChannelKeyFromInviteVia(rows[i].v.via);
+          }
+      }
+      return "web";
+  }
+
+  /**
+   * Dla każdego spendera w `earnings_from` znajdź bezpośrednie dziecko `myId` na ścieżce w górę (`parent_of`),
+   * przypisz kanał z `invite_entries` tego dziecka. Sumy są all-time (to samo źródło co wiersze „Earned” — nie claim).
+   */
+  async function ptgBranchRootDirectInvitee(spenderId, myId) {
+      if (!db || !spenderId || !myId) return null;
+      const myNorm = String(myId).toLowerCase();
+      let cur = spenderId;
+      for (let step = 0; step < 10; step++) {
+          let snap;
+          try {
+              snap = await get(ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + cur));
+          } catch (_) {
+              return null;
+          }
+          if (!snap.exists()) return null;
+          const pv = snap.val();
+          const inv =
+              pv && typeof pv === "object"
+                  ? pv.inviterId
+                  : typeof pv === "string"
+                    ? pv
+                    : null;
+          if (!inv) return null;
+          if (String(inv).toLowerCase() === myNorm) return cur;
+          cur = inv;
+      }
+      return null;
+  }
+
+  async function ptgComputeChannelLifetimeEarningsCents(inviteEntriesVal, earningsEntries) {
+      const out = { fc: 0, web: 0, base: 0 };
+      if (!db || !myUserId || myUserId === "guest") return out;
+      const list = Array.isArray(earningsEntries) ? earningsEntries : [];
+      for (let i = 0; i < list.length; i++) {
+          const e = list[i];
+          if (!e || typeof e.cents !== "number" || e.cents <= 0) continue;
+          const root = await ptgBranchRootDirectInvitee(e.key, myUserId);
+          if (!root) continue;
+          const ch = ptgViaForDirectInvitee(inviteEntriesVal, root);
+          if (ch === "fc") out.fc += e.cents;
+          else if (ch === "base") out.base += e.cents;
+          else out.web += e.cents;
+      }
+      return out;
   }
 
   function ptgInviteRowHtml(inviteeId, depth, edgeKey, mergedFromLinkedWallet) {
@@ -3977,14 +4061,14 @@
   }
 
   function ptgSetReferralInvitesAccordionOpen(accordionRoot, openKey) {
-      if (!accordionRoot || !openKey) return;
+      if (!accordionRoot) return;
       const items = accordionRoot.querySelectorAll(".referral-invite-acc-item");
       for (let i = 0; i < items.length; i++) {
           const h = items[i].querySelector(".referral-invite-acc-head");
           const p = items[i].querySelector(".referral-invite-acc-panel");
           if (!h || !p) continue;
           const k = h.getAttribute("data-inv-acc");
-          const open = k === openKey;
+          const open = !!openKey && k === openKey;
           h.setAttribute("aria-expanded", open ? "true" : "false");
           const chev = h.querySelector(".referral-invite-acc-chevron");
           if (chev) chev.textContent = open ? "▼" : "▶";
@@ -3992,27 +4076,33 @@
       }
   }
 
-  function ptgPaintReferralInvitesList(val) {
+  async function ptgPaintReferralInvitesList(val) {
       const host = document.getElementById("referralDetailListHost");
       if (!host) return;
       __ptgReferralInviteTiers = ptgTierArrayForViewer();
       const split =
           val && typeof val === "object" ? ptgSplitInvitesByVia(val) : { fc: [], base: [], web: [] };
+      await ptgLoadEarningsFromMap();
+      const channelTotals = await ptgComputeChannelLifetimeEarningsCents(val, __ptgEarningsFromEntries);
       const sections = [
           { key: "fc", label: "Farcaster", cls: "referral-invite-acc-item--fc", rows: split.fc },
           { key: "web", label: "Web", cls: "referral-invite-acc-item--web", rows: split.web },
           { key: "base", label: "Base", cls: "referral-invite-acc-item--base", rows: split.base },
       ];
-      let openKey = "fc";
-      if (split.fc.length) openKey = "fc";
-      else if (split.web.length) openKey = "web";
-      else if (split.base.length) openKey = "base";
+      const openKey = null;
 
       let html = '<div class="referral-invite-accordion">';
       for (let i = 0; i < sections.length; i++) {
           const s = sections[i];
-          const isOpen = s.key === openKey;
+          const isOpen = !!openKey && s.key === openKey;
           const n = s.rows.length;
+          const lifeCents =
+              s.key === "fc"
+                  ? channelTotals.fc
+                  : s.key === "web"
+                    ? channelTotals.web
+                    : channelTotals.base;
+          const lifeStr = ptgFormatReferralCents(lifeCents);
           html +=
               '<div class="referral-invite-acc-item ' +
               s.cls +
@@ -4024,16 +4114,19 @@
               '" aria-controls="ptg-inv-acc-' +
               s.key +
               '">' +
-              '<span class="referral-invite-acc-head-main">' +
               '<span class="referral-invite-acc-title">' +
               ptgEscapeReferralHtml(s.label) +
               "</span>" +
+              '<span class="referral-invite-acc-head-right">' +
               '<span class="referral-invite-acc-meta">' +
               n +
               "</span>" +
-              "</span>" +
+              '<span class="referral-invite-acc-lifetime" title="All-time referral earnings from this channel (not reduced by claims)">' +
+              ptgEscapeReferralHtml(lifeStr) +
+              "$</span>" +
               '<span class="referral-invite-acc-chevron" aria-hidden="true">' +
               (isOpen ? "▼" : "▶") +
+              "</span>" +
               "</span>" +
               "</button>" +
               '<div class="referral-invite-acc-panel" id="ptg-inv-acc-' +
@@ -4048,7 +4141,7 @@
       html += "</div>";
       host.innerHTML = html;
       void ptgEnrichInviteNameNodes(host);
-      void ptgLoadEarningsFromMap().then(() => ptgRefreshEarnedNodes(host));
+      ptgRefreshEarnedNodes(host);
   }
 
   function ptgRefreshEarnedNodes(rootEl) {
@@ -4065,7 +4158,7 @@
       __ptgLastInvitesVal = val;
       if (!ptgReferralDetailIsOpen() || __ptgReferralDetailMode !== "invites") return;
       const merged = await ptgMergeLinkedWalletInviteEntries(val);
-      ptgPaintReferralInvitesList(merged);
+      await ptgPaintReferralInvitesList(merged);
   }
 
   async function ptgOpenReferralDetail(mode) {
@@ -4092,7 +4185,7 @@
               const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + myUserId));
               __ptgLastInvitesVal = snap.exists() ? snap.val() : null;
               const merged = await ptgMergeLinkedWalletInviteEntries(__ptgLastInvitesVal);
-              ptgPaintReferralInvitesList(merged);
+              await ptgPaintReferralInvitesList(merged);
           }
       } catch (e) {
           console.warn("referral detail open", e);
@@ -9487,7 +9580,9 @@
           ev.preventDefault();
           const key = invHead.getAttribute("data-inv-acc");
           const root = invHead.closest(".referral-invite-accordion");
-          if (key && root) ptgSetReferralInvitesAccordionOpen(root, key);
+          if (!key || !root) return;
+          if (invHead.getAttribute("aria-expanded") === "true") ptgSetReferralInvitesAccordionOpen(root, null);
+          else ptgSetReferralInvitesAccordionOpen(root, key);
           return;
       }
       const acc = ev.target && ev.target.closest && ev.target.closest(".referral-acc-trigger");
