@@ -5466,9 +5466,10 @@
   }
 
   /**
-   * Deep-link Warpcast/Farcaster (`farcaster.xyz/~/mini-apps/launch`) — używany
-   * w polu „Farcaster” (kopiowanie / share). Pole „Base app” pokazuje osobno
-   * `https://…/?ref=&via=base`, żeby linki nie wyglądały identycznie.
+   * Deep-link do Mini App w Warpcast / Base App (`farcaster.xyz/~/mini-apps/launch`).
+   * Używany w polu „Farcaster” (`via=farcaster`) oraz w polu „Base” (`via=base`) —
+   * zwykły `https://domena/?ref=&via=base` otwiera się w przeglądarce; ten URL
+   * uruchamia aplikację w kliencie (Base App / Warpcast) zgodnie z manifestem domeny.
    */
   function ptgBuildFarcasterLaunchUrl(refCode, via) {
       const domain = ptgReferralHostDomain();
@@ -5595,7 +5596,7 @@
       const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
       if (!isLoggedIn() || myUserId === "guest") {
           const guestDeepFc = ptgBuildFarcasterLaunchUrl("", "farcaster");
-          const guestUrlBase = siteUrl + "?via=base";
+          const guestDeepBase = ptgBuildFarcasterLaunchUrl("", "base");
           const guestUrlWeb = siteUrl + "?via=web";
           if (urlFcEl) {
               urlFcEl.textContent = guestDeepFc;
@@ -5603,9 +5604,9 @@
               urlFcEl.title = guestDeepFc;
           }
           if (urlBaseEl) {
-              urlBaseEl.textContent = guestUrlBase;
+              urlBaseEl.textContent = guestDeepBase;
               urlBaseEl.classList.remove("referral-url-text--multiline");
-              urlBaseEl.title = guestUrlBase;
+              urlBaseEl.title = guestDeepBase;
           }
           if (urlWebEl) {
               urlWebEl.textContent = guestUrlWeb;
@@ -5613,7 +5614,7 @@
               urlWebEl.title = guestUrlWeb;
           }
           const guestShareFcUrl = siteUrl + "?via=farcaster";
-          const guestShareBaseUrl = siteUrl + "?via=base";
+          const guestShareBaseUrl = guestDeepBase;
           const guestShareWebUrl = siteUrl + "?via=web";
           const guestText = "Play Phrase To Guess — guess letters, watch the chart, mint a trophy onchain.";
           if (fcCompose) fcCompose.href = ptgBuildWarpcastComposeUrl(guestText, guestShareFcUrl);
@@ -5632,18 +5633,18 @@
       }
       const code = await ptgRefCodeFromUserId(myUserId);
       const uFc = origin + "/?ref=" + encodeURIComponent(code) + "&via=farcaster";
-      const uBase = origin + "/?ref=" + encodeURIComponent(code) + "&via=base";
       const uWeb = origin + "/?ref=" + encodeURIComponent(code) + "&via=web";
       const deepFc = ptgBuildFarcasterLaunchUrl(code, "farcaster");
+      const deepBase = ptgBuildFarcasterLaunchUrl(code, "base");
       if (urlFcEl) {
           urlFcEl.textContent = deepFc;
           urlFcEl.classList.remove("referral-url-text--multiline");
           urlFcEl.title = deepFc;
       }
       if (urlBaseEl) {
-          urlBaseEl.textContent = uBase;
+          urlBaseEl.textContent = deepBase;
           urlBaseEl.classList.remove("referral-url-text--multiline");
-          urlBaseEl.title = uBase;
+          urlBaseEl.title = deepBase;
       }
       if (urlWebEl) {
           urlWebEl.textContent = uWeb;
@@ -5653,7 +5654,7 @@
       const shareText = "Play Phrase To Guess — guess letters, watch the chart, mint a trophy onchain.";
       if (fcCompose) fcCompose.href = ptgBuildWarpcastComposeUrl(shareText, uFc);
       if (baseShare) {
-          baseShare.href = ptgBuildWarpcastComposeUrl(shareText, uBase);
+          baseShare.href = ptgBuildWarpcastComposeUrl(shareText, deepBase);
           baseShare.target = "_blank";
       }
       if (webShare) {
