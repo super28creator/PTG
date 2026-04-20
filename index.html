@@ -740,6 +740,105 @@
         font-style: italic;
         line-height: 1.45;
     }
+
+    /* Who you invited — jedna sekcja naraz (akordeon), pełna szerokość */
+    .referral-invite-accordion {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .referral-invite-acc-item {
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    .referral-invite-acc-item--fc {
+        background: linear-gradient(180deg, rgba(88, 28, 135, 0.35) 0%, rgba(2, 6, 23, 0.55) 100%);
+    }
+    .referral-invite-acc-item--web {
+        background: linear-gradient(180deg, rgba(14, 116, 144, 0.32) 0%, rgba(2, 6, 23, 0.55) 100%);
+    }
+    .referral-invite-acc-item--base {
+        background: linear-gradient(180deg, rgba(30, 64, 175, 0.32) 0%, rgba(2, 6, 23, 0.55) 100%);
+    }
+    .referral-invite-acc-head {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 14px;
+        margin: 0;
+        border: none;
+        color: #f8fafc;
+        font: inherit;
+        font-weight: 800;
+        font-size: 1rem;
+        letter-spacing: -0.02em;
+        cursor: pointer;
+        text-align: left;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .referral-invite-acc-head:hover {
+        filter: brightness(1.06);
+    }
+    .referral-invite-acc-head-main {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .referral-invite-acc-item--fc .referral-invite-acc-title {
+        color: rgba(233, 213, 255, 0.98);
+    }
+    .referral-invite-acc-item--web .referral-invite-acc-title {
+        color: rgba(165, 243, 252, 0.98);
+    }
+    .referral-invite-acc-item--base .referral-invite-acc-title {
+        color: rgba(191, 219, 254, 0.98);
+    }
+    .referral-invite-acc-meta {
+        flex-shrink: 0;
+        font-size: 11px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        color: rgba(148, 163, 184, 0.95);
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(0, 0, 0, 0.2);
+    }
+    .referral-invite-acc-chevron {
+        flex-shrink: 0;
+        width: 28px;
+        text-align: center;
+        font-size: 12px;
+        color: rgba(226, 232, 240, 0.85);
+    }
+    .referral-invite-acc-panel {
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .referral-invite-acc-panel-inner {
+        padding: 10px 12px 14px;
+        max-height: min(52vh, 440px);
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        box-sizing: border-box;
+    }
+    .referral-invite-acc-panel-inner .referral-inv-name {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        word-break: break-word;
+    }
     .referral-inv-row {
         display: flex;
         flex-wrap: wrap;
@@ -3877,31 +3976,77 @@
       }
   }
 
+  function ptgSetReferralInvitesAccordionOpen(accordionRoot, openKey) {
+      if (!accordionRoot || !openKey) return;
+      const items = accordionRoot.querySelectorAll(".referral-invite-acc-item");
+      for (let i = 0; i < items.length; i++) {
+          const h = items[i].querySelector(".referral-invite-acc-head");
+          const p = items[i].querySelector(".referral-invite-acc-panel");
+          if (!h || !p) continue;
+          const k = h.getAttribute("data-inv-acc");
+          const open = k === openKey;
+          h.setAttribute("aria-expanded", open ? "true" : "false");
+          const chev = h.querySelector(".referral-invite-acc-chevron");
+          if (chev) chev.textContent = open ? "▼" : "▶";
+          p.hidden = !open;
+      }
+  }
+
   function ptgPaintReferralInvitesList(val) {
       const host = document.getElementById("referralDetailListHost");
       if (!host) return;
       __ptgReferralInviteTiers = ptgTierArrayForViewer();
       const split =
           val && typeof val === "object" ? ptgSplitInvitesByVia(val) : { fc: [], base: [], web: [] };
-      host.innerHTML =
-          '<div class="referral-invite-split">' +
-          '<div class="referral-invite-col referral-invite-col--base">' +
-          '<div class="referral-invite-col-head">Base</div>' +
-          '<div class="referral-invite-col-body">' +
-          ptgPaintInviteColumnBody(split.base) +
-          "</div></div>" +
-          '<div class="referral-invite-split-divider" aria-hidden="true"></div>' +
-          '<div class="referral-invite-col referral-invite-col--fc">' +
-          '<div class="referral-invite-col-head">Farcaster</div>' +
-          '<div class="referral-invite-col-body">' +
-          ptgPaintInviteColumnBody(split.fc) +
-          "</div></div>" +
-          '<div class="referral-invite-split-divider" aria-hidden="true"></div>' +
-          '<div class="referral-invite-col referral-invite-col--web">' +
-          '<div class="referral-invite-col-head">Web</div>' +
-          '<div class="referral-invite-col-body">' +
-          ptgPaintInviteColumnBody(split.web) +
-          "</div></div></div>";
+      const sections = [
+          { key: "fc", label: "Farcaster", cls: "referral-invite-acc-item--fc", rows: split.fc },
+          { key: "web", label: "Web", cls: "referral-invite-acc-item--web", rows: split.web },
+          { key: "base", label: "Base", cls: "referral-invite-acc-item--base", rows: split.base },
+      ];
+      let openKey = "fc";
+      if (split.fc.length) openKey = "fc";
+      else if (split.web.length) openKey = "web";
+      else if (split.base.length) openKey = "base";
+
+      let html = '<div class="referral-invite-accordion">';
+      for (let i = 0; i < sections.length; i++) {
+          const s = sections[i];
+          const isOpen = s.key === openKey;
+          const n = s.rows.length;
+          html +=
+              '<div class="referral-invite-acc-item ' +
+              s.cls +
+              '">' +
+              '<button type="button" class="referral-invite-acc-head" data-inv-acc="' +
+              s.key +
+              '" aria-expanded="' +
+              (isOpen ? "true" : "false") +
+              '" aria-controls="ptg-inv-acc-' +
+              s.key +
+              '">' +
+              '<span class="referral-invite-acc-head-main">' +
+              '<span class="referral-invite-acc-title">' +
+              ptgEscapeReferralHtml(s.label) +
+              "</span>" +
+              '<span class="referral-invite-acc-meta">' +
+              n +
+              "</span>" +
+              "</span>" +
+              '<span class="referral-invite-acc-chevron" aria-hidden="true">' +
+              (isOpen ? "▼" : "▶") +
+              "</span>" +
+              "</button>" +
+              '<div class="referral-invite-acc-panel" id="ptg-inv-acc-' +
+              s.key +
+              '"' +
+              (isOpen ? "" : " hidden") +
+              ">" +
+              '<div class="referral-invite-acc-panel-inner">' +
+              ptgPaintInviteColumnBody(s.rows) +
+              "</div></div></div>";
+      }
+      html += "</div>";
+      host.innerHTML = html;
       void ptgEnrichInviteNameNodes(host);
       void ptgLoadEarningsFromMap().then(() => ptgRefreshEarnedNodes(host));
   }
@@ -9337,6 +9482,14 @@
       ptgCloseReferralDetailPanel();
   });
   document.getElementById("referralDetailOverlay")?.addEventListener("click", function (ev) {
+      const invHead = ev.target && ev.target.closest && ev.target.closest(".referral-invite-acc-head");
+      if (invHead && invHead.tagName === "BUTTON") {
+          ev.preventDefault();
+          const key = invHead.getAttribute("data-inv-acc");
+          const root = invHead.closest(".referral-invite-accordion");
+          if (key && root) ptgSetReferralInvitesAccordionOpen(root, key);
+          return;
+      }
       const acc = ev.target && ev.target.closest && ev.target.closest(".referral-acc-trigger");
       if (acc && acc.tagName === "BUTTON" && !acc.disabled) {
           ev.preventDefault();
