@@ -558,6 +558,7 @@
     .referral-detail-scroll {
         flex: 1;
         min-height: 0;
+        overflow-x: hidden;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         padding: 4px 2px 8px;
@@ -619,6 +620,7 @@
     }
     .referral-invite-split {
         display: flex;
+        flex-direction: row;
         align-items: stretch;
         justify-content: center;
         gap: 0;
@@ -641,31 +643,49 @@
             rgba(255, 255, 255, 0) 100%
         );
     }
+    /**
+     * Mobile: 3 kolumny + 2 separatory w DOM = 5 dzieci. NIE używaj tu CSS Grid
+     * z repeat(3, 1fr) — 4. i 5. element wpada do drugiego rzędu (bug: Web niżej).
+     * Flex + ukryte separatory + border między kolumnami.
+     */
     @media (max-width: 460px) {
         .referral-invite-split {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
             min-height: 0;
+            overflow-x: hidden;
         }
         .referral-invite-split-divider {
-            width: 1px;
-            height: auto;
-            flex: 0 0 1px;
-            align-self: stretch;
-            background: linear-gradient(
-                180deg,
-                rgba(255, 255, 255, 0) 0%,
-                rgba(255, 255, 255, 0.2) 18%,
-                rgba(255, 255, 255, 0.2) 82%,
-                rgba(255, 255, 255, 0) 100%
-            );
+            display: none;
+        }
+        .referral-invite-col--fc,
+        .referral-invite-col--web {
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
         }
         .referral-invite-col {
-            padding: 10px 8px 10px;
+            padding: 10px 5px 10px;
+            flex: 1 1 0;
+            min-width: 0;
         }
         .referral-invite-col-head {
-            font-size: clamp(14px, 4.8vw, 18px);
+            font-size: clamp(10px, 2.9vw, 15px);
             margin-bottom: 8px;
+            line-height: 1.1;
+            hyphens: none;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        .referral-invite-col-body {
+            max-height: min(42vh, 320px);
+            overflow-x: hidden;
+        }
+        .referral-inv-row {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        .referral-inv-main {
+            min-width: 0;
+        }
+        .referral-inv-pct {
+            flex-shrink: 0;
         }
     }
     .referral-invite-col {
