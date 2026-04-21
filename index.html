@@ -4021,9 +4021,15 @@
     return ref(db, `players_s${LEADERBOARD_SEASON}`);
   }
 
-  /** Wszystkie dane referrali są per sezon (jak `players_s{N}`). */
+  /**
+   * Wszystkie dane referrali są per sezon (jak `players_s{N}`).
+   * Bumpnij REFERRAL_DATA_VERSION, żeby „wyzerować" drzewo zaproszeń (bez
+   * zmiany rankingu). Stare dane zostają w RTDB jako archiwum.
+   */
+  const REFERRAL_DATA_VERSION = 2;
   function ptgReferralsRtdbRoot() {
-      return "referrals_v1/s" + LEADERBOARD_SEASON;
+      const suffix = REFERRAL_DATA_VERSION > 1 ? "_v" + REFERRAL_DATA_VERSION : "";
+      return "referrals_v1/s" + LEADERBOARD_SEASON + suffix;
   }
 
   /**
@@ -4408,7 +4414,7 @@
       return out;
   }
 
-  function ptgInviteRowHtml(inviteeId, depth, edgeKey, mergedFromLinkedWallet, inviteeName) {
+  function ptgInviteRowHtml(inviteeId, depth, edgeKey, mergedFromLinkedWallet, inviteeName, ancestorsLc) {
       const inv = String(inviteeId || "").trim();
       const maxDepth = __ptgReferralInviteTiers.length - 1;
       const showExpand = depth < maxDepth;
@@ -4419,12 +4425,20 @@
       const mergedTitle = mergedFromLinkedWallet
           ? " title=\"Same account: invite logged under your wallet is shown as your direct L1\""
           : "";
+      /* Pełna ścieżka przodków w lowercase — potrzebna, by nie rozwijać dzieci,
+       * które są już gdzieś wyżej w drzewie (cykl wizualny w starych danych). */
+      const ancPath = Array.isArray(ancestorsLc)
+          ? ancestorsLc.concat([inv.toLowerCase()]).filter(Boolean).join(",")
+          : inv.toLowerCase();
+      const ancAttr = ' data-ancestors="' + ptgEscapeReferralHtml(ancPath) + '"';
       const btn = showExpand
           ? '<button type="button" class="referral-acc-trigger" aria-expanded="false" aria-label="Show invites" data-invitee="' +
             safeInv +
             '" data-depth="' +
             depth +
-            '">▶</button>'
+            '"' +
+            ancAttr +
+            ">▶</button>"
           : '<span class="referral-acc-spacer" aria-hidden="true"></span>';
       const earnedCents = ptgEarnedFromCents(inv);
       const earnedStr = ptgFormatReferralCents(earnedCents);
@@ -4463,10 +4477,20 @@
       if (!rows.length) {
           return '<div class="referral-invite-empty">No invites yet</div>';
       }
+      /* Top-level: ścieżka przodków zaczyna się od wszystkich moich tożsamości
+       * (aktualna + historyczne), żeby dziecko nie „zawracało" drzewa do mnie. */
+      const rootAncestors = Array.from(ptgGetMyIdentityAliasesLc());
       let html = "";
       for (let i = 0; i < rows.length; i++) {
           const r = rows[i];
-          html += ptgInviteRowHtml(r.v.invitee, 0, r.k, !!r.v._mergedFromLinkedWallet, r.v.inviteeName);
+          html += ptgInviteRowHtml(
+              r.v.invitee,
+              0,
+              r.k,
+              !!r.v._mergedFromLinkedWallet,
+              r.v.inviteeName,
+              rootAncestors
+          );
       }
       return html;
   }
@@ -4557,6 +4581,16 @@
           btn.textContent = nested.hidden ? "▶" : "▼";
           return;
       }
+      /* Pełny łańcuch przodków, żeby przy renderze DZIECI odrzucić te, które
+       * już są wyżej w drzewie (stare dane z cyklami A→B→A→…). */
+      const ancRaw = String(btn.getAttribute("data-ancestors") || "")
+          .split(",")
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+      const ancestorsLc = ancRaw.length
+          ? ancRaw
+          : [String(invitee).toLowerCase()];
+      const ancestorSet = new Set(ancestorsLc);
       btn.disabled = true;
       try {
           const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + invitee));
@@ -4564,6 +4598,7 @@
           const childRows = !raw || typeof raw !== "object" ? [] : Object.entries(raw)
               .map(([k, v]) => ({ k, v: v && typeof v === "object" ? v : {} }))
               .filter((r) => r.v.invitee)
+              .filter((r) => !ancestorSet.has(String(r.v.invitee).toLowerCase()))
               .sort((a, b) => (b.v.ts || 0) - (a.v.ts || 0));
           if (!childRows.length) {
               nested.innerHTML =
@@ -4577,7 +4612,8 @@
                       depth + 1,
                       r.k,
                       !!r.v._mergedFromLinkedWallet,
-                      r.v.inviteeName
+                      r.v.inviteeName,
+                      ancestorsLc
                   );
               }
               nested.innerHTML = html;
@@ -4929,12 +4965,21 @@
           return;
       }
 
-      /* Twardy block self-invite — obejmuje też lowercase / fcFID ↔ wallet.
-       * Bez tego zaproszenie siebie się „liczyło" w Mini Appie, gdy user kliknął
-       * własny link zalogowany drugą tożsamością. */
+      /* Twardy block self-invite — obejmuje też lowercase / fcFID ↔ wallet. */
       if (await ptgIsSelfInviteCandidate(ownerId, refCode)) {
           ptgClearPendingRefCapture();
           return;
+      }
+
+      /* Cycle block — nie można zostać zaproszonym przez osobę, którą
+       * (pośrednio lub bezpośrednio) samemu się zaprosiło. */
+      try {
+          if (await ptgInviterIsInMyDescendants(ownerId)) {
+              ptgClearPendingRefCapture();
+              return;
+          }
+      } catch (e) {
+          console.warn("referral cycle preflight", e);
       }
 
       /* Policy "first invite wins" — jeśli w `parent_of/{me}` siedzi już KTOŚ inny,
@@ -4956,13 +5001,22 @@
       const vis = String(myUserId).replace(/[^a-zA-Z0-9_]/g, "_");
       const edgeKey = refCode + "_" + vis.slice(0, 72);
       const edgeRef = ref(db, ptgReferralsRtdbRoot() + "/edges/" + edgeKey);
-      let viaHost = "browser";
-      try {
-          const pv = localStorage.getItem("ptg_pending_via");
-          if (pv === "farcaster" || pv === "base" || pv === "web" || pv === "browser") viaHost = pv === "browser" ? "web" : pv;
-          else if (ptgHost === "base" || ptgHost === "farcaster") viaHost = ptgHost;
-      } catch (_) {
-          if (ptgHost === "base" || ptgHost === "farcaster") viaHost = ptgHost;
+      /**
+       * Kanał przyjęcia zaproszenia to HOST, w którym zaproszony FAKTYCZNIE
+       * zalogował się (Base App = „base", Warpcast/FC = „farcaster", browser = „web").
+       * URL-owy `via=` z linka jest tylko fallbackiem, gdy jesteśmy w zwykłej
+       * przeglądarce — wtedy host = "browser" i nie mamy innej wskazówki.
+       */
+      let viaHost = "web";
+      if (ptgHost === "base") viaHost = "base";
+      else if (ptgHost === "farcaster") viaHost = "farcaster";
+      else {
+          try {
+              const pv = localStorage.getItem("ptg_pending_via");
+              if (pv === "farcaster" || pv === "base" || pv === "web" || pv === "browser") {
+                  viaHost = pv === "browser" ? "web" : pv;
+              }
+          } catch (_) {}
       }
       try {
           const edgeSnap = await get(edgeRef);
@@ -5228,13 +5282,67 @@
   }
 
   /**
+   * Aliasy tożsamości (fcFID ↔ wallet, wallet ↔ handle itd.) — po kiedykolwiek zalogowaniu
+   * obiema „stronami" blokujemy self-invite nawet po wylogowaniu jednej z nich.
+   * Klucz localStorage jest per-sezon, żeby nie zanieczyszczać nowego startu.
+   */
+  function ptgIdentityAliasStorageKey() {
+      return "ptg_identity_aliases_s" + LEADERBOARD_SEASON;
+  }
+
+  function ptgNormalizeAliasId(id) {
+      const s = String(id || "").trim();
+      return s ? s.toLowerCase() : "";
+  }
+
+  function ptgLoadIdentityAliasesSet() {
+      try {
+          const raw = localStorage.getItem(ptgIdentityAliasStorageKey());
+          if (!raw) return new Set();
+          const arr = JSON.parse(raw);
+          if (!Array.isArray(arr)) return new Set();
+          const out = new Set();
+          for (let i = 0; i < arr.length; i++) {
+              const n = ptgNormalizeAliasId(arr[i]);
+              if (n) out.add(n);
+          }
+          return out;
+      } catch (_) {
+          return new Set();
+      }
+  }
+
+  function ptgRememberIdentityAlias(id) {
+      const n = ptgNormalizeAliasId(id);
+      if (!n) return;
+      try {
+          const set = ptgLoadIdentityAliasesSet();
+          if (set.has(n)) return;
+          set.add(n);
+          localStorage.setItem(
+              ptgIdentityAliasStorageKey(),
+              JSON.stringify(Array.from(set).slice(-24))
+          );
+      } catch (_) {}
+  }
+
+  /** Wszystkie znane tożsamości gracza (aktywna + historyczne) w lowercase. */
+  function ptgGetMyIdentityAliasesLc() {
+      const set = ptgLoadIdentityAliasesSet();
+      const me = ptgNormalizeAliasId(myUserId);
+      if (me && me !== "guest") set.add(me);
+      return set;
+  }
+
+  /**
    * Prawda jeśli `ownerId` to tak naprawdę ja (zapobiega zapraszaniu siebie).
    * Sprawdzamy:
    *   1) dokładne dopasowanie myUserId,
    *   2) lowercase (gdy zapis w indeksie miał checksumowany 0x),
    *   3) mój ref-code (hash myUserId) względem refCode — to wyłapuje przypadek,
    *      gdy ktoś kliknął własny link zalogowany inną tożsamością powiązaną,
-   *   4) dla fcFID: aktualnie połączony wallet (Embedded Provider) vs ownerId.
+   *   4) dla fcFID: aktualnie połączony wallet (Embedded Provider) vs ownerId,
+   *   5) zapisane aliasy (historycznie zalogowane tożsamości tego urządzenia).
    */
   async function ptgIsSelfInviteCandidate(ownerId, refCode) {
       if (!ownerId || !myUserId || myUserId === "guest") return false;
@@ -5246,6 +5354,13 @@
           const myCode = await ptgRefCodeFromUserId(myUserId);
           if (myCode && refCode && String(myCode).toLowerCase() === String(refCode).toLowerCase()) return true;
       } catch (_) {}
+      try {
+          const aliases = ptgGetMyIdentityAliasesLc();
+          const on = String(ownerId).toLowerCase();
+          if (aliases.has(on)) return true;
+          const myCode = await ptgRefCodeFromUserId(myUserId);
+          if (myCode && refCode && String(myCode).toLowerCase() === String(refCode).toLowerCase()) return true;
+      } catch (_) {}
       if (typeof myUserId === "string" && myUserId.indexOf("fcfid") === 0) {
           try {
               const prov = typeof getEmbeddedEthProvider === "function" ? getEmbeddedEthProvider() : null;
@@ -5253,11 +5368,89 @@
                   const acc = await prov.request({ method: "eth_accounts" });
                   if (acc && acc[0]) {
                       const w = String(acc[0]).toLowerCase();
+                      ptgRememberIdentityAlias(w);
                       if (String(ownerId).toLowerCase() === w) return true;
                   }
               }
           } catch (_) {}
       }
+      return false;
+  }
+
+  /**
+   * Cycle block: odmawia zaakceptowania zaproszenia od KOGOŚ, kogo JA
+   * (pośrednio lub bezpośrednio) już zaprosiłem. Scenariusze:
+   *   a) `ownerId` === któryś z moich potomków w `invite_entries`,
+   *   b) ich łańcuch `parent_of` prowadzi do MNIE (lub mojego aliasu) —
+   *      to oznacza, że zostali zaproszeni przez moją stronę drzewa.
+   */
+  async function ptgInviterIsInMyDescendants(ownerId) {
+      if (!db) return false;
+      if (!ownerId || !myUserId || myUserId === "guest") return false;
+      const ownerLc = String(ownerId).toLowerCase();
+      const aliases = ptgGetMyIdentityAliasesLc();
+      aliases.add(String(myUserId).toLowerCase());
+      const root = ptgReferralsRtdbRoot();
+
+      /* 1) Łańcuch w górę od `ownerId` — jeśli trafi na mnie / alias, to ja ich zaprosiłem. */
+      try {
+          let cur = ownerId;
+          const visited = new Set();
+          for (let step = 0; step < 8; step++) {
+              const curLc = String(cur || "").toLowerCase();
+              if (!curLc || visited.has(curLc)) break;
+              visited.add(curLc);
+              let snap;
+              try {
+                  snap = await get(ref(db, root + "/parent_of/" + cur));
+              } catch (_) {
+                  break;
+              }
+              if (!snap.exists()) break;
+              const pv = snap.val();
+              const inv =
+                  pv && typeof pv === "object"
+                      ? pv.inviterId
+                      : typeof pv === "string"
+                          ? pv
+                          : null;
+              if (!inv) break;
+              if (aliases.has(String(inv).toLowerCase())) return true;
+              cur = inv;
+          }
+      } catch (_) {}
+
+      /* 2) BFS w dół: invite_entries/{mnie}/…/invitee. Ograniczone głębokością drzewa. */
+      try {
+          const maxDepth = (typeof PTG_REF_MAX_DEPTH === "number" ? PTG_REF_MAX_DEPTH : 5) + 1;
+          const queue = [];
+          const visited = new Set();
+          for (const a of aliases) queue.push({ id: a, depth: 0 });
+          while (queue.length) {
+              const { id, depth } = queue.shift();
+              if (!id || visited.has(id) || depth > maxDepth) continue;
+              visited.add(id);
+              let snap;
+              try {
+                  snap = await get(ref(db, root + "/invite_entries/" + id));
+              } catch (_) {
+                  continue;
+              }
+              if (!snap.exists()) continue;
+              const raw = snap.val();
+              if (!raw || typeof raw !== "object") continue;
+              const keys = Object.keys(raw);
+              for (let i = 0; i < keys.length; i++) {
+                  const e = raw[keys[i]];
+                  const child = e && typeof e === "object" ? e.invitee : null;
+                  if (!child) continue;
+                  const childLc = String(child).toLowerCase();
+                  if (childLc === ownerLc) return true;
+                  if (!visited.has(childLc)) queue.push({ id: child, depth: depth + 1 });
+              }
+          }
+      } catch (_) {}
+
       return false;
   }
 
@@ -5306,6 +5499,18 @@
           ptgClearPendingRefCapture();
           return;
       }
+
+      /* Cycle block — „ja" nie mogę przyjąć zaproszenia od osoby, którą wcześniej
+       * sam(-a) zaprosiłem (pośrednio lub bezpośrednio). */
+      try {
+          if (await ptgInviterIsInMyDescendants(ownerId)) {
+              try {
+                  localStorage.setItem(seenKey, String(Date.now()));
+              } catch (_) {}
+              ptgClearPendingRefCapture();
+              return;
+          }
+      } catch (_) {}
 
       /* Policy "first invite wins" — jeśli user już kiedyś zaakceptował zaproszenie
        * od KOGOKOLWIEK (dowolny inviter), nie pokazujemy nowego modala ani nie zmieniamy
@@ -5654,10 +5859,10 @@
   }
 
   /**
-   * Deep-link do Mini App w Warpcast / Base App (`farcaster.xyz/~/mini-apps/launch`).
-   * Używany w polu „Farcaster” (`via=farcaster`) oraz w polu „Base” (`via=base`) —
-   * zwykły `https://domena/?ref=&via=base` otwiera się w przeglądarce; ten URL
-   * uruchamia aplikację w kliencie (Base App / Warpcast) zgodnie z manifestem domeny.
+   * Deep-link do Mini App w Warpcast (`farcaster.xyz/~/mini-apps/launch`).
+   * Używany w polu „Farcaster” — otwiera aplikację Warpcast / Farcaster
+   * na urządzeniu, a gdy jej brak, strona farcaster.xyz przekierowuje
+   * do instalacji (App Store / Google Play).
    */
   function ptgBuildFarcasterLaunchUrl(refCode, via) {
       const domain = ptgReferralHostDomain();
@@ -5668,60 +5873,134 @@
   }
 
   /**
-   * Share buttons dla Farcaster / Base app:
-   * 1) Czekamy na miniapp SDK (composeCast często failuje, jeśli klik przed importem).
-   * 2) `sdk.actions.composeCast` (Farcaster / Base native composer).
-   * 3) `navigator.share` — systemowy arkusz z deep-linkiem (nie otwiera przeglądarki bez potrzeby).
-   * 4) `warpcast.com/~/compose` jako ostateczny fallback (last resort, poza app kontekstem).
-   * 5) Schowek — cała wiadomość + deep-link.
+   * Uniwersalny link do Base App (Coinbase Wallet) — otwiera dApp
+   * w appce, a jeśli jej brak, strona go.cb-w.com zaprasza do instalacji.
    */
-  /**
-   * „Share on Farcaster” / Base buttons — próbują natywny `composeCast`
-   * (Farcaster / Base mini app), potem arkusz systemowy (`navigator.share`),
-   * a dopiero na końcu `warpcast.com/~/compose`. Bez tego klik w Mini App
-   * często prowadził do przeglądarki.
-   */
-  async function ptgShareReferralInviteViaAction(channel) {
-      const msg = document.getElementById("referralClaimMsg");
-      await withTimeout(optionalSdkReadyPromise, 10000, "sdk for referral share").catch(function () {});
+  function ptgBuildBaseAppLaunchUrl(refCode) {
+      const origin = ptgReferralInviteOrigin();
+      const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
+      const target =
+          refCode && /^[a-f0-9]{12}$/.test(String(refCode))
+              ? siteUrl + "?ref=" + encodeURIComponent(refCode) + "&via=base"
+              : siteUrl + "?via=base";
+      return "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(target);
+  }
 
+  /** Tekst marketingowy w share-ach. */
+  const PTG_REFERRAL_SHARE_TEXT =
+      "Play Phrase To Guess — guess letters, watch the chart, mint a trophy onchain.";
+
+  function ptgRefMsgEl() {
+      return document.getElementById("referralClaimMsg");
+  }
+
+  async function ptgBuildReferralShareContext(channel) {
       const origin = ptgReferralInviteOrigin();
       const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
       let code = "";
       if (isLoggedIn() && myUserId && myUserId !== "guest") {
           try { code = await ptgRefCodeFromUserId(myUserId); } catch (_) {}
       }
-      const via = channel === "base" ? "base" : channel === "web" ? "web" : "farcaster";
-      const isWebChannel = channel === "web";
-      const shareUrl =
-          code && /^[a-f0-9]{12}$/.test(code)
-              ? siteUrl + "?ref=" + encodeURIComponent(code) + "&via=" + via
-              : siteUrl + "?via=" + via;
-      const deepLink = isWebChannel ? shareUrl : ptgBuildFarcasterLaunchUrl(code, via);
-      const text = "Play Phrase To Guess — guess letters, watch the chart, mint a trophy onchain.";
+      const refQs = code && /^[a-f0-9]{12}$/.test(code) ? "ref=" + encodeURIComponent(code) + "&" : "";
+      const webUrl = siteUrl + "?" + refQs + "via=web";
+      const fcUrl = siteUrl + "?" + refQs + "via=farcaster";
+      const baseUrl = siteUrl + "?" + refQs + "via=base";
+      const fcDeep = ptgBuildFarcasterLaunchUrl(code, "farcaster");
+      const baseDeep = ptgBuildBaseAppLaunchUrl(code);
+      return {
+          channel,
+          code,
+          text: PTG_REFERRAL_SHARE_TEXT,
+          webUrl,
+          fcUrl,
+          baseUrl,
+          fcDeep,
+          baseDeep,
+      };
+  }
 
-      if (!isWebChannel && sdk && sdk.actions && typeof sdk.actions.composeCast === "function") {
+  async function ptgOpenExternalUrl(url) {
+      try {
+          const w = window.open(url, "_blank", "noopener,noreferrer");
+          if (w) return true;
+      } catch (_) {}
+      try {
+          window.location.href = url;
+          return true;
+      } catch (_) {}
+      return false;
+  }
+
+  /**
+   * "Share on Farcaster" — zawsze celuje w Farcaster:
+   *   1) jeśli jesteśmy w Farcaster Mini Appie → natywny composeCast
+   *   2) w przeciwnym razie uniwersalny link `warpcast.com/~/compose`
+   *      (instaluje / otwiera Warpcasta na telefonie, web na desktopie)
+   */
+  async function ptgShareReferralFarcasterInviteFromUi() {
+      const msg = ptgRefMsgEl();
+      await withTimeout(optionalSdkReadyPromise, 10000, "sdk for fc share").catch(function () {});
+      const ctx = await ptgBuildReferralShareContext("farcaster");
+
+      if (ptgHost === "farcaster" && sdk && sdk.actions && typeof sdk.actions.composeCast === "function") {
           try {
-              const result = await sdk.actions.composeCast({ text, embeds: [shareUrl] });
+              const result = await sdk.actions.composeCast({ text: ctx.text, embeds: [ctx.fcUrl] });
               if (msg) {
                   msg.textContent = result && result.cast ? "Cast sent." : "Composer opened — edit and post.";
               }
               return true;
           } catch (e) {
-              console.warn("composeCast referral " + channel + " (embeds)", e);
-              try {
-                  await sdk.actions.composeCast({ text });
-                  if (msg) msg.textContent = "Composer opened — edit and post.";
-                  return true;
-              } catch (e2) {
-                  console.warn("composeCast referral " + channel + " (text only)", e2);
-              }
+              console.warn("composeCast referral farcaster", e);
           }
       }
-
+      const composeUrl = ptgBuildWarpcastComposeUrl(ctx.text, ctx.fcUrl);
+      if (await ptgOpenExternalUrl(composeUrl)) {
+          if (msg) msg.textContent = "Opening Farcaster composer…";
+          return true;
+      }
       try {
-          if (navigator.share) {
-              await navigator.share({ title: "Phrase To Guess", text, url: deepLink });
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+              await navigator.clipboard.writeText(ctx.text + " " + ctx.fcUrl);
+              if (msg) msg.textContent = "Copied invite — paste in Farcaster.";
+              return true;
+          }
+      } catch (_) {}
+      if (msg) msg.textContent = "Could not open Farcaster. Tap Copy below.";
+      return false;
+  }
+
+  /**
+   * "Share on Base" — zawsze celuje w Base App:
+   *   1) jeśli jesteśmy w Base App Mini Appie → natywny composeCast (Base-owy)
+   *   2) w przeciwnym razie uniwersalny deep-link do Coinbase Wallet / Base App:
+   *      `https://go.cb-w.com/dapp?cb_url=...` otwiera appkę na telefonie
+   *      (lub przekierowuje do sklepu, jeśli jej brak).
+   *   NIGDY nie korzystamy z warpcast compose, żeby nie utworzyć FC casta
+   *   zamiast wiadomości na Base.
+   */
+  async function ptgShareReferralBaseInviteFromUi() {
+      const msg = ptgRefMsgEl();
+      await withTimeout(optionalSdkReadyPromise, 10000, "sdk for base share").catch(function () {});
+      const ctx = await ptgBuildReferralShareContext("base");
+
+      if (ptgHost === "base" && sdk && sdk.actions && typeof sdk.actions.composeCast === "function") {
+          try {
+              const result = await sdk.actions.composeCast({ text: ctx.text, embeds: [ctx.baseUrl] });
+              if (msg) {
+                  msg.textContent = result && result.cast ? "Posted on Base." : "Base composer opened.";
+              }
+              return true;
+          } catch (e) {
+              console.warn("composeCast referral base", e);
+          }
+      }
+      try {
+          if (typeof navigator.share === "function") {
+              await navigator.share({
+                  title: "Phrase To Guess",
+                  text: ctx.text,
+                  url: ctx.baseDeep,
+              });
               if (msg) msg.textContent = "Share sheet opened.";
               return true;
           }
@@ -5730,47 +6009,64 @@
               if (msg) msg.textContent = "";
               return false;
           }
-          console.warn("navigator.share referral " + channel, e);
+          console.warn("navigator.share base", e);
       }
-
-      const composeUrl = ptgBuildWarpcastComposeUrl(text, shareUrl);
-      try {
-          const w = window.open(composeUrl, "_blank", "noopener,noreferrer");
-          if (w) {
-              if (msg) msg.textContent = "Opening cast composer…";
-              return true;
-          }
-      } catch (e2) {
-          console.warn("window.open warpcast compose", e2);
-      }
-      try {
-          window.location.href = composeUrl;
+      if (await ptgOpenExternalUrl(ctx.baseDeep)) {
+          if (msg) msg.textContent = "Opening Base App…";
           return true;
-      } catch (_) {}
-
+      }
       try {
           if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-              await navigator.clipboard.writeText(text + " " + deepLink);
-              if (msg) msg.textContent = "Copied full invite message — paste in chat or Cast.";
+              await navigator.clipboard.writeText(ctx.text + " " + ctx.baseDeep);
+              if (msg) msg.textContent = "Copied Base invite link.";
               return true;
           }
-      } catch (e3) {
-          console.warn("clipboard referral " + channel, e3);
-      }
-      if (msg) msg.textContent = "Could not open composer here. Tap Copy below.";
+      } catch (_) {}
+      if (msg) msg.textContent = "Could not open Base App. Tap Copy below.";
       return false;
   }
 
-  async function ptgShareReferralBaseInviteFromUi() {
-      return ptgShareReferralInviteViaAction("base");
-  }
-
+  /**
+   * "Share on Web" — wymusza natywny systemowy arkusz Share (X / WhatsApp /
+   * Telegram / SMS / Mail…). Bez composeCast — to linki dla świata poza mini-appami.
+   */
   async function ptgShareReferralWebInviteFromUi() {
-      return ptgShareReferralInviteViaAction("web");
-  }
-
-  async function ptgShareReferralFarcasterInviteFromUi() {
-      return ptgShareReferralInviteViaAction("farcaster");
+      const msg = ptgRefMsgEl();
+      const ctx = await ptgBuildReferralShareContext("web");
+      try {
+          if (typeof navigator.share === "function") {
+              await navigator.share({
+                  title: "Phrase To Guess",
+                  text: ctx.text,
+                  url: ctx.webUrl,
+              });
+              if (msg) msg.textContent = "Share sheet opened.";
+              return true;
+          }
+      } catch (e) {
+          if (e && e.name === "AbortError") {
+              if (msg) msg.textContent = "";
+              return false;
+          }
+          console.warn("navigator.share web", e);
+      }
+      /* Brak Web Share API → X (Twitter) intent jako najszerzej wspierany fallback. */
+      const tw =
+          "https://twitter.com/intent/tweet?text=" +
+          encodeURIComponent(ctx.text + " " + ctx.webUrl);
+      if (await ptgOpenExternalUrl(tw)) {
+          if (msg) msg.textContent = "Opening share…";
+          return true;
+      }
+      try {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+              await navigator.clipboard.writeText(ctx.text + " " + ctx.webUrl);
+              if (msg) msg.textContent = "Copied invite link.";
+              return true;
+          }
+      } catch (_) {}
+      if (msg) msg.textContent = "Could not open share sheet. Tap Copy below.";
+      return false;
   }
 
   async function refreshReferralModalContent() {
@@ -5782,72 +6078,57 @@
       const webShare = document.getElementById("referralWebShare");
       const origin = ptgReferralInviteOrigin();
       const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
-      if (!isLoggedIn() || myUserId === "guest") {
-          const guestDeepFc = ptgBuildFarcasterLaunchUrl("", "farcaster");
-          const guestDeepBase = ptgBuildFarcasterLaunchUrl("", "base");
-          const guestUrlWeb = siteUrl + "?via=web";
-          if (urlFcEl) {
-              urlFcEl.textContent = guestDeepFc;
-              urlFcEl.classList.remove("referral-url-text--multiline");
-              urlFcEl.title = guestDeepFc;
-          }
-          if (urlBaseEl) {
-              urlBaseEl.textContent = guestDeepBase;
-              urlBaseEl.classList.remove("referral-url-text--multiline");
-              urlBaseEl.title = guestDeepBase;
-          }
-          if (urlWebEl) {
-              urlWebEl.textContent = guestUrlWeb;
-              urlWebEl.classList.remove("referral-url-text--multiline");
-              urlWebEl.title = guestUrlWeb;
-          }
-          const guestShareFcUrl = siteUrl + "?via=farcaster";
-          const guestShareBaseUrl = guestDeepBase;
-          const guestShareWebUrl = siteUrl + "?via=web";
-          const guestText = "Play Phrase To Guess — guess letters, watch the chart, mint a trophy onchain.";
-          if (fcCompose) fcCompose.href = ptgBuildWarpcastComposeUrl(guestText, guestShareFcUrl);
-          if (baseShare) {
-              baseShare.href = ptgBuildWarpcastComposeUrl(guestText, guestShareBaseUrl);
-              baseShare.target = "_blank";
-          }
-          if (webShare) {
-              webShare.href = guestShareWebUrl;
-              webShare.target = "_blank";
-          }
+
+      /**
+       * Pola link-ów: to jest to, co user skopiuje/wklei komuś. Każde pole prowadzi
+       * natywnie do właściwego hosta:
+       *   • Farcaster → `farcaster.xyz/~/mini-apps/launch` (otwiera Warpcasta)
+       *   • Base → `go.cb-w.com/dapp?cb_url=…` (otwiera Base App / Coinbase Wallet)
+       *   • Web → „czysty" https link (do wysyłki przez X, email, DM)
+       */
+      const isGuest = !isLoggedIn() || myUserId === "guest";
+      const code = isGuest ? "" : await ptgRefCodeFromUserId(myUserId);
+      const refQs = code && /^[a-f0-9]{12}$/.test(code) ? "ref=" + encodeURIComponent(code) + "&" : "";
+      const fcDeep = ptgBuildFarcasterLaunchUrl(code, "farcaster");
+      const baseDeep = ptgBuildBaseAppLaunchUrl(code);
+      const webUrl = siteUrl + "?" + refQs + "via=web";
+
+      if (urlFcEl) {
+          urlFcEl.textContent = fcDeep;
+          urlFcEl.classList.remove("referral-url-text--multiline");
+          urlFcEl.title = fcDeep;
+      }
+      if (urlBaseEl) {
+          urlBaseEl.textContent = baseDeep;
+          urlBaseEl.classList.remove("referral-url-text--multiline");
+          urlBaseEl.title = baseDeep;
+      }
+      if (urlWebEl) {
+          urlWebEl.textContent = webUrl;
+          urlWebEl.classList.remove("referral-url-text--multiline");
+          urlWebEl.title = webUrl;
+      }
+
+      /* Przyciski Share są obsługiwane w JS (ptgShareReferral*FromUi); `href`
+       * to fallback dla klienta bez JS — zawsze kanał-specyficzny. */
+      if (fcCompose) {
+          fcCompose.href = ptgBuildWarpcastComposeUrl(PTG_REFERRAL_SHARE_TEXT, fcDeep);
+          fcCompose.target = "_blank";
+      }
+      if (baseShare) {
+          baseShare.href = baseDeep;
+          baseShare.target = "_blank";
+      }
+      if (webShare) {
+          webShare.href = webUrl;
+          webShare.target = "_blank";
+      }
+
+      if (isGuest) {
           ptgUpdateReferralUiFromSnapshot(null);
           const btn = document.getElementById("referralClaimBtn");
           if (btn) btn.disabled = true;
           return;
-      }
-      const code = await ptgRefCodeFromUserId(myUserId);
-      const uFc = origin + "/?ref=" + encodeURIComponent(code) + "&via=farcaster";
-      const uWeb = origin + "/?ref=" + encodeURIComponent(code) + "&via=web";
-      const deepFc = ptgBuildFarcasterLaunchUrl(code, "farcaster");
-      const deepBase = ptgBuildFarcasterLaunchUrl(code, "base");
-      if (urlFcEl) {
-          urlFcEl.textContent = deepFc;
-          urlFcEl.classList.remove("referral-url-text--multiline");
-          urlFcEl.title = deepFc;
-      }
-      if (urlBaseEl) {
-          urlBaseEl.textContent = deepBase;
-          urlBaseEl.classList.remove("referral-url-text--multiline");
-          urlBaseEl.title = deepBase;
-      }
-      if (urlWebEl) {
-          urlWebEl.textContent = uWeb;
-          urlWebEl.classList.remove("referral-url-text--multiline");
-          urlWebEl.title = uWeb;
-      }
-      const shareText = "Play Phrase To Guess — guess letters, watch the chart, mint a trophy onchain.";
-      if (fcCompose) fcCompose.href = ptgBuildWarpcastComposeUrl(shareText, uFc);
-      if (baseShare) {
-          baseShare.href = ptgBuildWarpcastComposeUrl(shareText, deepBase);
-          baseShare.target = "_blank";
-      }
-      if (webShare) {
-          webShare.href = uWeb;
-          webShare.target = "_blank";
       }
       try {
           const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId);
@@ -6155,6 +6436,7 @@
       if (!/^0x[a-fA-F0-9]{40}$/.test(a)) return false;
       myUsername = a.substring(0, 6) + "..." + a.substring(38);
       myUserId = a.toLowerCase();
+      ptgRememberIdentityAlias(myUserId);
       ptgRefreshTierModeBadge();
       if (hostKind === "base") {
           setPlayerChip("Base · " + myUsername, "base");
@@ -6175,6 +6457,7 @@
       if (u.username) {
           myUsername = "@" + u.username;
           myUserId = myUsername.replace(/[^a-zA-Z0-9]/g, "");
+          ptgRememberIdentityAlias(myUserId);
           ptgRefreshTierModeBadge();
           const label = viaBase ? "Base · " + myUsername : myUsername;
           setPlayerChip(label, chipVariant);
@@ -6187,6 +6470,7 @@
           const fidStr = String(u.fid);
           myUsername = "FID " + fidStr;
           myUserId = "fcfid" + fidStr.replace(/\D/g, "");
+          ptgRememberIdentityAlias(myUserId);
           ptgRefreshTierModeBadge();
           const label = viaBase ? "Base · FID " + fidStr : "FC · FID " + fidStr;
           setPlayerChip(label, chipVariant);
