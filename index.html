@@ -4147,7 +4147,7 @@
    * Bumpnij REFERRAL_DATA_VERSION, żeby „wyzerować" drzewo zaproszeń (bez
    * zmiany rankingu). Stare dane zostają w RTDB jako archiwum.
    */
-  const REFERRAL_DATA_VERSION = 4;
+  const REFERRAL_DATA_VERSION = 5;
   function ptgReferralsRtdbRoot() {
       const suffix = REFERRAL_DATA_VERSION > 1 ? "_v" + REFERRAL_DATA_VERSION : "";
       return "referrals_v1/s" + LEADERBOARD_SEASON + suffix;
@@ -5419,7 +5419,8 @@
 
       /** Wydobądź basename/ENS z samej nazwy (np. owner id = "super-creator.eth"). */
       function ptgDeriveEnsLikeFromString(s) {
-          const t = String(s || "").trim();
+          /* Odrzuć prefiksy FC „@handle" i białe znaki — ENS CDN nie zna `@`. */
+          const t = String(s || "").trim().replace(/^@+/, "").trim();
           if (!t) return null;
           if (/\.base\.eth$/i.test(t)) return { kind: "basename", value: t };
           if (/\.eth$/i.test(t)) return { kind: "ens", value: t };
@@ -5810,10 +5811,16 @@
       const refCode = String(pending).trim().toLowerCase();
       if (!/^[a-f0-9]{12}$/.test(refCode)) return;
       let seenKey = "ptg_invite_accept_seen_" + refCode;
-      try {
-          if (localStorage.getItem(seenKey)) return;
-      } catch (_) {}
       if (!db) return;
+      /* „seen" blokuje modal TYLKO jeśli user realnie jest już dopisany do drzewa
+       * (`parent_of/{me}` istnieje). Inaczej przypadkowe „Not now" lub backdrop
+       * na zawsze chowałoby powitanie, choć w RTDB nic się nie zmieniło. */
+      try {
+          if (localStorage.getItem(seenKey)) {
+              const hasParent = await ptgGetExistingInviterId();
+              if (hasParent) return;
+          }
+      } catch (_) {}
       let ownerId = null;
       try {
           const s = await get(ref(db, ptgReferralsRtdbRoot() + "/index/" + refCode));
