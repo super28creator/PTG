@@ -3954,6 +3954,19 @@
       }
   }
 
+  async function persistCurrentPlayerNameToRtdb() {
+      if (!db || !isLoggedIn()) return;
+      const id = String(myUserId || "").trim();
+      const name = String(myUsername || "").trim();
+      if (!id || id === "guest" || !name) return;
+      if (!isBetterDisplayName(name)) return;
+      try {
+          await update(playerDocRef(id), { name: name });
+      } catch (e) {
+          console.warn("persistCurrentPlayerNameToRtdb", e);
+      }
+  }
+
   /** Po zalogowaniu portfelem: pokaż Basename zamiast samego 0x… (klucz RTDB zostaje adresem). */
   async function applyBasenameToUiIfAny(hostKind) {
       if (!myUserId || typeof myUserId !== "string" || !myUserId.startsWith("0x")) return;
@@ -4180,7 +4193,9 @@
       return tiers[i] + "%";
   }
 
-  function ptgFormatInviteeIdForRow(inviteeId) {
+  function ptgFormatInviteeIdForRow(inviteeId, inviteeName) {
+      const direct = String(inviteeName || "").trim();
+      if (direct && isBetterDisplayName(direct)) return direct;
       const id = String(inviteeId || "").trim();
       if (!id) return "—";
       return formatLeaderboardDisplayName(id, {});
@@ -4378,11 +4393,11 @@
       return out;
   }
 
-  function ptgInviteRowHtml(inviteeId, depth, edgeKey, mergedFromLinkedWallet) {
+  function ptgInviteRowHtml(inviteeId, depth, edgeKey, mergedFromLinkedWallet, inviteeName) {
       const inv = String(inviteeId || "").trim();
       const maxDepth = __ptgReferralInviteTiers.length - 1;
       const showExpand = depth < maxDepth;
-      const nameDisp = ptgFormatInviteeIdForRow(inv);
+      const nameDisp = ptgFormatInviteeIdForRow(inv, inviteeName);
       const safeName = ptgEscapeReferralHtml(nameDisp);
       const safeInv = ptgEscapeReferralHtml(inv);
       const mergedCls = mergedFromLinkedWallet ? " referral-inv-row--merged-flat" : "";
@@ -4436,7 +4451,7 @@
       let html = "";
       for (let i = 0; i < rows.length; i++) {
           const r = rows[i];
-          html += ptgInviteRowHtml(r.v.invitee, 0, r.k, !!r.v._mergedFromLinkedWallet);
+          html += ptgInviteRowHtml(r.v.invitee, 0, r.k, !!r.v._mergedFromLinkedWallet, r.v.inviteeName);
       }
       return html;
   }
@@ -4446,15 +4461,38 @@
       const nodes = rootEl.querySelectorAll(".referral-inv-name[data-wallet]");
       const need = [];
       const seen = new Set();
+      const needPlayerIds = [];
+      const seenPlayerIds = new Set();
       for (let i = 0; i < nodes.length; i++) {
           const w = String(nodes[i].getAttribute("data-wallet") || "").trim();
-          if (!/^0x[a-fA-F0-9]{40}$/.test(w)) continue;
-          const k = w.toLowerCase();
-          if (seen.has(k)) continue;
-          seen.add(k);
-          need.push(w);
+          if (/^0x[a-fA-F0-9]{40}$/.test(w)) {
+              const k = w.toLowerCase();
+              if (seen.has(k)) continue;
+              seen.add(k);
+              need.push(w);
+              continue;
+          }
+          if (w && !seenPlayerIds.has(w)) {
+              seenPlayerIds.add(w);
+              needPlayerIds.push(w);
+          }
       }
-      if (!need.length) return;
+      let playerNameById = {};
+      if (needPlayerIds.length) {
+          playerNameById = {};
+          await Promise.all(
+              needPlayerIds.map(async (id) => {
+                  try {
+                      const snap = await get(playerDocRef(id));
+                      if (!snap.exists()) return;
+                      const rawName = snap.val() && snap.val().name;
+                      const nm = typeof rawName === "string" ? rawName.trim() : "";
+                      if (nm && isBetterDisplayName(nm)) playerNameById[id] = nm;
+                  } catch (_) {}
+              })
+          );
+      }
+      if (!need.length && !needPlayerIds.length) return;
       let map = await resolveDisplayNamesBatch(need);
       if (!map || typeof map !== "object") map = {};
       for (let j = 0; j < need.length; j++) {
@@ -4470,6 +4508,15 @@
       for (let i = 0; i < nodes.length; i++) {
           const el = nodes[i];
           const w = String(el.getAttribute("data-wallet") || "").trim();
+          if (!/^0x[a-fA-F0-9]{40}$/.test(w)) {
+              const playerName = playerNameById[w] || "";
+              if (playerName) {
+                  el.textContent = playerName;
+              } else {
+                  el.textContent = ptgFormatInviteeIdForRow(w);
+              }
+              continue;
+          }
           if (!/^0x[a-fA-F0-9]{40}$/.test(w)) continue;
           const k = w.toLowerCase();
           let label = map[k] && String(map[k]).trim() ? String(map[k]).trim() : "";
@@ -4510,7 +4557,13 @@
               let html = "";
               for (let i = 0; i < childRows.length; i++) {
                   const r = childRows[i];
-                  html += ptgInviteRowHtml(r.v.invitee, depth + 1, r.k, !!r.v._mergedFromLinkedWallet);
+                  html += ptgInviteRowHtml(
+                      r.v.invitee,
+                      depth + 1,
+                      r.k,
+                      !!r.v._mergedFromLinkedWallet,
+                      r.v.inviteeName
+                  );
               }
               nested.innerHTML = html;
               void ptgEnrichInviteNameNodes(nested);
@@ -4938,6 +4991,7 @@
           await set(edgeRef, { ts: Date.now(), invitee: myUserId, via: viaHost });
           await set(ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + ownerId + "/" + edgeKey), {
               invitee: myUserId,
+              inviteeName: String(myUsername || "").trim(),
               ts: Date.now(),
               via: viaHost,
           });
@@ -6082,6 +6136,7 @@
           setPlayerChip(label, chipVariant);
           const chip = document.getElementById("playerDisplay");
           if (chip) chip.title = viaBase ? "Farcaster profile via Base App" : "Farcaster profile";
+          void persistCurrentPlayerNameToRtdb();
           return true;
       }
       if (u.fid != null && String(u.fid).length > 0) {
