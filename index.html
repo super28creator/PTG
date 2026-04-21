@@ -5055,7 +5055,14 @@
           const p = new URLSearchParams(location.search.slice(1));
           const r = p.get("ref");
           if (!r || !/^[a-f0-9]{12}$/i.test(String(r).trim())) return;
-          localStorage.setItem("ptg_pending_ref", String(r).trim().toLowerCase());
+          const rc = String(r).trim().toLowerCase();
+          localStorage.setItem("ptg_pending_ref", rc);
+          /* Każde wejście z nowego linka kasuje sesyjny dismiss tego refa — user znów
+           * dostaje modal, zgodnie z „jak ktoś nie zaakceptuje to przy kolejnym wejściu
+           * powinno się pokazać". */
+          try {
+              sessionStorage.removeItem("ptg_invite_accept_dismissed_" + rc);
+          } catch (_) {}
           const via = p.get("via");
           if (via === "farcaster" || via === "base" || via === "web" || via === "browser") localStorage.setItem("ptg_pending_via", via === "browser" ? "web" : via);
           else localStorage.removeItem("ptg_pending_via");
@@ -5682,17 +5689,15 @@
       try {
           if (String(ownerId).toLowerCase() === String(myUserId).toLowerCase()) return true;
       } catch (_) {}
+      /* Dokładne dopasowanie refCode do mojego code (z sessionowego `myUserId`) — nie używamy
+       * localStorage aliasów, bo to blokowało sytuacje „inny portfel, ten sam browser"
+       * i kasowało legalne zaproszenia testowe / między własnymi kontami. */
       try {
           const myCode = await ptgRefCodeFromUserId(myUserId);
           if (myCode && refCode && String(myCode).toLowerCase() === String(refCode).toLowerCase()) return true;
       } catch (_) {}
-      try {
-          const aliases = ptgGetMyIdentityAliasesLc();
-          const on = String(ownerId).toLowerCase();
-          if (aliases.has(on)) return true;
-          const myCode = await ptgRefCodeFromUserId(myUserId);
-          if (myCode && refCode && String(myCode).toLowerCase() === String(refCode).toLowerCase()) return true;
-      } catch (_) {}
+      /* Szczególny przypadek: jestem aktualnie zalogowany FC-iem (fcfidN), a link należy
+       * do portfela aktualnie wpiętego pod tę samą sesję (Warpcast signer wallet). */
       if (typeof myUserId === "string" && myUserId.indexOf("fcfid") === 0) {
           try {
               const prov = typeof getEmbeddedEthProvider === "function" ? getEmbeddedEthProvider() : null;
@@ -5812,15 +5817,13 @@
       if (!/^[a-f0-9]{12}$/.test(refCode)) return;
       let seenKey = "ptg_invite_accept_seen_" + refCode;
       if (!db) return;
-      /* „seen" blokuje modal TYLKO jeśli user realnie jest już dopisany do drzewa
-       * (`parent_of/{me}` istnieje). Inaczej przypadkowe „Not now" lub backdrop
-       * na zawsze chowałoby powitanie, choć w RTDB nic się nie zmieniło. */
+      /* Permanentny „seen" ustawiamy wyłącznie po „Accept invite". Jeśli istnieje,
+       * naprawdę kończymy (user świadomie potwierdził). Sesyjny dismiss (Not now /
+       * backdrop) blokuje tylko tę kartę — kolejne wejście z linka znów pokaże modal. */
       try {
-          if (localStorage.getItem(seenKey)) {
-              const hasParent = await ptgGetExistingInviterId();
-              if (hasParent) return;
-          }
+          if (localStorage.getItem(seenKey)) return;
       } catch (_) {}
+      if (ptgInviteAcceptDismissedThisSession(refCode)) return;
       let ownerId = null;
       try {
           const s = await get(ref(db, ptgReferralsRtdbRoot() + "/index/" + refCode));
@@ -5900,6 +5903,85 @@
       overlay.classList.add("show");
       overlay.setAttribute("aria-hidden", "false");
 
+      function renderPreviewIntoModal(preview, { isFinal } = {}) {
+          if (!preview) return;
+          if (nickEl && preview.name) nickEl.textContent = preview.name;
+          if (fallbackEl) {
+              fallbackEl.textContent = ptgInviterAvatarMarkup(preview.name, ownerId) || "?";
+          }
+          if (srcEl && srcLabelEl) {
+              let label = "";
+              const src = preview.source || "";
+              if (src === "farcaster") label = "Farcaster profile";
+              else if (src === "basename") label = preview.basename || "Basename";
+              else if (src === "ens") label = preview.ensName || "ENS";
+              else if (src === "rtdb" && preview.avatarUrl) label = "Verified player";
+              if (label) {
+                  srcEl.setAttribute("data-src", src);
+                  srcLabelEl.textContent = label;
+                  srcEl.hidden = false;
+              } else {
+                  srcEl.hidden = true;
+              }
+          }
+          if (avEl && preview.avatarUrl) {
+              const current = avEl.querySelector("img");
+              if (current && current.getAttribute("data-src") === preview.avatarUrl) {
+                  /* Ten sam URL po pełnym resolve — nie przeładowujemy. */
+                  return;
+              }
+              const img = document.createElement("img");
+              img.alt = "";
+              img.loading = "eager";
+              img.decoding = "async";
+              img.referrerPolicy = "no-referrer";
+              img.setAttribute("data-src", preview.avatarUrl);
+              img.addEventListener(
+                  "error",
+                  function () {
+                      if (img.parentNode) img.parentNode.removeChild(img);
+                      if (!avEl.querySelector("img")) {
+                          if (fallbackEl) fallbackEl.style.display = "";
+                          if (badgeEl) badgeEl.style.display = "";
+                      }
+                  },
+                  { once: true },
+              );
+              img.addEventListener(
+                  "load",
+                  function () {
+                      /* Usuń poprzedni obraz dopiero po udanym załadowaniu — brak „pustego" flasha. */
+                      const olds = avEl.querySelectorAll("img");
+                      for (let i = 0; i < olds.length; i++) {
+                          if (olds[i] !== img && olds[i].parentNode) olds[i].parentNode.removeChild(olds[i]);
+                      }
+                      if (fallbackEl) fallbackEl.style.display = "none";
+                      img.classList.add("invite-accept-avatar-img--loaded");
+                  },
+                  { once: true },
+              );
+              img.src = preview.avatarUrl;
+              if (!avEl.contains(img)) avEl.appendChild(img);
+          }
+          if (isFinal) {
+              if (nickEl) nickEl.classList.remove("invite-accept-nick--loading");
+              if (avEl) avEl.classList.remove("invite-accept-avatar--loading");
+          }
+      }
+
+      /* 1) Szybka pierwsza warstwa: RTDB + derywacja .eth/.base.eth z samej nazwy.
+       * Awatar z ENS metadata CDN zaczyna się ładować natychmiast — bez czekania na Neynar. */
+      let quick = null;
+      try {
+          quick = await ptgResolveInviterPreviewQuick(ownerId, ptgInviteChannelFromStorage());
+      } catch (_) {
+          quick = null;
+      }
+      if (quick && (quick.name || quick.avatarUrl)) {
+          renderPreviewIntoModal(quick, { isFinal: false });
+      }
+
+      /* 2) Pełny resolve (Neynar, reverse RPC) w tle — aktualizuje avatar/nick jeśli coś nowego. */
       let preview = null;
       try {
           preview = await ptgResolveInviterPreview(ownerId, ptgInviteChannelFromStorage());
@@ -5909,60 +5991,84 @@
       if (nickEl) nickEl.classList.remove("invite-accept-nick--loading");
       if (avEl) avEl.classList.remove("invite-accept-avatar--loading");
       if (!preview) {
-          if (srcEl) srcEl.hidden = true;
+          if (!quick || !quick.name) {
+              if (srcEl) srcEl.hidden = true;
+          }
           return;
       }
+      renderPreviewIntoModal(preview, { isFinal: true });
+  }
 
-      if (nickEl && preview.name) nickEl.textContent = preview.name;
-      if (fallbackEl) {
-          fallbackEl.textContent = ptgInviterAvatarMarkup(preview.name, ownerId) || "?";
-      }
+  /**
+   * Szybka warstwa podglądu — tylko RTDB + wyciąganie `.base.eth`/`.eth` z nazwy/id.
+   * Nie robi żadnych on-chain RPC ani roundtripów do Neynar, dzięki czemu modal pokazuje
+   * cokolwiek w <150 ms zamiast wisieć 4-5 s na pełnym resolve.
+   */
+  async function ptgResolveInviterPreviewQuick(ownerId, inviteChannel) {
+      const preview = {
+          id: ownerId,
+          name: "",
+          avatarUrl: "",
+          ensName: "",
+          basename: "",
+          source: "",
+      };
+      if (!ownerId) return preview;
+      const ch = inviteChannel || ptgInviteChannelFromStorage();
+      const idStr = String(ownerId).trim();
+      const is0x = /^0x[a-fA-F0-9]{40}$/.test(idStr);
 
-      /* Etykieta źródła profilu — pomaga odróżnić FC-owy pfp od samego basename. */
-      if (srcEl && srcLabelEl) {
-          let label = "";
-          const src = preview.source || "";
-          if (src === "farcaster") label = "Farcaster profile";
-          else if (src === "basename") label = preview.basename || "Basename";
-          else if (src === "ens") label = preview.ensName || "ENS";
-          else if (src === "rtdb" && preview.avatarUrl) label = "Verified player";
-          if (label) {
-              srcEl.setAttribute("data-src", src);
-              srcLabelEl.textContent = label;
-              srcEl.hidden = false;
-          } else {
-              srcEl.hidden = true;
+      let storedName = "";
+      try {
+          const pSnap = await get(playerDocRef(ownerId));
+          if (pSnap.exists()) {
+              const v = pSnap.val() || {};
+              if (typeof v.name === "string" && v.name.trim()) storedName = v.name.trim();
+              if (typeof v.pfpUrl === "string" && /^https?:\/\//.test(v.pfpUrl)) {
+                  preview.avatarUrl = v.pfpUrl;
+                  preview.source = "rtdb";
+              } else if (typeof v.avatarUrl === "string" && /^https?:\/\//.test(v.avatarUrl)) {
+                  preview.avatarUrl = v.avatarUrl;
+                  preview.source = "rtdb";
+              }
+              if (storedName && isBetterDisplayName(storedName)) preview.name = storedName;
           }
+      } catch (_) {}
+
+      function deriveEnsLike(s) {
+          const t = String(s || "").trim().replace(/^@+/, "").trim();
+          if (!t) return null;
+          if (/\.base\.eth$/i.test(t)) return { kind: "basename", value: t };
+          if (/\.eth$/i.test(t)) return { kind: "ens", value: t };
+          return null;
+      }
+      const cand = [];
+      if (!is0x) cand.push(idStr);
+      if (storedName) cand.push(storedName);
+      for (let i = 0; i < cand.length; i++) {
+          const d = deriveEnsLike(cand[i]);
+          if (!d) continue;
+          if (d.kind === "basename" && !preview.basename) preview.basename = d.value;
+          if (d.kind === "ens" && !preview.ensName) preview.ensName = d.value;
       }
 
-      if (avEl && preview.avatarUrl) {
-          const existingImg = avEl.querySelector("img");
-          const img = document.createElement("img");
-          img.alt = "";
-          img.loading = "eager";
-          img.decoding = "async";
-          img.referrerPolicy = "no-referrer";
-          img.addEventListener(
-              "error",
-              function () {
-                  if (img.parentNode) img.parentNode.removeChild(img);
-                  if (fallbackEl) fallbackEl.style.display = "";
-                  if (badgeEl) badgeEl.style.display = "";
-              },
-              { once: true },
-          );
-          img.addEventListener(
-              "load",
-              function () {
-                  if (existingImg && existingImg.parentNode) existingImg.parentNode.removeChild(existingImg);
-                  if (fallbackEl) fallbackEl.style.display = "none";
-                  img.classList.add("invite-accept-avatar-img--loaded");
-              },
-              { once: true },
-          );
-          img.src = preview.avatarUrl;
-          if (!avEl.contains(img)) avEl.appendChild(img);
+      if (!preview.avatarUrl) {
+          if (preview.basename) preview.avatarUrl = ptgEnsMetadataAvatarUrl(preview.basename) || "";
+          else if (preview.ensName) preview.avatarUrl = ptgEnsMetadataAvatarUrl(preview.ensName) || "";
       }
+      if (!preview.name) {
+          if (preview.basename) preview.name = preview.basename;
+          else if (preview.ensName) preview.name = preview.ensName;
+          else preview.name = formatLeaderboardDisplayName(ownerId, {});
+      }
+      if (!preview.source) {
+          if (ch === "base" && preview.basename) preview.source = "basename";
+          else if (ch === "web" && preview.basename) preview.source = "basename";
+          else if (ch === "web" && preview.ensName) preview.source = "ens";
+          else if (preview.avatarUrl) preview.source = "rtdb";
+          else preview.source = "letter";
+      }
+      return preview;
   }
 
   function ptgMarkInviteAcceptSeen() {
@@ -5976,6 +6082,28 @@
       try {
           localStorage.setItem("ptg_invite_accept_seen_" + refCode, String(Date.now()));
       } catch (_) {}
+  }
+
+  /** „Not now" / backdrop — tylko do końca tej karty/tabki. */
+  function ptgMarkInviteAcceptDismissedSession() {
+      let pending = null;
+      try {
+          pending = localStorage.getItem("ptg_pending_ref") || localStorage.getItem("ptg_invite_last_ref");
+      } catch (_) {}
+      if (!pending) return;
+      const refCode = String(pending).trim().toLowerCase();
+      if (!/^[a-f0-9]{12}$/.test(refCode)) return;
+      try {
+          sessionStorage.setItem("ptg_invite_accept_dismissed_" + refCode, String(Date.now()));
+      } catch (_) {}
+  }
+
+  function ptgInviteAcceptDismissedThisSession(refCode) {
+      try {
+          return !!sessionStorage.getItem("ptg_invite_accept_dismissed_" + refCode);
+      } catch (_) {
+          return false;
+      }
   }
 
   /** Musi być identyczny z `buildClaimMessage` w `api/ptg-referral-payout.js`. */
@@ -11094,6 +11222,8 @@
       if (ev.target === ev.currentTarget) closeReferralModal();
   });
   document.getElementById("inviteAcceptBtn")?.addEventListener("click", function () {
+      /* Permanentne „seen" ustawiamy TYLKO po świadomym Accept — inaczej dismiss/backdrop
+       * kasowałyby zaproszenie na zawsze. */
       ptgMarkInviteAcceptSeen();
       ptgHideInviteAcceptOverlay();
       if (!isLoggedIn() || myUserId === "guest") {
@@ -11103,12 +11233,14 @@
       }
   });
   document.getElementById("inviteAcceptDismissBtn")?.addEventListener("click", function () {
-      ptgMarkInviteAcceptSeen();
+      /* „Not now" tylko chowa modal na tę sesję — po reloadzie / ponownym wejściu z linka
+       * user znów dostanie powitanie. */
+      ptgMarkInviteAcceptDismissedSession();
       ptgHideInviteAcceptOverlay();
   });
   document.getElementById("inviteAcceptOverlay")?.addEventListener("click", function (ev) {
       if (ev.target === ev.currentTarget) {
-          ptgMarkInviteAcceptSeen();
+          ptgMarkInviteAcceptDismissedSession();
           ptgHideInviteAcceptOverlay();
       }
   });
