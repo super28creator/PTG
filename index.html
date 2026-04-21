@@ -4930,6 +4930,10 @@
       try {
           const keep = localStorage.getItem("ptg_pending_ref");
           if (keep) localStorage.setItem("ptg_invite_last_ref", keep);
+          const keepVia = localStorage.getItem("ptg_pending_via");
+          if (keepVia === "farcaster" || keepVia === "base" || keepVia === "web" || keepVia === "browser") {
+              localStorage.setItem("ptg_invite_last_via", keepVia === "browser" ? "web" : keepVia);
+          }
           localStorage.removeItem("ptg_pending_ref");
           localStorage.removeItem("ptg_pending_via");
       } catch (_) {}
@@ -5460,6 +5464,11 @@
           if (pv === "farcaster" || pv === "base" || pv === "web") return pv;
           if (pv === "browser") return "web";
       } catch (_) {}
+      try {
+          const lv = localStorage.getItem("ptg_invite_last_via");
+          if (lv === "farcaster" || lv === "base" || lv === "web") return lv;
+          if (lv === "browser") return "web";
+      } catch (_) {}
       if (typeof ptgHost === "string") {
           if (ptgHost === "farcaster") return "farcaster";
           if (ptgHost === "base") return "base";
@@ -5735,13 +5744,11 @@
           ptgClearPendingRefCapture();
           return;
       }
-      if (existingInviter && existingInviter === ownerId) {
-          /* Już zaakceptował od tej samej osoby — nie pokazuj ponownie. */
-          try {
-              localStorage.setItem(seenKey, String(Date.now()));
-          } catch (_) {}
-          return;
-      }
+      /* UWAGA: nie blokujemy tu, gdy `existingInviter === ownerId`.
+       * `tryProcessReferralAttribution` odpala się automatycznie po loginie
+       * i już zapisało `parent_of/{me} = ownerId` zanim modal dobiegł do tej linii.
+       * O tym, czy modal już był pokazany, decyduje wyłącznie `seenKey`
+       * (ustawiany przy Accept / Not now / klik-tło). */
       const overlay = document.getElementById("inviteAcceptOverlay");
       if (!overlay) return;
       const nickEl = document.getElementById("inviteAcceptNick");
