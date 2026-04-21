@@ -6,7 +6,7 @@
  *
  * Env: FIREBASE_SERVICE_ACCOUNT_JSON, REFERRAL_PAYOUT_PRIVATE_KEY (treasury z USDC + ETH na gas),
  *      BASE_RPC_URL (opcjonalnie),
- *      PTG_REFERRAL_SEASON (domyślnie 2 — musi być zgodny z LEADERBOARD_SEASON w index.html),
+ *      PTG_REFERRAL_SEASON (domyślnie 2 — musi być zgodny z REFERRAL_RTDB_SEASON w index.html),
  *      PTG_REFERRAL_DATA_VERSION (domyślnie 6 — suffix _v{N} jak w `ptgReferralsRtdbRoot()`).
  */
 

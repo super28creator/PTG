@@ -4171,21 +4171,25 @@
   }
 
   /**
-   * Wszystkie dane referrali są per sezon (jak `players_s{N}`).
-   * Bumpnij REFERRAL_DATA_VERSION, żeby „wyzerować" drzewo zaproszeń (bez
-   * zmiany rankingu). Stare dane zostają w RTDB jako archiwum.
+   * Partycja RTDB dla reflinków: `referrals_v1/s{N}_v*`.
+   * Osobna od `LEADERBOARD_SEASON` — reset rankingu nie przenosi ani nie czyści drzewa zaproszeń.
+   * Zmieniaj tylko świadomie (np. nowy root w RTDB); trzymaj zgodność z `PTG_REFERRAL_SEASON` na serwerze.
+   */
+  const REFERRAL_RTDB_SEASON = 2;
+  /**
+   * Bumpnij REFERRAL_DATA_VERSION, żeby „wyzerować" drzewo zaproszeń (suffix `_v{N}`).
+   * Stare dane zostają w RTDB jako archiwum; `REFERRAL_RTDB_SEASON` zostaje bez zmian, o ile nie migrujesz całości.
    */
   const REFERRAL_DATA_VERSION = 6;
   function ptgReferralsRtdbRoot() {
       const suffix = REFERRAL_DATA_VERSION > 1 ? "_v" + REFERRAL_DATA_VERSION : "";
-      return "referrals_v1/s" + LEADERBOARD_SEASON + suffix;
+      return "referrals_v1/s" + REFERRAL_RTDB_SEASON + suffix;
   }
 
   /**
    * Kolejność ścieżek RTDB do odczytu `index/{refCode}` zanim się poddamy.
-   * 1) Bieżący sezon + starsze _v (ten sam `LEADERBOARD_SEASON`).
-   * 2) Archiwalne sezony (np. s4 gdy kiedyś był deploy na `players_s4`) — inaczej
-   *    refCode z linka nigdy nie mapuje się na ownerId po zmianie sezonu na s2.
+   * 1) Bieżący root + starsze `_v` (ten sam `REFERRAL_RTDB_SEASON`).
+   * 2) Inne `s{N}` — archiwum starych partycji referrali (np. gdy kiedyś używano tego samego numeru co ranking).
    * Zatrzymujemy się na pierwszym trafieniu; trafienie replikujemy do bieżącego roota.
    */
   function ptgReferralIndexLookupRootsOrdered() {
@@ -4196,16 +4200,16 @@
           seen.add(p);
           out.push(p);
       }
-      const curSeason = LEADERBOARD_SEASON;
+      const refSeason = REFERRAL_RTDB_SEASON;
       push(ptgReferralsRtdbRoot());
       for (let v = REFERRAL_DATA_VERSION - 1; v >= 1; v--) {
           const suffix = v > 1 ? "_v" + v : "";
-          push("referrals_v1/s" + curSeason + suffix);
+          push("referrals_v1/s" + refSeason + suffix);
       }
       const archiveSeasons = [4, 3, 5, 6, 1];
       for (let si = 0; si < archiveSeasons.length; si++) {
           const s = archiveSeasons[si];
-          if (s === curSeason) continue;
+          if (s === refSeason) continue;
           for (let v = 12; v >= 1; v--) {
               const suffix = v > 1 ? "_v" + v : "";
               push("referrals_v1/s" + s + suffix);
@@ -4255,13 +4259,13 @@
   }
 
   /**
-   * Jednorazowy wipe localStorage przy zmianie sezonu lub wersji reflinków —
-   * stare pending/seen nie mogą reaktywować modala ani brudzić nowego roocie RTDB.
+   * Jednorazowy wipe localStorage przy zmianie partycji referrali lub wersji danych —
+   * stare pending/seen nie mogą reaktywować modala ani brudzić nowego roota RTDB.
    */
   (function ptgPurgeStaleReferralLocalStorage() {
       try {
           const markerKey = "ptg_ref_storage_version";
-          const cur = String(LEADERBOARD_SEASON) + "_" + String(REFERRAL_DATA_VERSION);
+          const cur = String(REFERRAL_RTDB_SEASON) + "_" + String(REFERRAL_DATA_VERSION);
           if (localStorage.getItem(markerKey) === cur) return;
           const drop = [
               "ptg_pending_ref",
@@ -5737,10 +5741,10 @@
   /**
    * Aliasy tożsamości (fcFID ↔ wallet, wallet ↔ handle itd.) — po kiedykolwiek zalogowaniu
    * obiema „stronami" blokujemy self-invite nawet po wylogowaniu jednej z nich.
-   * Klucz localStorage jest per-sezon, żeby nie zanieczyszczać nowego startu.
+   * Klucz nie jest powiązany z sezonem rankingu — tylko z reflinkami / tożsamością.
    */
   function ptgIdentityAliasStorageKey() {
-      return "ptg_identity_aliases_s" + LEADERBOARD_SEASON;
+      return "ptg_identity_aliases_ref";
   }
 
   function ptgNormalizeAliasId(id) {
@@ -5750,7 +5754,17 @@
 
   function ptgLoadIdentityAliasesSet() {
       try {
-          const raw = localStorage.getItem(ptgIdentityAliasStorageKey());
+          const key = ptgIdentityAliasStorageKey();
+          let raw = localStorage.getItem(key);
+          if (!raw) {
+              try {
+                  const legacy = localStorage.getItem("ptg_identity_aliases_s" + LEADERBOARD_SEASON);
+                  if (legacy) {
+                      localStorage.setItem(key, legacy);
+                      raw = legacy;
+                  }
+              } catch (_) {}
+          }
           if (!raw) return new Set();
           const arr = JSON.parse(raw);
           if (!Array.isArray(arr)) return new Set();
