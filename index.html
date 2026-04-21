@@ -569,6 +569,32 @@
         height: 100%;
         object-fit: cover;
         display: block;
+        opacity: 0;
+        transition: opacity 0.28s ease;
+    }
+    .invite-accept-avatar img.invite-accept-avatar-img--loaded {
+        opacity: 1;
+    }
+    .invite-accept-avatar--loading::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(
+            110deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0) 35%,
+            rgba(255, 255, 255, 0.22) 50%,
+            rgba(255, 255, 255, 0) 65%,
+            rgba(255, 255, 255, 0) 100%
+        );
+        background-size: 220% 100%;
+        animation: ptgInviteShimmer 1.2s linear infinite;
+        pointer-events: none;
+    }
+    @keyframes ptgInviteShimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -100% 0; }
     }
     .invite-accept-avatar-badge {
         position: absolute;
@@ -603,7 +629,7 @@
     .invite-accept-meta {
         display: flex;
         flex-direction: column;
-        gap: 3px;
+        gap: 4px;
         min-width: 0;
     }
     .invite-accept-nick {
@@ -611,10 +637,74 @@
         font-weight: 700;
         color: #f8fafc;
         word-break: break-word;
+        line-height: 1.25;
+    }
+    .invite-accept-nick--loading {
+        display: inline-block;
+        min-width: 60%;
+        height: 14px;
+        border-radius: 6px;
+        color: transparent !important;
+        background:
+            linear-gradient(
+                110deg,
+                rgba(255,255,255,0.06) 0%,
+                rgba(255,255,255,0.14) 45%,
+                rgba(255,255,255,0.06) 75%
+            );
+        background-size: 220% 100%;
+        animation: ptgInviteShimmer 1.2s linear infinite;
     }
     .invite-accept-hint {
         font-size: 12px;
         color: rgba(148, 163, 184, 0.92);
+    }
+    .invite-accept-source {
+        display: inline-flex;
+        align-self: flex-start;
+        align-items: center;
+        gap: 5px;
+        margin-top: 3px;
+        padding: 3px 8px;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: rgba(203, 213, 225, 0.88);
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .invite-accept-source[data-src="farcaster"] {
+        color: #e9d5ff;
+        background: rgba(168, 85, 247, 0.16);
+        border-color: rgba(168, 85, 247, 0.45);
+    }
+    .invite-accept-source[data-src="basename"] {
+        color: #bfdbfe;
+        background: rgba(60, 138, 255, 0.2);
+        border-color: rgba(96, 165, 250, 0.5);
+    }
+    .invite-accept-source[data-src="ens"] {
+        color: #a5f3fc;
+        background: rgba(6, 182, 212, 0.2);
+        border-color: rgba(34, 211, 238, 0.5);
+    }
+    .invite-accept-source[data-src="rtdb"],
+    .invite-accept-source[data-src="letter"] {
+        color: rgba(203, 213, 225, 0.82);
+    }
+    .invite-accept-source-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 6px currentColor;
+        flex-shrink: 0;
     }
     .invite-accept-actions {
         display: flex;
@@ -3457,6 +3547,10 @@
       <div class="invite-accept-meta">
         <div class="invite-accept-nick" id="inviteAcceptNick">Someone on Base</div>
         <div class="invite-accept-hint">invited you to Phrase To Guess</div>
+        <span class="invite-accept-source" id="inviteAcceptSource" data-src="" hidden>
+          <span class="invite-accept-source-dot"></span>
+          <span id="inviteAcceptSourceLabel">Profile</span>
+        </span>
       </div>
     </div>
     <div class="invite-accept-actions">
@@ -5143,25 +5237,43 @@
       return ptgEscapeReferralHtml(letter);
   }
 
-  /** Batch: pobiera awatary Farcaster (pfp_url) z `/api/ptg-resolve-names`. */
-  async function resolveInviterProfilesFromServer(addresses) {
-      const uniq = [];
-      const seen = new Set();
-      for (let j = 0; j < addresses.length; j++) {
-          const s = String(addresses[j] || "").trim();
+  /**
+   * Batch: pobiera nazwy + awatary z `/api/ptg-resolve-names`.
+   * Obsługuje 0x-adresy, FID-y (Farcaster), oraz handle'e (`alice.eth`, bez `@`).
+   */
+  async function resolveInviterProfilesFromServer({ addresses, fids, usernames } = {}) {
+      const addrList = [];
+      const addrSeen = new Set();
+      const arrAddr = Array.isArray(addresses) ? addresses : [];
+      for (let j = 0; j < arrAddr.length; j++) {
+          const s = String(arrAddr[j] || "").trim();
           if (!/^0x[a-fA-F0-9]{40}$/.test(s)) continue;
           let k;
-          try {
-              k = ethers.utils.getAddress(s).toLowerCase();
-          } catch (_) {
-              k = s.toLowerCase();
-          }
-          if (!seen.has(k)) {
-              seen.add(k);
-              uniq.push(k);
-          }
+          try { k = ethers.utils.getAddress(s).toLowerCase(); }
+          catch (_) { k = s.toLowerCase(); }
+          if (!addrSeen.has(k)) { addrSeen.add(k); addrList.push(k); }
       }
-      if (uniq.length === 0) return { names: {}, pfps: {} };
+      const fidList = [];
+      const arrFid = Array.isArray(fids) ? fids : [];
+      for (let j = 0; j < arrFid.length; j++) {
+          const raw = arrFid[j];
+          const n = typeof raw === "number" && isFinite(raw) && raw > 0
+              ? Math.floor(raw)
+              : typeof raw === "string" && /^\d+$/.test(raw.trim())
+                  ? parseInt(raw.trim(), 10)
+                  : null;
+          if (n != null && fidList.indexOf(n) === -1) fidList.push(n);
+      }
+      const handleList = [];
+      const arrHandle = Array.isArray(usernames) ? usernames : [];
+      for (let j = 0; j < arrHandle.length; j++) {
+          const s = String(arrHandle[j] || "").trim().replace(/^@/, "");
+          if (!s || !/^[a-zA-Z0-9_.\-]{1,32}$/.test(s)) continue;
+          const k = s.toLowerCase();
+          if (handleList.indexOf(k) === -1) handleList.push(k);
+      }
+      const empty = { names: {}, pfps: {}, byFid: {}, byHandle: {} };
+      if (!addrList.length && !fidList.length && !handleList.length) return empty;
       const origin =
           typeof window !== "undefined" && window.location && window.location.origin ? window.location.origin : "";
       const url = origin + "/api/ptg-resolve-names";
@@ -5169,76 +5281,153 @@
           const r = await fetch(url, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ addresses: uniq.slice(0, 80) }),
+              body: JSON.stringify({
+                  addresses: addrList.slice(0, 80),
+                  fids: fidList.slice(0, 40),
+                  usernames: handleList.slice(0, 20),
+              }),
           });
-          if (!r.ok) return { names: {}, pfps: {} };
+          if (!r.ok) return empty;
           const j = await r.json();
           return {
               names: j && typeof j.names === "object" ? j.names : {},
               pfps: j && typeof j.pfps === "object" ? j.pfps : {},
+              byFid: j && typeof j.byFid === "object" ? j.byFid : {},
+              byHandle: j && typeof j.byHandle === "object" ? j.byHandle : {},
           };
       } catch (e) {
           console.warn("resolveInviterProfilesFromServer", e);
-          return { names: {}, pfps: {} };
+          return empty;
       }
   }
 
   /**
-   * Kolejność rozwiązywania avatara/nazwy invitera (najbogatszy wygrywa):
-   *   1) Avatar + nazwa z Farcasterowego profilu (Neynar przez /api/ptg-resolve-names).
-   *   2) Basename (Base) → nazwa + avatar ENS (avatar.textRecord lookup via znany CDN).
-   *   3) ENS mainnet — nazwa + avatar (metadata.ens.domains).
-   *   4) Cached RTDB (`players_s{N}/{uid}.pfpUrl/avatarUrl/name`) jako fallback.
-   *   5) Skrócony 0x / fcFID + pierwsza litera jako letter fallback.
-   * Uwaga: zwracamy od razu wartości co znajdziemy; UI potrafi odświeżyć avatar po wgraniu większego.
+   * Z sanitized ID (np. „supercreatoreth") lub zapisanego w RTDB `name`
+   * (`@super-creator.eth`) próbuje odtworzyć oryginalny Farcaster-handle.
+   * Priorytet: `name` z RTDB (po usunięciu `@`), potem sam sanitized id.
+   */
+  function ptgGuessFarcasterHandle(ownerId, storedName) {
+      const raw = String(storedName || "").trim();
+      if (raw) {
+          const h = raw.replace(/^@/, "").trim();
+          if (h && /^[a-zA-Z0-9_.\-]{1,32}$/.test(h)) return h;
+      }
+      const sid = String(ownerId || "").trim();
+      if (!sid || /^0x/i.test(sid) || /^fcfid/i.test(sid)) return "";
+      if (/^[a-zA-Z0-9_.\-]{1,32}$/.test(sid)) return sid;
+      return "";
+  }
+
+  /**
+   * Kolejność rozwiązywania avatara + nazwy invitera (najbogatsze wygrywa,
+   * ale zawsze wracamy z CZYMŚ — nawet fallback literowym):
+   *   1) Farcaster (Neynar) — przez FID, username lub 0x.
+   *   2) Basename (Base, *.base.eth) — nazwa; avatar przez metadata.ens.
+   *   3) Ethereum ENS — nazwa + avatar (metadata.ens.domains).
+   *   4) Cache w RTDB `players_s{N}/{uid}` — pfpUrl / avatarUrl / name.
+   *   5) Letter fallback (pierwsza litera + gradient + channel badge).
+   * Pole `preview.source` niesie info dla UI, skąd przyszły dane.
    */
   async function ptgResolveInviterPreview(ownerId) {
-      const preview = { id: ownerId, name: "", avatarUrl: "", ensName: "", basename: "" };
+      const preview = {
+          id: ownerId,
+          name: "",
+          avatarUrl: "",
+          ensName: "",
+          basename: "",
+          source: "",
+      };
       if (!ownerId) return preview;
+      const idStr = String(ownerId).trim();
 
+      let storedName = "";
       try {
           const pSnap = await get(playerDocRef(ownerId));
           if (pSnap.exists()) {
               const v = pSnap.val() || {};
-              if (typeof v.name === "string" && v.name.trim()) preview.name = v.name.trim();
-              if (typeof v.pfpUrl === "string" && /^https?:\/\//.test(v.pfpUrl)) preview.avatarUrl = v.pfpUrl;
-              else if (typeof v.avatarUrl === "string" && /^https?:\/\//.test(v.avatarUrl)) preview.avatarUrl = v.avatarUrl;
+              if (typeof v.name === "string" && v.name.trim()) storedName = v.name.trim();
+              if (typeof v.pfpUrl === "string" && /^https?:\/\//.test(v.pfpUrl)) {
+                  preview.avatarUrl = v.pfpUrl;
+                  preview.source = "rtdb";
+              } else if (typeof v.avatarUrl === "string" && /^https?:\/\//.test(v.avatarUrl)) {
+                  preview.avatarUrl = v.avatarUrl;
+                  preview.source = "rtdb";
+              }
+              if (storedName && isBetterDisplayName(storedName)) preview.name = storedName;
           }
       } catch (_) {}
 
-      if (/^0x[a-fA-F0-9]{40}$/.test(String(ownerId || ""))) {
-          try {
-              const r = await resolveInviterProfilesFromServer([ownerId]);
-              const key = String(ownerId).toLowerCase();
+      const is0x = /^0x[a-fA-F0-9]{40}$/.test(idStr);
+      const isFid = /^fcfid\d+$/i.test(idStr);
+      const fidNum = isFid ? parseInt(idStr.replace(/^fcfid/i, ""), 10) : null;
+      const fcHandle = is0x || isFid ? "" : ptgGuessFarcasterHandle(ownerId, storedName);
+
+      try {
+          const r = await resolveInviterProfilesFromServer({
+              addresses: is0x ? [idStr] : [],
+              fids: isFid && fidNum ? [fidNum] : [],
+              usernames: fcHandle ? [fcHandle] : [],
+          });
+          if (is0x) {
+              const key = idStr.toLowerCase();
               const n = r.names && r.names[key];
               const p = r.pfps && r.pfps[key];
               if (n && String(n).trim()) {
-                  if (!preview.name || /^0x/i.test(preview.name)) preview.name = String(n).trim();
                   const nt = String(n).trim();
+                  if (!preview.name || /^0x/i.test(preview.name)) preview.name = nt;
                   if (/\.base\.eth$/i.test(nt)) preview.basename = nt;
                   else if (/\.eth$/i.test(nt)) preview.ensName = nt;
               }
               if (p && /^https?:\/\//.test(p)) {
-                  if (!preview.avatarUrl) preview.avatarUrl = p;
+                  preview.avatarUrl = p;
+                  preview.source = "farcaster";
+              }
+          }
+          if (isFid && fidNum) {
+              const fcEntry = r.byFid && r.byFid[String(fidNum)];
+              if (fcEntry) {
+                  if (fcEntry.name && (!preview.name || /^FID\s/i.test(preview.name))) preview.name = fcEntry.name;
+                  if (fcEntry.pfp && /^https?:\/\//.test(fcEntry.pfp)) {
+                      preview.avatarUrl = fcEntry.pfp;
+                      preview.source = "farcaster";
+                  }
+              }
+          }
+          if (fcHandle) {
+              const hk = fcHandle.toLowerCase();
+              const fcEntry = r.byHandle && r.byHandle[hk];
+              if (fcEntry) {
+                  if (fcEntry.name && (!preview.name || !isBetterDisplayName(preview.name))) preview.name = fcEntry.name;
+                  if (fcEntry.pfp && /^https?:\/\//.test(fcEntry.pfp)) {
+                      preview.avatarUrl = fcEntry.pfp;
+                      preview.source = "farcaster";
+                  }
+              }
+          }
+      } catch (_) {}
+
+      if (is0x && (!preview.name || /^0x/i.test(preview.name))) {
+          try {
+              const bn = await resolveBasenameForAddress(ownerId);
+              if (bn && String(bn).trim()) {
+                  preview.name = String(bn).trim();
+                  preview.basename = preview.basename || String(bn).trim();
+                  if (!preview.source) preview.source = "basename";
               }
           } catch (_) {}
+      }
 
-          if (!preview.name || /^0x/i.test(preview.name)) {
-              try {
-                  const bn = await resolveBasenameForAddress(ownerId);
-                  if (bn && String(bn).trim()) {
-                      preview.name = String(bn).trim();
-                      preview.basename = preview.basename || String(bn).trim();
-                  }
-              } catch (_) {}
-          }
-
-          if (!preview.avatarUrl && preview.ensName) {
-              preview.avatarUrl = "https://metadata.ens.domains/mainnet/avatar/" + encodeURIComponent(preview.ensName);
-          }
+      if (!preview.avatarUrl && preview.ensName) {
+          preview.avatarUrl = "https://metadata.ens.domains/mainnet/avatar/" + encodeURIComponent(preview.ensName);
+          if (!preview.source) preview.source = "ens";
+      }
+      if (!preview.avatarUrl && preview.basename) {
+          preview.avatarUrl = "https://metadata.ens.domains/mainnet/avatar/" + encodeURIComponent(preview.basename);
+          if (!preview.source) preview.source = "basename";
       }
 
       if (!preview.name) preview.name = formatLeaderboardDisplayName(ownerId, {});
+      if (!preview.source) preview.source = preview.avatarUrl ? "rtdb" : "letter";
       return preview;
   }
 
@@ -5536,50 +5725,94 @@
       const avEl = document.getElementById("inviteAcceptAvatar");
       const fallbackEl = document.getElementById("inviteAcceptAvatarFallback");
       const badgeEl = document.getElementById("inviteAcceptAvatarBadge");
+      const srcEl = document.getElementById("inviteAcceptSource");
+      const srcLabelEl = document.getElementById("inviteAcceptSourceLabel");
 
       ptgApplyInviteAcceptChannelStyling(ptgInviteChannelFromStorage());
 
+      /* Stan loadingowy — shimmer na nicku + awatarze, dopóki preview nie przyjdzie. */
       const initialLetter = ptgInviterAvatarMarkup("", ownerId);
-      if (fallbackEl) fallbackEl.textContent = initialLetter || "?";
-      if (nickEl) nickEl.textContent = formatLeaderboardDisplayName(ownerId, {});
+      if (fallbackEl) {
+          fallbackEl.style.display = "";
+          fallbackEl.textContent = initialLetter || "?";
+      }
+      if (nickEl) {
+          nickEl.textContent = formatLeaderboardDisplayName(ownerId, {});
+          nickEl.classList.add("invite-accept-nick--loading");
+      }
+      if (avEl) {
+          avEl.classList.add("invite-accept-avatar--loading");
+          const stale = avEl.querySelector("img");
+          if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
+      }
+      if (srcEl) {
+          srcEl.hidden = true;
+          srcEl.setAttribute("data-src", "");
+      }
 
       overlay.classList.add("show");
       overlay.setAttribute("aria-hidden", "false");
 
+      let preview = null;
       try {
-          const preview = await ptgResolveInviterPreview(ownerId);
-          if (nickEl && preview.name) nickEl.textContent = preview.name;
-          if (fallbackEl) {
-              fallbackEl.textContent = ptgInviterAvatarMarkup(preview.name, ownerId) || "?";
+          preview = await ptgResolveInviterPreview(ownerId);
+      } catch (_) {
+          preview = null;
+      }
+      if (nickEl) nickEl.classList.remove("invite-accept-nick--loading");
+      if (avEl) avEl.classList.remove("invite-accept-avatar--loading");
+      if (!preview) return;
+
+      if (nickEl && preview.name) nickEl.textContent = preview.name;
+      if (fallbackEl) {
+          fallbackEl.textContent = ptgInviterAvatarMarkup(preview.name, ownerId) || "?";
+      }
+
+      /* Etykieta źródła profilu — pomaga odróżnić FC-owy pfp od samego basename. */
+      if (srcEl && srcLabelEl) {
+          let label = "";
+          const src = preview.source || "";
+          if (src === "farcaster") label = "Farcaster profile";
+          else if (src === "basename") label = preview.basename || "Basename";
+          else if (src === "ens") label = preview.ensName || "ENS";
+          else if (src === "rtdb" && preview.avatarUrl) label = "Verified player";
+          if (label) {
+              srcEl.setAttribute("data-src", src);
+              srcLabelEl.textContent = label;
+              srcEl.hidden = false;
+          } else {
+              srcEl.hidden = true;
           }
-          if (avEl && preview.avatarUrl) {
-              const existingImg = avEl.querySelector("img");
-              const img = document.createElement("img");
-              img.alt = "";
-              img.loading = "lazy";
-              img.decoding = "async";
-              img.referrerPolicy = "no-referrer";
-              img.addEventListener(
-                  "error",
-                  function () {
-                      if (img.parentNode) img.parentNode.removeChild(img);
-                      if (fallbackEl) fallbackEl.style.display = "";
-                      if (badgeEl) badgeEl.style.display = "";
-                  },
-                  { once: true },
-              );
-              img.addEventListener(
-                  "load",
-                  function () {
-                      if (existingImg && existingImg.parentNode) existingImg.parentNode.removeChild(existingImg);
-                      if (fallbackEl) fallbackEl.style.display = "none";
-                  },
-                  { once: true },
-              );
-              img.src = preview.avatarUrl;
-              if (!avEl.contains(img)) avEl.appendChild(img);
-          }
-      } catch (_) {}
+      }
+
+      if (avEl && preview.avatarUrl) {
+          const existingImg = avEl.querySelector("img");
+          const img = document.createElement("img");
+          img.alt = "";
+          img.loading = "eager";
+          img.decoding = "async";
+          img.referrerPolicy = "no-referrer";
+          img.addEventListener(
+              "error",
+              function () {
+                  if (img.parentNode) img.parentNode.removeChild(img);
+                  if (fallbackEl) fallbackEl.style.display = "";
+                  if (badgeEl) badgeEl.style.display = "";
+              },
+              { once: true },
+          );
+          img.addEventListener(
+              "load",
+              function () {
+                  if (existingImg && existingImg.parentNode) existingImg.parentNode.removeChild(existingImg);
+                  if (fallbackEl) fallbackEl.style.display = "none";
+                  img.classList.add("invite-accept-avatar-img--loaded");
+              },
+              { once: true },
+          );
+          img.src = preview.avatarUrl;
+          if (!avEl.contains(img)) avEl.appendChild(img);
+      }
   }
 
   function ptgMarkInviteAcceptSeen() {
