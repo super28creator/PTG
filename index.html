@@ -4344,71 +4344,13 @@
   }
 
   /**
-   * Jesteś fcFID + masz podłączony portfel — w RTDB często: Ty → Twój 0x → ktoś.
-   * W UI wygląda to jakby „super-creator.base.eth” (Twój adres) zapraszał osobno.
-   * Spłaszczamy: podciągamy zaproszonych spod Twojego 0x jako Twoje L1 (bez fałszywego „drugiego poziomu”).
+   * Wcześniej: fcFID + podłączony portfel → spłaszczanie wpisów z `invite_entries/{0x}`
+   * pod jeden widok Farcaster (wyglądało jak „Base name zaprasza osobno”).
+   * **Wyłączone na stałe:** Farcaster i tożsamość portfelowa / Basename mają być
+   * rozdzielone w UI — każdy wpis zostaje pod kanałem zapisanym w `via`.
    */
   async function ptgMergeLinkedWalletInviteEntries(val) {
-      if (!db || !val || typeof val !== "object") return val;
-      if (typeof myUserId !== "string" || !myUserId.startsWith("fcfid")) return val;
-      const prov = getEmbeddedEthProvider();
-      if (!prov || typeof prov.request !== "function") return val;
-      let wallet = null;
-      try {
-          const acc = await prov.request({ method: "eth_accounts" });
-          if (acc && acc[0]) wallet = ethers.utils.getAddress(acc[0]);
-      } catch (_) {
-          return val;
-      }
-      if (!wallet) return val;
-      const wLower = wallet.toLowerCase();
-      const entries = Object.entries(val);
-      let walletEdgeKey = null;
-      let walletVia = "farcaster";
-      for (let i = 0; i < entries.length; i++) {
-          const [k, v] = entries[i];
-          if (v && typeof v === "object" && v.invitee && String(v.invitee).toLowerCase() === wLower) {
-              walletEdgeKey = k;
-              const walletViaRaw = String(v.via || "farcaster").toLowerCase();
-              walletVia = walletViaRaw === "base" ? "base" : walletViaRaw === "web" || walletViaRaw === "browser" ? "web" : "farcaster";
-              break;
-          }
-      }
-      if (!walletEdgeKey) return val;
-      let nestedSnap;
-      try {
-          nestedSnap = await get(ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + wallet));
-      } catch (_) {
-          return val;
-      }
-      if (!nestedSnap.exists()) return val;
-      const nestedRaw = nestedSnap.val();
-      if (!nestedRaw || typeof nestedRaw !== "object") return val;
-      const nestedList = Object.entries(nestedRaw).filter(([k, v]) => v && typeof v === "object" && v.invitee);
-      if (!nestedList.length) return val;
-      const out = { ...val };
-      delete out[walletEdgeKey];
-      for (let i = 0; i < nestedList.length; i++) {
-          const [k, v] = nestedList[i];
-          const nk = "mwl_" + String(k).replace(/[^a-zA-Z0-9_]/g, "_") + "_" + i;
-          const nv = v && typeof v === "object" ? v : {};
-          out[nk] = {
-              invitee: nv.invitee,
-              ts: typeof nv.ts === "number" ? nv.ts : Date.now(),
-              via: (() => {
-                  /* Kanał z DZIECKA ma pierwszeństwo (wpis nadaje via przy atrybucji).
-                   * Brak via → NIE dziedziczymy z wallet edge (inaczej zaproszenie przez
-                   * web trafiało do Base gdy fcFID połączył portfel w Base app). */
-                  const raw = String(nv.via || "").toLowerCase();
-                  if (raw === "base") return "base";
-                  if (raw === "web" || raw === "browser") return "web";
-                  if (raw === "farcaster") return "farcaster";
-                  return "web";
-              })(),
-              _mergedFromLinkedWallet: true,
-          };
-      }
-      return out;
+      return val;
   }
 
   function ptgSplitInvitesByVia(val) {
@@ -5346,17 +5288,18 @@
   }
 
   /**
-   * Podgląd invitera w modalu „Accept invite” — kolejność zależy od KANAŁU zaproszenia
-   * (`inviteChannel` lub `ptgInviteChannelFromStorage()`), nie od jednej globalnej listy:
+   * Podgląd invitera w modalu „Accept invite” — **Farcaster i Basename są rozłączone**:
+   * żaden kanał nie dociąga drugiego źródła „na ratunek”.
    *
-   *   • **Base** (`via=base` / Base App): najpierw **Basename** (0x), potem uzupełnienie
-   *     z Farcaster (Neynar) jeśli brak basename lub brak awatara; FID / handle → Neynar.
-   *   • **Farcaster**: najpierw **Farcaster** (Neynar), potem basename / ENS dla 0x
-   *     jeśli nadal brakuje nazwy; awatary z metadanych ENS gdy mamy nazwę .eth.
-   *   • **Web**: tylko **basename → Ethereum ENS** dla portfeli (bez Neynar); brak
-   *     połączenia z Base Name → wtedy ENS mainnet; FCFID / sam nick → RTDB + fallback.
+   *   • **Base** (`via=base`): tylko **Basename** (on-chain Base) dla `0x` + awatar z
+   *     metadanych ENS dla tej nazwy; brak basename → zostaje **RTDB** + litera.
+   *     **Bez Neynar / Farcaster.**
+   *   • **Farcaster**: tylko **Neynar** (0x / FID / handle) + to, co już było w **RTDB**
+   *     przed otwarciem modala. **Bez basename / ENS mainnet.**
+   *   • **Web**: tylko **basename → Ethereum ENS** dla `0x` (bez Neynar); pozostałe ID
+   *     → RTDB + litera.
    *
-   * `preview.source` — etykieta pigułki: basename | ens | farcaster | rtdb | letter.
+   * `preview.source` — pigułka: basename | ens | farcaster | rtdb | letter.
    */
   async function ptgResolveInviterPreview(ownerId, inviteChannel) {
       const preview = {
@@ -5444,7 +5387,7 @@
           return preview;
       }
 
-      /* ——— Base: basename pierwszy (0x), potem Neynar; FID/handle → Neynar ——— */
+      /* ——— Base: wyłącznie Basename (0x) + RTDB — bez Farcaster / Neynar ——— */
       if (ch === "base") {
           if (is0x) {
               try {
@@ -5458,53 +5401,6 @@
                       if (av) preview.avatarUrl = av;
                   }
               } catch (_) {}
-              if (!preview.basename || !preview.avatarUrl) {
-                  try {
-                      const r = await resolveInviterProfilesFromServer({
-                          addresses: [idStr],
-                          fids: [],
-                          usernames: [],
-                      });
-                      const key = idStr.toLowerCase();
-                      const n = r.names && r.names[key];
-                      const p = r.pfps && r.pfps[key];
-                      if (!preview.basename && n && String(n).trim()) {
-                          const nt = String(n).trim();
-                          if (!preview.name || /^0x/i.test(preview.name)) preview.name = nt;
-                          if (/\.base\.eth$/i.test(nt)) preview.basename = nt;
-                          else if (/\.eth$/i.test(nt)) preview.ensName = nt;
-                      }
-                      if (p && /^https?:\/\//.test(p) && !preview.avatarUrl) {
-                          preview.avatarUrl = p;
-                          preview.source = "farcaster";
-                      }
-                  } catch (_) {}
-              }
-          } else if (isFid && fidNum) {
-              try {
-                  const r = await resolveInviterProfilesFromServer({ addresses: [], fids: [fidNum], usernames: [] });
-                  const fcEntry = r.byFid && r.byFid[String(fidNum)];
-                  if (fcEntry) {
-                      if (fcEntry.name) preview.name = fcEntry.name;
-                      if (fcEntry.pfp && /^https?:\/\//.test(fcEntry.pfp)) {
-                          preview.avatarUrl = fcEntry.pfp;
-                          preview.source = "farcaster";
-                      }
-                  }
-              } catch (_) {}
-          } else if (fcHandle) {
-              try {
-                  const r = await resolveInviterProfilesFromServer({ addresses: [], fids: [], usernames: [fcHandle] });
-                  const hk = fcHandle.toLowerCase();
-                  const fcEntry = r.byHandle && r.byHandle[hk];
-                  if (fcEntry) {
-                      if (fcEntry.name) preview.name = fcEntry.name;
-                      if (fcEntry.pfp && /^https?:\/\//.test(fcEntry.pfp)) {
-                          preview.avatarUrl = fcEntry.pfp;
-                          preview.source = "farcaster";
-                      }
-                  }
-              } catch (_) {}
           }
           applyEnsAvatarIfName();
           if (preview.basename) preview.source = "basename";
@@ -5513,7 +5409,7 @@
           return preview;
       }
 
-      /* ——— Farcaster: konto FC (Neynar) pierwsze, potem basename/ENS dla 0x ——— */
+      /* ——— Farcaster: wyłącznie Neynar + RTDB — bez basename / ENS mainnet ——— */
       try {
           const r = await resolveInviterProfilesFromServer({
               addresses: is0x ? [idStr] : [],
@@ -5527,8 +5423,6 @@
               if (n && String(n).trim()) {
                   const nt = String(n).trim();
                   if (!preview.name || /^0x/i.test(preview.name)) preview.name = nt;
-                  if (/\.base\.eth$/i.test(nt)) preview.basename = nt;
-                  else if (/\.eth$/i.test(nt)) preview.ensName = nt;
               }
               if (p && /^https?:\/\//.test(p)) {
                   preview.avatarUrl = p;
@@ -5558,28 +5452,6 @@
           }
       } catch (_) {}
 
-      if (is0x && (!preview.name || /^0x/i.test(preview.name))) {
-          try {
-              const bn = await resolveBasenameForAddress(ownerId);
-              if (bn && String(bn).trim()) {
-                  preview.name = String(bn).trim();
-                  preview.basename = preview.basename || String(bn).trim();
-                  if (!preview.source || preview.source === "rtdb") preview.source = "basename";
-              }
-          } catch (_) {}
-      }
-      if (is0x && (!preview.name || /^0x/i.test(preview.name))) {
-          try {
-              const ens = await resolveEthMainnetEnsName(ownerId);
-              if (ens && String(ens).trim()) {
-                  preview.name = String(ens).trim();
-                  preview.ensName = preview.ensName || String(ens).trim();
-                  if (!preview.source || preview.source === "rtdb") preview.source = "ens";
-              }
-          } catch (_) {}
-      }
-
-      applyEnsAvatarIfName();
       if (!preview.name) preview.name = formatLeaderboardDisplayName(ownerId, {});
       if (!preview.source) preview.source = preview.avatarUrl ? "rtdb" : "letter";
       return preview;
