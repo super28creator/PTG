@@ -3589,6 +3589,38 @@
 </div>
 
 <script>
+  (function (w) {
+      /**
+       * ref/via z pełnego URL (search **albo** fragment po `?` w hash — typowe dla Base App / in-app).
+       * Opcjonalny `href` (np. embed z Mini App) zamiast `location.href`.
+       */
+      w.__ptgCaptureRefViaFromUrl = function (hrefOpt) {
+          try {
+              var origin = (w.location && w.location.origin) || "https://phrasetoguess.xyz";
+              var href = hrefOpt || (w.location && w.location.href) || "";
+              var u = new URL(href, origin);
+              var chunks = [];
+              if (u.search && String(u.search).length > 1) chunks.push(String(u.search).slice(1));
+              var h = u.hash || "";
+              if (h.length > 1) {
+                  var inner = h.slice(1);
+                  var qm = inner.indexOf("?");
+                  if (qm >= 0) chunks.push(inner.slice(qm + 1));
+              }
+              for (var i = 0; i < chunks.length; i++) {
+                  var p = new URLSearchParams(chunks[i]);
+                  var r = p.get("ref");
+                  if (r && /^[a-f0-9]{12}$/i.test(String(r).trim())) {
+                      return { ref: String(r).trim().toLowerCase(), via: p.get("via") };
+                  }
+              }
+          } catch (e0) {}
+          return { ref: null, via: null };
+      };
+  })(window);
+</script>
+
+<script>
   (function () {
       function forceHideLoadingScreen() {
           var el = document.getElementById("loadingScreen");
@@ -3605,21 +3637,17 @@
           setTimeout(forceHideLoadingScreen, 0);
       });
           try {
-              var q = window.location && window.location.search;
-              if (q && q.length > 1) {
-                  var p = new URLSearchParams(q.slice(1));
-                  var r = p.get("ref");
-                  if (r && /^[a-f0-9]{12}$/i.test(String(r).trim())) {
-                      try {
-                          localStorage.setItem("ptg_pending_ref", String(r).trim().toLowerCase());
-                          var via = p.get("via");
-                          if (via === "farcaster" || via === "base" || via === "web" || via === "browser") {
-                              localStorage.setItem("ptg_pending_via", via === "browser" ? "web" : via);
-                          } else {
-                              localStorage.removeItem("ptg_pending_via");
-                          }
-                      } catch (e) {}
-                  }
+              var cap = window.__ptgCaptureRefViaFromUrl && window.__ptgCaptureRefViaFromUrl();
+              if (cap && cap.ref) {
+                  try {
+                      localStorage.setItem("ptg_pending_ref", cap.ref);
+                      var via = cap.via;
+                      if (via === "farcaster" || via === "base" || via === "web" || via === "browser") {
+                          localStorage.setItem("ptg_pending_via", via === "browser" ? "web" : via);
+                      } else {
+                          localStorage.removeItem("ptg_pending_via");
+                      }
+                  } catch (e) {}
               }
           } catch (e) {}
   })();
@@ -4147,61 +4175,80 @@
    * Bumpnij REFERRAL_DATA_VERSION, żeby „wyzerować" drzewo zaproszeń (bez
    * zmiany rankingu). Stare dane zostają w RTDB jako archiwum.
    */
-  const REFERRAL_DATA_VERSION = 5;
+  const REFERRAL_DATA_VERSION = 6;
   function ptgReferralsRtdbRoot() {
       const suffix = REFERRAL_DATA_VERSION > 1 ? "_v" + REFERRAL_DATA_VERSION : "";
       return "referrals_v1/s" + LEADERBOARD_SEASON + suffix;
   }
 
   /**
-   * Starsze korzenie dla tego samego sezonu — używane tylko jako fallback przy
-   * czytaniu `index/{refCode}`, gdy zapraszający nie odwiedził jeszcze aplikacji
-   * po bumpie `REFERRAL_DATA_VERSION`. Nie piszemy do starych korzeni — gdy fallback
-   * trafi, on-demand zreplikujemy wpis do bieżącego roota.
+   * Kolejność ścieżek RTDB do odczytu `index/{refCode}` zanim się poddamy.
+   * 1) Bieżący sezon + starsze _v (ten sam `LEADERBOARD_SEASON`).
+   * 2) Archiwalne sezony (np. s4 gdy kiedyś był deploy na `players_s4`) — inaczej
+   *    refCode z linka nigdy nie mapuje się na ownerId po zmianie sezonu na s2.
+   * Zatrzymujemy się na pierwszym trafieniu; trafienie replikujemy do bieżącego roota.
    */
-  function ptgReferralsLegacyRoots() {
-      const roots = [];
+  function ptgReferralIndexLookupRootsOrdered() {
+      const out = [];
+      const seen = new Set();
+      function push(p) {
+          if (!p || seen.has(p)) return;
+          seen.add(p);
+          out.push(p);
+      }
+      const curSeason = LEADERBOARD_SEASON;
+      push(ptgReferralsRtdbRoot());
       for (let v = REFERRAL_DATA_VERSION - 1; v >= 1; v--) {
           const suffix = v > 1 ? "_v" + v : "";
-          roots.push("referrals_v1/s" + LEADERBOARD_SEASON + suffix);
+          push("referrals_v1/s" + curSeason + suffix);
       }
-      return roots;
+      const archiveSeasons = [4, 3, 5, 6, 1];
+      for (let si = 0; si < archiveSeasons.length; si++) {
+          const s = archiveSeasons[si];
+          if (s === curSeason) continue;
+          for (let v = 12; v >= 1; v--) {
+              const suffix = v > 1 ? "_v" + v : "";
+              push("referrals_v1/s" + s + suffix);
+          }
+      }
+      return out;
   }
 
+  let __ptgRefOwnerCache = { code: "", owner: null, at: 0 };
   /**
-   * Rozwiąż ownerId dla refCode'a, próbując aktualnego roota oraz starszych
-   * (po bumpie wersji). Jeśli trafiamy na starszym, replikujemy wpis w bieżącym
-   * roocie, żeby dalsze operacje (edge/parent_of/summary) działały spójnie.
+   * Rozwiąż ownerId dla refCode'a — aktualny root, potem legacy (wersje + inne sezony).
+   * Przy trafieniu poza bieżącym rootem replikujemy `index/{refCode}` do `ptgReferralsRtdbRoot()`.
    */
   async function ptgResolveOwnerIdForRefCodeAnyVersion(refCode) {
       if (!db || !refCode) return null;
       const codeLc = String(refCode).trim().toLowerCase();
       if (!/^[a-f0-9]{12}$/.test(codeLc)) return null;
+      const now = Date.now();
+      if (__ptgRefOwnerCache.code === codeLc && __ptgRefOwnerCache.owner && now - __ptgRefOwnerCache.at < 120000) {
+          return __ptgRefOwnerCache.owner;
+      }
       const currentRoot = ptgReferralsRtdbRoot();
-      try {
-          const s = await get(ref(db, currentRoot + "/index/" + codeLc));
-          if (s.exists()) {
-              const v = s.val();
-              const owner = v && typeof v === "object" ? v.ownerId : null;
-              if (owner) return String(owner);
-          }
-      } catch (_) {}
-      const legacy = ptgReferralsLegacyRoots();
-      for (let i = 0; i < legacy.length; i++) {
+      const roots = ptgReferralIndexLookupRootsOrdered();
+      for (let i = 0; i < roots.length; i++) {
+          const root = roots[i];
           try {
-              const s = await get(ref(db, legacy[i] + "/index/" + codeLc));
+              const s = await get(ref(db, root + "/index/" + codeLc));
               if (!s.exists()) continue;
-              const v = s.val();
-              const owner = v && typeof v === "object" ? v.ownerId : null;
+              const val = s.val();
+              const owner = val && typeof val === "object" ? val.ownerId : null;
               if (!owner) continue;
-              try {
-                  await set(ref(db, currentRoot + "/index/" + codeLc), {
-                      ownerId: owner,
-                      ts: Date.now(),
-                      migratedFrom: legacy[i],
-                  });
-              } catch (_) {}
-              return String(owner);
+              const ownerStr = String(owner);
+              if (root !== currentRoot) {
+                  try {
+                      await set(ref(db, currentRoot + "/index/" + codeLc), {
+                          ownerId: ownerStr,
+                          ts: Date.now(),
+                          migratedFrom: root,
+                      });
+                  } catch (_) {}
+              }
+              __ptgRefOwnerCache = { code: codeLc, owner: ownerStr, at: now };
+              return ownerStr;
           } catch (_) {}
       }
       return null;
@@ -4970,10 +5017,12 @@
       let refCode = "";
       let via = "";
       try {
-          const u = new URL(embed);
-          const r = u.searchParams.get("ref");
-          const v = u.searchParams.get("via");
-          if (r && /^[a-f0-9]{12}$/i.test(String(r).trim())) refCode = String(r).trim().toLowerCase();
+          const cap =
+              typeof window !== "undefined" && typeof window.__ptgCaptureRefViaFromUrl === "function"
+                  ? window.__ptgCaptureRefViaFromUrl(embed)
+                  : { ref: null, via: null };
+          if (cap && cap.ref && /^[a-f0-9]{12}$/i.test(String(cap.ref).trim())) refCode = String(cap.ref).trim().toLowerCase();
+          const v = cap && cap.via;
           if (v === "farcaster" || v === "base" || v === "web" || v === "browser") via = v === "browser" ? "web" : v;
       } catch (_) {}
       if (!refCode) return;
@@ -5105,9 +5154,11 @@
   /** Z paska adresu — zawsze nadpisuje localStorage (URL jest źródłem prawdy po wejściu z linku). */
   function ptgSyncPendingRefFromUrl() {
       try {
-          if (typeof location === "undefined" || !location.search || location.search.length < 2) return;
-          const p = new URLSearchParams(location.search.slice(1));
-          const r = p.get("ref");
+          const cap =
+              typeof window !== "undefined" && typeof window.__ptgCaptureRefViaFromUrl === "function"
+                  ? window.__ptgCaptureRefViaFromUrl()
+                  : { ref: null, via: null };
+          const r = cap && cap.ref;
           if (!r || !/^[a-f0-9]{12}$/i.test(String(r).trim())) return;
           const rc = String(r).trim().toLowerCase();
           localStorage.setItem("ptg_pending_ref", rc);
@@ -5117,7 +5168,7 @@
           try {
               sessionStorage.removeItem("ptg_invite_accept_dismissed_" + rc);
           } catch (_) {}
-          const via = p.get("via");
+          const via = cap && cap.via;
           if (via === "farcaster" || via === "base" || via === "web" || via === "browser") localStorage.setItem("ptg_pending_via", via === "browser" ? "web" : via);
           else localStorage.removeItem("ptg_pending_via");
       } catch (_) {}
@@ -5148,8 +5199,9 @@
           console.warn("referral index lookup", e);
           return;
       }
+      /* Brak indeksu: nie czyść pending — ref może być w starym sezonie RTDB (migracja przy kolejnym
+       * odczycie), albo `?ref=` siedzi tylko w hash (portfel) i dopiero co wpisany do LS. */
       if (!ownerId) {
-          ptgClearPendingRefCapture();
           return;
       }
       if (ownerId === myUserId) {
