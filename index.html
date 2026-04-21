@@ -4147,11 +4147,47 @@
    * Bumpnij REFERRAL_DATA_VERSION, żeby „wyzerować" drzewo zaproszeń (bez
    * zmiany rankingu). Stare dane zostają w RTDB jako archiwum.
    */
-  const REFERRAL_DATA_VERSION = 2;
+  const REFERRAL_DATA_VERSION = 3;
   function ptgReferralsRtdbRoot() {
       const suffix = REFERRAL_DATA_VERSION > 1 ? "_v" + REFERRAL_DATA_VERSION : "";
       return "referrals_v1/s" + LEADERBOARD_SEASON + suffix;
   }
+
+  /**
+   * Jednorazowy wipe localStorage dla przełomu wersji reflinków — po zmianie
+   * REFERRAL_DATA_VERSION stare pending/seen (zebrane przed poprawką) nie mogą
+   * reaktywować modala ani brudzić atrybucji w nowym roocie RTDB.
+   */
+  (function ptgPurgeStaleReferralLocalStorage() {
+      try {
+          const markerKey = "ptg_ref_storage_version";
+          const cur = String(REFERRAL_DATA_VERSION);
+          if (localStorage.getItem(markerKey) === cur) return;
+          const drop = [
+              "ptg_pending_ref",
+              "ptg_pending_via",
+              "ptg_invite_last_ref",
+              "ptg_invite_last_via",
+          ];
+          for (let i = 0; i < drop.length; i++) {
+              try {
+                  localStorage.removeItem(drop[i]);
+              } catch (_) {}
+          }
+          const toRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (!k) continue;
+              if (k.indexOf("ptg_invite_accept_seen_") === 0) toRemove.push(k);
+          }
+          for (let i = 0; i < toRemove.length; i++) {
+              try {
+                  localStorage.removeItem(toRemove[i]);
+              } catch (_) {}
+          }
+          localStorage.setItem(markerKey, cur);
+      } catch (_) {}
+  })();
 
   /**
    * Bez jednorazowego bonusu za samo zaproszenie — prowizja naliczana JEDYNIE
