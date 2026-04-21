@@ -3928,6 +3928,33 @@
   const REVERSE_REGISTRAR_NODE_ABI = ["function node(address addr) view returns (bytes32)"];
 
   let basenameReadProvider = null;
+  let ethMainnetReadProvider = null;
+
+  function ptgGetEthMainnetReadProvider() {
+      if (!ethMainnetReadProvider) {
+          ethMainnetReadProvider = new ethers.providers.JsonRpcProvider("https://cloudflare-eth.com");
+      }
+      return ethMainnetReadProvider;
+  }
+
+  /** Ethereum mainnet ENS (bez Neynar) — dla kanału „web": basename → ten krok. */
+  async function resolveEthMainnetEnsName(address) {
+      try {
+          const prov = ptgGetEthMainnetReadProvider();
+          const chk = ethers.utils.getAddress(address);
+          const n = await prov.lookupAddress(chk).catch(() => null);
+          if (n && typeof n === "string" && n.trim().length > 0) return n.trim();
+      } catch (_) {}
+      return null;
+  }
+
+  /** Awatar z publicznego endpointu ENS (basename i .eth). */
+  function ptgEnsMetadataAvatarUrl(fullName) {
+      if (!fullName || typeof fullName !== "string") return "";
+      const t = fullName.trim();
+      if (!/\.eth$/i.test(t)) return "";
+      return "https://metadata.ens.domains/mainnet/avatar/" + encodeURIComponent(t);
+  }
 
   /** Zgodne z Sha3.hexAddress(addr) z Base ReverseRegistrar. */
   function sha3HexAddressLabel(address) {
@@ -5319,16 +5346,19 @@
   }
 
   /**
-   * Kolejność rozwiązywania avatara + nazwy invitera (najbogatsze wygrywa,
-   * ale zawsze wracamy z CZYMŚ — nawet fallback literowym):
-   *   1) Farcaster (Neynar) — przez FID, username lub 0x.
-   *   2) Basename (Base, *.base.eth) — nazwa; avatar przez metadata.ens.
-   *   3) Ethereum ENS — nazwa + avatar (metadata.ens.domains).
-   *   4) Cache w RTDB `players_s{N}/{uid}` — pfpUrl / avatarUrl / name.
-   *   5) Letter fallback (pierwsza litera + gradient + channel badge).
-   * Pole `preview.source` niesie info dla UI, skąd przyszły dane.
+   * Podgląd invitera w modalu „Accept invite” — kolejność zależy od KANAŁU zaproszenia
+   * (`inviteChannel` lub `ptgInviteChannelFromStorage()`), nie od jednej globalnej listy:
+   *
+   *   • **Base** (`via=base` / Base App): najpierw **Basename** (0x), potem uzupełnienie
+   *     z Farcaster (Neynar) jeśli brak basename lub brak awatara; FID / handle → Neynar.
+   *   • **Farcaster**: najpierw **Farcaster** (Neynar), potem basename / ENS dla 0x
+   *     jeśli nadal brakuje nazwy; awatary z metadanych ENS gdy mamy nazwę .eth.
+   *   • **Web**: tylko **basename → Ethereum ENS** dla portfeli (bez Neynar); brak
+   *     połączenia z Base Name → wtedy ENS mainnet; FCFID / sam nick → RTDB + fallback.
+   *
+   * `preview.source` — etykieta pigułki: basename | ens | farcaster | rtdb | letter.
    */
-  async function ptgResolveInviterPreview(ownerId) {
+  async function ptgResolveInviterPreview(ownerId, inviteChannel) {
       const preview = {
           id: ownerId,
           name: "",
@@ -5338,7 +5368,11 @@
           source: "",
       };
       if (!ownerId) return preview;
+      const ch = inviteChannel || ptgInviteChannelFromStorage();
       const idStr = String(ownerId).trim();
+      const is0x = /^0x[a-fA-F0-9]{40}$/.test(idStr);
+      const isFid = /^fcfid\d+$/i.test(idStr);
+      const fidNum = isFid ? parseInt(idStr.replace(/^fcfid/i, ""), 10) : null;
 
       let storedName = "";
       try {
@@ -5357,11 +5391,129 @@
           }
       } catch (_) {}
 
-      const is0x = /^0x[a-fA-F0-9]{40}$/.test(idStr);
-      const isFid = /^fcfid\d+$/i.test(idStr);
-      const fidNum = isFid ? parseInt(idStr.replace(/^fcfid/i, ""), 10) : null;
       const fcHandle = is0x || isFid ? "" : ptgGuessFarcasterHandle(ownerId, storedName);
 
+      function applyEnsAvatarIfName() {
+          if (preview.avatarUrl) return;
+          if (preview.ensName) {
+              const av = ptgEnsMetadataAvatarUrl(preview.ensName);
+              if (av) {
+                  preview.avatarUrl = av;
+                  if (!preview.source || preview.source === "rtdb") preview.source = "ens";
+              }
+          }
+          if (!preview.avatarUrl && preview.basename) {
+              const av = ptgEnsMetadataAvatarUrl(preview.basename);
+              if (av) {
+                  preview.avatarUrl = av;
+                  if (!preview.source || preview.source === "rtdb") preview.source = "basename";
+              }
+          }
+      }
+
+      /* ——— Web: basename → ENS (bez Farcaster / Neynar) ——— */
+      if (ch === "web") {
+          if (is0x) {
+              try {
+                  const bn = await resolveBasenameForAddress(ownerId);
+                  if (bn && String(bn).trim()) {
+                      const t = String(bn).trim();
+                      preview.name = t;
+                      preview.basename = t;
+                      preview.source = "basename";
+                      const av = ptgEnsMetadataAvatarUrl(t);
+                      if (av) preview.avatarUrl = av;
+                  } else {
+                      const ens = await resolveEthMainnetEnsName(ownerId);
+                      if (ens && String(ens).trim()) {
+                          const t = String(ens).trim();
+                          preview.name = t;
+                          preview.ensName = t;
+                          preview.source = "ens";
+                          const av = ptgEnsMetadataAvatarUrl(t);
+                          if (av) preview.avatarUrl = av;
+                      }
+                  }
+              } catch (_) {}
+          }
+          applyEnsAvatarIfName();
+          if (!preview.name) preview.name = formatLeaderboardDisplayName(ownerId, {});
+          if (preview.basename) preview.source = "basename";
+          else if (preview.ensName) preview.source = "ens";
+          if (!preview.source) preview.source = preview.avatarUrl ? "rtdb" : "letter";
+          return preview;
+      }
+
+      /* ——— Base: basename pierwszy (0x), potem Neynar; FID/handle → Neynar ——— */
+      if (ch === "base") {
+          if (is0x) {
+              try {
+                  const bn = await resolveBasenameForAddress(ownerId);
+                  if (bn && String(bn).trim()) {
+                      const t = String(bn).trim();
+                      preview.name = t;
+                      preview.basename = t;
+                      preview.source = "basename";
+                      const av = ptgEnsMetadataAvatarUrl(t);
+                      if (av) preview.avatarUrl = av;
+                  }
+              } catch (_) {}
+              if (!preview.basename || !preview.avatarUrl) {
+                  try {
+                      const r = await resolveInviterProfilesFromServer({
+                          addresses: [idStr],
+                          fids: [],
+                          usernames: [],
+                      });
+                      const key = idStr.toLowerCase();
+                      const n = r.names && r.names[key];
+                      const p = r.pfps && r.pfps[key];
+                      if (!preview.basename && n && String(n).trim()) {
+                          const nt = String(n).trim();
+                          if (!preview.name || /^0x/i.test(preview.name)) preview.name = nt;
+                          if (/\.base\.eth$/i.test(nt)) preview.basename = nt;
+                          else if (/\.eth$/i.test(nt)) preview.ensName = nt;
+                      }
+                      if (p && /^https?:\/\//.test(p) && !preview.avatarUrl) {
+                          preview.avatarUrl = p;
+                          preview.source = "farcaster";
+                      }
+                  } catch (_) {}
+              }
+          } else if (isFid && fidNum) {
+              try {
+                  const r = await resolveInviterProfilesFromServer({ addresses: [], fids: [fidNum], usernames: [] });
+                  const fcEntry = r.byFid && r.byFid[String(fidNum)];
+                  if (fcEntry) {
+                      if (fcEntry.name) preview.name = fcEntry.name;
+                      if (fcEntry.pfp && /^https?:\/\//.test(fcEntry.pfp)) {
+                          preview.avatarUrl = fcEntry.pfp;
+                          preview.source = "farcaster";
+                      }
+                  }
+              } catch (_) {}
+          } else if (fcHandle) {
+              try {
+                  const r = await resolveInviterProfilesFromServer({ addresses: [], fids: [], usernames: [fcHandle] });
+                  const hk = fcHandle.toLowerCase();
+                  const fcEntry = r.byHandle && r.byHandle[hk];
+                  if (fcEntry) {
+                      if (fcEntry.name) preview.name = fcEntry.name;
+                      if (fcEntry.pfp && /^https?:\/\//.test(fcEntry.pfp)) {
+                          preview.avatarUrl = fcEntry.pfp;
+                          preview.source = "farcaster";
+                      }
+                  }
+              } catch (_) {}
+          }
+          applyEnsAvatarIfName();
+          if (preview.basename) preview.source = "basename";
+          if (!preview.name) preview.name = formatLeaderboardDisplayName(ownerId, {});
+          if (!preview.source) preview.source = preview.avatarUrl ? "rtdb" : "letter";
+          return preview;
+      }
+
+      /* ——— Farcaster: konto FC (Neynar) pierwsze, potem basename/ENS dla 0x ——— */
       try {
           const r = await resolveInviterProfilesFromServer({
               addresses: is0x ? [idStr] : [],
@@ -5412,20 +5564,22 @@
               if (bn && String(bn).trim()) {
                   preview.name = String(bn).trim();
                   preview.basename = preview.basename || String(bn).trim();
-                  if (!preview.source) preview.source = "basename";
+                  if (!preview.source || preview.source === "rtdb") preview.source = "basename";
+              }
+          } catch (_) {}
+      }
+      if (is0x && (!preview.name || /^0x/i.test(preview.name))) {
+          try {
+              const ens = await resolveEthMainnetEnsName(ownerId);
+              if (ens && String(ens).trim()) {
+                  preview.name = String(ens).trim();
+                  preview.ensName = preview.ensName || String(ens).trim();
+                  if (!preview.source || preview.source === "rtdb") preview.source = "ens";
               }
           } catch (_) {}
       }
 
-      if (!preview.avatarUrl && preview.ensName) {
-          preview.avatarUrl = "https://metadata.ens.domains/mainnet/avatar/" + encodeURIComponent(preview.ensName);
-          if (!preview.source) preview.source = "ens";
-      }
-      if (!preview.avatarUrl && preview.basename) {
-          preview.avatarUrl = "https://metadata.ens.domains/mainnet/avatar/" + encodeURIComponent(preview.basename);
-          if (!preview.source) preview.source = "basename";
-      }
-
+      applyEnsAvatarIfName();
       if (!preview.name) preview.name = formatLeaderboardDisplayName(ownerId, {});
       if (!preview.source) preview.source = preview.avatarUrl ? "rtdb" : "letter";
       return preview;
@@ -5755,7 +5909,7 @@
 
       let preview = null;
       try {
-          preview = await ptgResolveInviterPreview(ownerId);
+          preview = await ptgResolveInviterPreview(ownerId, ptgInviteChannelFromStorage());
       } catch (_) {
           preview = null;
       }
