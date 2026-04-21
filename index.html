@@ -3967,6 +3967,21 @@
       }
   }
 
+  /** Ten sam algorytm co dla `myUserId` Farcaster — do porównania zapisanego nicku z wersją „zesanityzowaną”. */
+  function ptgSanitizeFcUserIdKey(displayOrId) {
+      return String(displayOrId || "").replace(/[^a-zA-Z0-9]/g, "");
+  }
+
+  function shouldPreferSessionDisplayNameOverStored(storedName) {
+      if (!isBetterDisplayName(myUsername)) return false;
+      const s = String(storedName || "").trim();
+      const uid = String(myUserId || "").trim();
+      if (!s || s === "undefined" || s === "null") return true;
+      if (s === uid) return true;
+      if (ptgSanitizeFcUserIdKey(s) === uid) return true;
+      return false;
+  }
+
   /** Po zalogowaniu portfelem: pokaż Basename zamiast samego 0x… (klucz RTDB zostaje adresem). */
   async function applyBasenameToUiIfAny(hostKind) {
       if (!myUserId || typeof myUserId !== "string" || !myUserId.startsWith("0x")) return;
@@ -5957,52 +5972,81 @@
   /** Po sync profilu: jeśli w RTDB jest tylko skrót adresu / brak nicku — dociągnij i zapisz (na bieżąco). */
   async function refreshMyDisplayNameInRtdb() {
       if (!db || !isLoggedIn() || !myUserId || myUserId === "guest") return;
-      if (!/^0x[a-fA-F0-9]{40}$/.test(myUserId)) return;
-      let snap;
+
+      if (/^0x[a-fA-F0-9]{40}$/.test(myUserId)) {
+          let snap;
+          try {
+              snap = await get(playerDocRef(myUserId));
+          } catch (_) {
+              return;
+          }
+          if (!snap.exists()) return;
+          const raw = snap.val().name;
+          if (typeof raw === "string") {
+              const t = raw.trim();
+              if (t && t !== "undefined" && t !== "null") {
+                  if (
+                      !/^0x[a-fA-F0-9]{40}$/.test(t) &&
+                      !/^0x[a-fA-F0-9]{1,12}\.{3}[a-fA-F0-9]{2,8}$/i.test(t) &&
+                      !/^0x[a-fA-F0-9]{4,12}\u2026[a-fA-F0-9]{4,10}$/i.test(t)
+                  ) {
+                      return;
+                  }
+              }
+          }
+          const m = await resolveDisplayNamesBatch([myUserId]);
+          const k = myUserId.toLowerCase();
+          let resolved = m && m[k] && String(m[k]).trim() ? String(m[k]).trim() : "";
+          if (!resolved) {
+              try {
+                  const fb = await resolveBasenameForAddress(myUserId);
+                  if (fb && fb.trim()) resolved = fb.trim();
+              } catch (_) {}
+          }
+          if (!isBetterDisplayName(resolved)) return;
+          myUsername = resolved;
+          ptgRefreshTierModeBadge();
+          let chipCore = resolved;
+          if (ptgHost === "base") chipCore = "Base · " + resolved;
+          else if (ptgHost === "farcaster") chipCore = "FC · " + resolved;
+          setPlayerChip(
+              truncateDisplayName(chipCore, 36),
+              ptgHost === "base" ? "base" : ptgHost === "farcaster" ? "farcaster" : "browser"
+          );
+          const chip = document.getElementById("playerDisplay");
+          if (chip) chip.title = resolved + " · " + myUserId;
+          try {
+              await update(playerDocRef(myUserId), { name: resolved });
+          } catch (e) {
+              console.warn("refreshMyDisplayNameInRtdb", e);
+          }
+          return;
+      }
+
+      /** Farcaster przy `myUserId` = sam uciekające znaki z handle (@ i .) — nadpisz `name` pełnym nickiem z sesji. */
+      if (/^fcfid/i.test(myUserId)) return;
+      if (/^0x/i.test(myUserId)) return;
+      const desired = String(myUsername || "").trim();
+      if (!isBetterDisplayName(desired)) return;
+      let snapFc;
       try {
-          snap = await get(playerDocRef(myUserId));
+          snapFc = await get(playerDocRef(myUserId));
       } catch (_) {
           return;
       }
-      if (!snap.exists()) return;
-      const raw = snap.val().name;
-      if (typeof raw === "string") {
-          const t = raw.trim();
-          if (t && t !== "undefined" && t !== "null") {
-              if (
-                  !/^0x[a-fA-F0-9]{40}$/.test(t) &&
-                  !/^0x[a-fA-F0-9]{1,12}\.{3}[a-fA-F0-9]{2,8}$/i.test(t) &&
-                  !/^0x[a-fA-F0-9]{4,12}\u2026[a-fA-F0-9]{4,10}$/i.test(t)
-              ) {
-                  return;
-              }
-          }
-      }
-      const m = await resolveDisplayNamesBatch([myUserId]);
-      const k = myUserId.toLowerCase();
-      let resolved = m && m[k] && String(m[k]).trim() ? String(m[k]).trim() : "";
-      if (!resolved) {
-          try {
-              const fb = await resolveBasenameForAddress(myUserId);
-              if (fb && fb.trim()) resolved = fb.trim();
-          } catch (_) {}
-      }
-      if (!isBetterDisplayName(resolved)) return;
-      myUsername = resolved;
-      ptgRefreshTierModeBadge();
-      let chipCore = resolved;
-      if (ptgHost === "base") chipCore = "Base · " + resolved;
-      else if (ptgHost === "farcaster") chipCore = "FC · " + resolved;
-      setPlayerChip(
-          truncateDisplayName(chipCore, 36),
-          ptgHost === "base" ? "base" : ptgHost === "farcaster" ? "farcaster" : "browser"
-      );
-      const chip = document.getElementById("playerDisplay");
-      if (chip) chip.title = resolved + " · " + myUserId;
+      const curName =
+          snapFc.exists() && typeof snapFc.val().name === "string" ? snapFc.val().name.trim() : "";
+      const needWrite =
+          !snapFc.exists() ||
+          !curName ||
+          curName === "undefined" ||
+          curName === "null" ||
+          shouldPreferSessionDisplayNameOverStored(curName);
+      if (!needWrite) return;
       try {
-          await update(playerDocRef(myUserId), { name: resolved });
+          await update(playerDocRef(myUserId), { name: desired });
       } catch (e) {
-          console.warn("refreshMyDisplayNameInRtdb", e);
+          console.warn("refreshMyDisplayNameInRtdb fc", e);
       }
   }
 
@@ -10150,6 +10194,7 @@
 
   /** Nick z RTDB albo skrócony adres / id gracza (bez „undefined”). */
   function formatLeaderboardDisplayName(playerId, playerObj) {
+      const pid = String(playerId || "").trim();
       const raw = playerObj && playerObj.name;
       if (typeof raw === "string") {
           const t = raw.trim();
@@ -10160,10 +10205,19 @@
               !isWalletSquashedDisplayName(t) &&
               !isPlayerAnonPlaceholderName(t)
           ) {
+              if (
+                  pid === String(myUserId || "").trim() &&
+                  shouldPreferSessionDisplayNameOverStored(t)
+              ) {
+                  return String(myUsername || "").trim();
+              }
               return t;
           }
       }
-      const id = String(playerId || "").trim();
+      if (pid === String(myUserId || "").trim() && isBetterDisplayName(myUsername)) {
+          return String(myUsername || "").trim();
+      }
+      const id = pid;
       if (/^0x[a-fA-F0-9]{40}$/.test(id)) {
           return walletAnonLabelFromAddress(id);
       }
