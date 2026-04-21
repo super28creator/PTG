@@ -4154,6 +4154,60 @@
   }
 
   /**
+   * Starsze korzenie dla tego samego sezonu — używane tylko jako fallback przy
+   * czytaniu `index/{refCode}`, gdy zapraszający nie odwiedził jeszcze aplikacji
+   * po bumpie `REFERRAL_DATA_VERSION`. Nie piszemy do starych korzeni — gdy fallback
+   * trafi, on-demand zreplikujemy wpis do bieżącego roota.
+   */
+  function ptgReferralsLegacyRoots() {
+      const roots = [];
+      for (let v = REFERRAL_DATA_VERSION - 1; v >= 1; v--) {
+          const suffix = v > 1 ? "_v" + v : "";
+          roots.push("referrals_v1/s" + LEADERBOARD_SEASON + suffix);
+      }
+      return roots;
+  }
+
+  /**
+   * Rozwiąż ownerId dla refCode'a, próbując aktualnego roota oraz starszych
+   * (po bumpie wersji). Jeśli trafiamy na starszym, replikujemy wpis w bieżącym
+   * roocie, żeby dalsze operacje (edge/parent_of/summary) działały spójnie.
+   */
+  async function ptgResolveOwnerIdForRefCodeAnyVersion(refCode) {
+      if (!db || !refCode) return null;
+      const codeLc = String(refCode).trim().toLowerCase();
+      if (!/^[a-f0-9]{12}$/.test(codeLc)) return null;
+      const currentRoot = ptgReferralsRtdbRoot();
+      try {
+          const s = await get(ref(db, currentRoot + "/index/" + codeLc));
+          if (s.exists()) {
+              const v = s.val();
+              const owner = v && typeof v === "object" ? v.ownerId : null;
+              if (owner) return String(owner);
+          }
+      } catch (_) {}
+      const legacy = ptgReferralsLegacyRoots();
+      for (let i = 0; i < legacy.length; i++) {
+          try {
+              const s = await get(ref(db, legacy[i] + "/index/" + codeLc));
+              if (!s.exists()) continue;
+              const v = s.val();
+              const owner = v && typeof v === "object" ? v.ownerId : null;
+              if (!owner) continue;
+              try {
+                  await set(ref(db, currentRoot + "/index/" + codeLc), {
+                      ownerId: owner,
+                      ts: Date.now(),
+                      migratedFrom: legacy[i],
+                  });
+              } catch (_) {}
+              return String(owner);
+          } catch (_) {}
+      }
+      return null;
+  }
+
+  /**
    * Jednorazowy wipe localStorage przy zmianie sezonu lub wersji reflinków —
    * stare pending/seen nie mogą reaktywować modala ani brudzić nowego roocie RTDB.
    */
@@ -5087,19 +5141,18 @@
           ptgClearPendingRefCapture();
           return;
       }
-      let idxSnap;
+      let ownerId = null;
       try {
-          idxSnap = await get(ref(db, ptgReferralsRtdbRoot() + "/index/" + refCode));
+          ownerId = await ptgResolveOwnerIdForRefCodeAnyVersion(refCode);
       } catch (e) {
           console.warn("referral index lookup", e);
           return;
       }
-      if (!idxSnap.exists()) {
+      if (!ownerId) {
           ptgClearPendingRefCapture();
           return;
       }
-      const ownerId = idxSnap.val().ownerId;
-      if (!ownerId || ownerId === myUserId) {
+      if (ownerId === myUserId) {
           ptgClearPendingRefCapture();
           return;
       }
@@ -5222,6 +5275,15 @@
           } catch (eParent) {
               console.warn("referral parent_of", eParent);
           }
+          /* Świeża atrybucja (nowa krawędź) — wyczyść wszystkie blokady modala
+           * powitalnego dla tego refCode, żeby user na nowym portfelu zobaczył
+           * „You were invited!" niezależnie od tego, co klikał w innej tożsamości. */
+          try {
+              localStorage.removeItem("ptg_invite_accept_seen_" + refCode);
+          } catch (_) {}
+          try {
+              sessionStorage.removeItem("ptg_invite_accept_dismissed_" + refCode);
+          } catch (_) {}
       } catch (e) {
           console.warn("referral edge", e);
           return;
@@ -5817,6 +5879,24 @@
       if (!/^[a-f0-9]{12}$/.test(refCode)) return;
       let seenKey = "ptg_invite_accept_seen_" + refCode;
       if (!db) return;
+      /* Zmiana tożsamości w tej samej karcie (np. inny portfel) — nowy user ma prawo
+       * zobaczyć powitanie, więc czyścimy sesyjne dismissy z poprzedniej tożsamości. */
+      try {
+          const lastUid = sessionStorage.getItem("ptg_invite_last_uid");
+          const curUid = String(myUserId || "");
+          if (lastUid && lastUid !== curUid) {
+              const toDrop = [];
+              for (let i = 0; i < sessionStorage.length; i++) {
+                  const k = sessionStorage.key(i);
+                  if (!k) continue;
+                  if (k.indexOf("ptg_invite_accept_dismissed_") === 0) toDrop.push(k);
+              }
+              for (let i = 0; i < toDrop.length; i++) {
+                  try { sessionStorage.removeItem(toDrop[i]); } catch (_) {}
+              }
+          }
+          if (curUid) sessionStorage.setItem("ptg_invite_last_uid", curUid);
+      } catch (_) {}
       /* Permanentny „seen" ustawiamy wyłącznie po „Accept invite". Jeśli istnieje,
        * naprawdę kończymy (user świadomie potwierdził). Sesyjny dismiss (Not now /
        * backdrop) blokuje tylko tę kartę — kolejne wejście z linka znów pokaże modal. */
@@ -5826,8 +5906,7 @@
       if (ptgInviteAcceptDismissedThisSession(refCode)) return;
       let ownerId = null;
       try {
-          const s = await get(ref(db, ptgReferralsRtdbRoot() + "/index/" + refCode));
-          if (s.exists()) ownerId = s.val() && s.val().ownerId;
+          ownerId = await ptgResolveOwnerIdForRefCodeAnyVersion(refCode);
       } catch (_) {}
       if (!ownerId) return;
 
