@@ -5,7 +5,9 @@
  * — signature: personal_sign nad ustalonym tekstem (ethers).
  *
  * Env: FIREBASE_SERVICE_ACCOUNT_JSON, REFERRAL_PAYOUT_PRIVATE_KEY (treasury z USDC + ETH na gas),
- *      BASE_RPC_URL (opcjonalnie), PTG_REFERRAL_SEASON (domyślnie 3)
+ *      BASE_RPC_URL (opcjonalnie),
+ *      PTG_REFERRAL_SEASON (domyślnie 2 — musi być zgodny z LEADERBOARD_SEASON w index.html),
+ *      PTG_REFERRAL_DATA_VERSION (domyślnie 4 — suffix _v{N} jak w `ptgReferralsRtdbRoot()`).
  */
 
 const { Wallet, JsonRpcProvider, Contract, verifyMessage } = require("ethers");
@@ -30,8 +32,10 @@ function setCors(req, res) {
 }
 
 function referralRoot() {
-  const season = Number(process.env.PTG_REFERRAL_SEASON || "3");
-  return `referrals_v1/s${season}`;
+  const season = Number(process.env.PTG_REFERRAL_SEASON || "2");
+  const ver = Number(process.env.PTG_REFERRAL_DATA_VERSION || "4");
+  const suffix = Number.isFinite(ver) && ver > 1 ? `_v${ver}` : "";
+  return `referrals_v1/s${season}${suffix}`;
 }
 
 function buildClaimMessage(userId, claimAmountCents) {
