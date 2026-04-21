@@ -5291,9 +5291,9 @@
    * Podgląd invitera w modalu „Accept invite” — **Farcaster i Basename są rozłączone**:
    * żaden kanał nie dociąga drugiego źródła „na ratunek”.
    *
-   *   • **Base** (`via=base`): tylko **Basename** (on-chain Base) dla `0x` + awatar z
-   *     metadanych ENS dla tej nazwy; brak basename → zostaje **RTDB** + litera.
-   *     **Bez Neynar / Farcaster.**
+   *   • **Base** (`via=base`): tylko **Basename** (on-chain Base) dla `0x` — nazwa z reverse;
+   *     awatar **wyłącznie z RTDB** (jeśli gracz ma `pfpUrl`/`avatarUrl`); **bez** CDN
+   *     `metadata.ens.domains` i bez Neynar / Farcaster.
    *   • **Farcaster**: tylko **Neynar** (0x / FID / handle) + to, co już było w **RTDB**
    *     przed otwarciem modala. **Bez basename / ENS mainnet.**
    *   • **Web**: tylko **basename → Ethereum ENS** dla `0x` (bez Neynar); pozostałe ID
@@ -5387,7 +5387,7 @@
           return preview;
       }
 
-      /* ——— Base: wyłącznie Basename (0x) + RTDB — bez Farcaster / Neynar ——— */
+      /* ——— Base: wyłącznie Basename (0x) + RTDB — bez ENS CDN, bez Farcaster / Neynar ——— */
       if (ch === "base") {
           if (is0x) {
               try {
@@ -5397,12 +5397,9 @@
                       preview.name = t;
                       preview.basename = t;
                       preview.source = "basename";
-                      const av = ptgEnsMetadataAvatarUrl(t);
-                      if (av) preview.avatarUrl = av;
                   }
               } catch (_) {}
           }
-          applyEnsAvatarIfName();
           if (preview.basename) preview.source = "basename";
           if (!preview.name) preview.name = formatLeaderboardDisplayName(ownerId, {});
           if (!preview.source) preview.source = preview.avatarUrl ? "rtdb" : "letter";
