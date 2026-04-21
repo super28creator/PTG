@@ -4408,6 +4408,33 @@
       return { fc, base, web };
   }
 
+  /**
+   * Invitee z Basename przenosimy z sekcji „Web" do „Base" w widoku zapraszającego
+   * (decyzja produktowa — basename traktujemy jako Base, niezależnie od faktycznego hosta).
+   * Działa bez zapisu do RTDB, tylko w pamięci wyniku splita.
+   */
+  async function ptgReclassifyWebBasenameInvitesToBase(split) {
+      if (!split || !Array.isArray(split.web) || split.web.length === 0) return split;
+      const keep = [];
+      for (let i = 0; i < split.web.length; i++) {
+          const r = split.web[i];
+          const invitee = r && r.v && r.v.invitee ? String(r.v.invitee) : "";
+          if (!/^0x[a-fA-F0-9]{40}$/.test(invitee)) {
+              keep.push(r);
+              continue;
+          }
+          let bn = null;
+          try {
+              bn = await resolveBasenameForAddress(invitee);
+          } catch (_) {}
+          if (bn && String(bn).trim()) split.base.unshift(r);
+          else keep.push(r);
+      }
+      split.web = keep;
+      split.base.sort((a, b) => (b.v.ts || 0) - (a.v.ts || 0));
+      return split;
+  }
+
   let __ptgEarningsFromMap = {};
   /** Oryginalne klucze RTDB `earnings_from/{me}/{spender}` (wielkość liter) — potrzebne do `parent_of/{spender}`. */
   let __ptgEarningsFromEntries = [];
@@ -4751,8 +4778,11 @@
       const host = document.getElementById("referralDetailListHost");
       if (!host) return;
       __ptgReferralInviteTiers = ptgTierArrayForViewer();
-      const split =
+      let split =
           val && typeof val === "object" ? ptgSplitInvitesByVia(val) : { fc: [], base: [], web: [] };
+      try {
+          split = await ptgReclassifyWebBasenameInvitesToBase(split);
+      } catch (_) {}
       await ptgLoadEarningsFromMap();
       const channelTotals = await ptgComputeChannelLifetimeEarningsCents(val, __ptgEarningsFromEntries);
       const sections = [
@@ -5120,6 +5150,15 @@
               }
           } catch (_) {}
       }
+      /* Invitee z Basename = „Base" w liście zapraszającego, nawet jeśli wszedł z przeglądarki.
+       * (Życzenie produktu: basename = lojalny użytkownik Base.) Farcaster/FC zostaje nietknięty,
+       * żeby nie przeklasyfikować osób, które JAWNIE weszły z Warpcasta. */
+      if (viaHost === "web" && /^0x[a-fA-F0-9]{40}$/.test(String(myUserId))) {
+          try {
+              const bn = await resolveBasenameForAddress(myUserId);
+              if (bn && String(bn).trim()) viaHost = "base";
+          } catch (_) {}
+      }
       try {
           const edgeSnap = await get(edgeRef);
           const parentRef = ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + myUserId);
@@ -5378,6 +5417,24 @@
 
       const fcHandle = is0x || isFid ? "" : ptgGuessFarcasterHandle(ownerId, storedName);
 
+      /** Wydobądź basename/ENS z samej nazwy (np. owner id = "super-creator.eth"). */
+      function ptgDeriveEnsLikeFromString(s) {
+          const t = String(s || "").trim();
+          if (!t) return null;
+          if (/\.base\.eth$/i.test(t)) return { kind: "basename", value: t };
+          if (/\.eth$/i.test(t)) return { kind: "ens", value: t };
+          return null;
+      }
+      const nameCandidates = [];
+      if (!is0x && !isFid) nameCandidates.push(idStr);
+      if (storedName) nameCandidates.push(storedName);
+      for (let i = 0; i < nameCandidates.length; i++) {
+          const d = ptgDeriveEnsLikeFromString(nameCandidates[i]);
+          if (!d) continue;
+          if (d.kind === "basename" && !preview.basename) preview.basename = d.value;
+          if (d.kind === "ens" && !preview.ensName) preview.ensName = d.value;
+      }
+
       function applyEnsAvatarIfName() {
           if (preview.avatarUrl) return;
           if (preview.ensName) {
@@ -5421,6 +5478,9 @@
                   }
               } catch (_) {}
           }
+          /* Nazwa typu `super-creator.eth`: użyj jej wprost do avatara (bez on-chain lookupu). */
+          if (!preview.name && preview.basename) preview.name = preview.basename;
+          if (!preview.name && preview.ensName) preview.name = preview.ensName;
           applyEnsAvatarIfName();
           if (!preview.name) preview.name = formatLeaderboardDisplayName(ownerId, {});
           if (preview.basename) preview.source = "basename";
@@ -5429,7 +5489,7 @@
           return preview;
       }
 
-      /* ——— Base: wyłącznie Basename (0x) + RTDB — bez ENS CDN, bez Farcaster / Neynar ——— */
+      /* ——— Base: wyłącznie Basename (0x lub nazwa .base.eth) + RTDB — bez Farcaster / Neynar ——— */
       if (ch === "base") {
           if (is0x) {
               try {
@@ -5439,10 +5499,22 @@
                       preview.name = t;
                       preview.basename = t;
                       preview.source = "basename";
+                      /* Awatar z ENS metadata CDN — Basename też pod tym samym endpointem. */
+                      if (!preview.avatarUrl) {
+                          const av = ptgEnsMetadataAvatarUrl(t);
+                          if (av) preview.avatarUrl = av;
+                      }
                   }
               } catch (_) {}
           }
-          if (preview.basename) preview.source = "basename";
+          if (preview.basename) {
+              if (!preview.name) preview.name = preview.basename;
+              preview.source = "basename";
+              if (!preview.avatarUrl) {
+                  const av = ptgEnsMetadataAvatarUrl(preview.basename);
+                  if (av) preview.avatarUrl = av;
+              }
+          }
           if (!preview.name) preview.name = formatLeaderboardDisplayName(ownerId, {});
           if (!preview.source) preview.source = preview.avatarUrl ? "rtdb" : "letter";
           return preview;
