@@ -5131,6 +5131,43 @@
       }
   }
 
+  /**
+   * Odfiltrowuje wiersze, w których `parent_of/{invitee}` istnieje i wskazuje
+   * kogoś INNEGO niż mój alias. Taki wpis pokazuje się w `invite_entries/{me}`
+   * tylko jako „duch” po nieudanej atrybucji / odwrotnym zapisie — realnie ten
+   * user nie jest moim zaproszonym, tylko zaproszonym kogoś innego.
+   * Gdy `parent_of/{invitee}` nie istnieje, zostawiamy wiersz (może to być świeża,
+   * jeszcze niepełna atrybucja — nie chcemy w takich momentach chować poprawnych
+   * danych). */
+  async function ptgFilterInviteeRowsToMyDescendants(rows) {
+      if (!db || !Array.isArray(rows) || rows.length === 0) return rows;
+      const root = ptgReferralsRtdbRoot();
+      const aliases = ptgGetMyIdentityAliasesLc();
+      aliases.add(String(myUserId || "").toLowerCase());
+      const out = [];
+      for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          const inv = r && r.v && r.v.invitee ? String(r.v.invitee) : "";
+          if (!inv) continue;
+          let keep = true;
+          try {
+              const snap = await get(ref(db, root + "/parent_of/" + inv));
+              if (snap.exists()) {
+                  const pv = snap.val();
+                  const pInv =
+                      pv && typeof pv === "object"
+                          ? pv.inviterId
+                          : typeof pv === "string"
+                              ? pv
+                              : null;
+                  if (pInv && !aliases.has(String(pInv).toLowerCase())) keep = false;
+              }
+          } catch (_) {}
+          if (keep) out.push(r);
+      }
+      return out;
+  }
+
   async function ptgPaintReferralInvitesList(val) {
       const host = document.getElementById("referralDetailListHost");
       if (!host) return;
@@ -5139,6 +5176,15 @@
           val && typeof val === "object" ? ptgSplitInvitesByVia(val) : { fc: [], base: [], web: [] };
       try {
           split = await ptgReclassifyWebBasenameInvitesToBase(split);
+      } catch (_) {}
+      /* Rów odwróconego zaproszenia: ktoś pojawia się w naszym `invite_entries`, ale
+       * jego `parent_of` wskazuje kogoś innego (= to nie jest nasz zaproszony).
+       * Filtrujemy każdy kanał, żeby w UI nie pokazywały się duchy po starych
+       * nieudanych atrybucjach. */
+      try {
+          split.fc = await ptgFilterInviteeRowsToMyDescendants(split.fc);
+          split.web = await ptgFilterInviteeRowsToMyDescendants(split.web);
+          split.base = await ptgFilterInviteeRowsToMyDescendants(split.base);
       } catch (_) {}
       await ptgLoadEarningsFromMap();
       const channelTotals = await ptgComputeChannelLifetimeEarningsCents(val, __ptgEarningsFromEntries);
@@ -5437,6 +5483,103 @@
       }
   }
 
+  /**
+   * Zwraca true jeśli `ownerId` figuruje jako MÓJ zaproszony (w jakimkolwiek aliasie)
+   * w `invite_entries/{alias}/<edgeKey>.invitee`. W przeciwieństwie do
+   * `ptgInviterIsInMyDescendants` NIE wymagamy potwierdzenia w `parent_of/{child}` —
+   * bo to właśnie ten scenariusz, który powoduje "odwrócone zaproszenie":
+   *   - klient invitowanego zapisał `invite_entries/{me}/...=invitee:them`,
+   *   - ale `parent_of/{them}` nie powstał (reguły / transient / race),
+   *   - potem ja próbuję wejść z ICH linka i bez tego guardu dochodzi do
+   *     zapisu `parent_of/{me}=them` (czyli odwrotnego kierunku).
+   * Bezpośredni wpis w MOICH `invite_entries` jest wystarczającym dowodem, że to
+   * JA ich zaprosiłem — nawet jeśli parent_of nie potwierdza z powodu awarii zapisu.
+   */
+  async function ptgOwnerIsAlreadyMyDirectInvitee(ownerId) {
+      if (!db || !ownerId || !myUserId || myUserId === "guest") return false;
+      const root = ptgReferralsRtdbRoot();
+      const ownerLc = String(ownerId).toLowerCase();
+      const aliases = ptgGetMyIdentityAliasesLc();
+      aliases.add(String(myUserId).toLowerCase());
+      for (const alias of aliases) {
+          if (!alias) continue;
+          let snap;
+          try {
+              snap = await get(ref(db, root + "/invite_entries/" + alias));
+          } catch (_) {
+              continue;
+          }
+          if (!snap.exists()) continue;
+          const raw = snap.val();
+          if (!raw || typeof raw !== "object") continue;
+          const keys = Object.keys(raw);
+          for (let i = 0; i < keys.length; i++) {
+              const e = raw[keys[i]];
+              const inv = e && typeof e === "object" ? e.invitee : null;
+              if (inv && String(inv).toLowerCase() === ownerLc) return true;
+          }
+      }
+      return false;
+  }
+
+  /**
+   * Auto-heal: jeśli w RTDB istnieje sprzeczny podwójny wpis
+   * ( parent_of/{me}.inviterId === X  AND  invite_entries/{me}/<k>.invitee === X ),
+   * to wiemy że to JA zaprosiłem X (moje invite_entries są moim zapisem „kogo zaprosiłem”),
+   * a odwrócony wpis parent_of/{me}=X powstał przez race w atrybucji. Usuwamy odwrócony
+   * kierunek: parent_of/{me} i invite_entries/{X}/<k> gdzie invitee === me.
+   * Działa tylko na bieżącym koncie — na drugim koncie heal odpala się po zalogowaniu.
+   */
+  async function ptgHealReversedSelfInviteIfAny() {
+      if (!db || !isLoggedIn() || myUserId === "guest") return;
+      const root = ptgReferralsRtdbRoot();
+      try {
+          const pSnap = await get(ref(db, root + "/parent_of/" + myUserId));
+          if (!pSnap.exists()) return;
+          const pv = pSnap.val();
+          const myInviter =
+              pv && typeof pv === "object"
+                  ? pv.inviterId
+                  : typeof pv === "string"
+                      ? pv
+                      : null;
+          if (!myInviter) return;
+          const myInvLc = String(myInviter).toLowerCase();
+          if (myInvLc === String(myUserId).toLowerCase()) return;
+
+          const iSnap = await get(ref(db, root + "/invite_entries/" + myUserId));
+          if (!iSnap.exists()) return;
+          const raw = iSnap.val();
+          if (!raw || typeof raw !== "object") return;
+          let foundAsMyInvitee = false;
+          const keys = Object.keys(raw);
+          for (let i = 0; i < keys.length; i++) {
+              const e = raw[keys[i]];
+              const child = e && typeof e === "object" ? e.invitee : null;
+              if (child && String(child).toLowerCase() === myInvLc) {
+                  foundAsMyInvitee = true;
+                  break;
+              }
+          }
+          if (!foundAsMyInvitee) return;
+
+          try {
+              console.warn("[ptg-referral] healing reversed self-invite", {
+                  me: myUserId,
+                  otherId: myInviter,
+              });
+          } catch (_) {}
+          try {
+              await remove(ref(db, root + "/parent_of/" + myUserId));
+          } catch (_) {}
+          try {
+              await ptgReferralRemoveInviteeFromInviter(myInviter, myUserId);
+          } catch (_) {}
+      } catch (e) {
+          try { console.warn("ptgHealReversedSelfInviteIfAny", e); } catch (_) {}
+      }
+  }
+
   /** Z paska adresu — zawsze nadpisuje localStorage (URL jest źródłem prawdy po wejściu z linku). */
   function ptgSyncPendingRefFromUrl() {
       try {
@@ -5526,6 +5669,30 @@
           }
       } catch (e) {
           console.warn("referral cycle preflight", e);
+      }
+
+      /* Twardszy guard — gdy ownerId figuruje jako MÓJ bezpośredni zaproszony w
+       * `invite_entries/{alias}`, odrzucamy odwrotną atrybucję nawet bez potwierdzenia
+       * w `parent_of/{them}`. Taki „zerwany” cykl powstawał, gdy pierwotny zapis
+       * `parent_of/{them}` się nie powiódł (reguły / transient) — wtedy
+       * `ptgInviterIsInMyDescendants` nie wykrywał cyklu, a kolejny link od nich
+       * dokonywał odwrotnego przypisania (parent_of/{me}=them, invite_entries/{them}/...=me).
+       * Teraz trzymamy kierunek „pierwszy invitee wygrywa” niezależnie od tego czy
+       * parent_of kiedykolwiek się zapisał. */
+      try {
+          if (await ptgOwnerIsAlreadyMyDirectInvitee(ownerId)) {
+              try {
+                  console.warn("[ptg-referral] blocked reverse attribution — ownerId is already my invitee", {
+                      ownerId,
+                      myUserId,
+                      refCode,
+                  });
+              } catch (_) {}
+              ptgClearPendingRefCapture();
+              return;
+          }
+      } catch (e) {
+          console.warn("referral reverse guard", e);
       }
 
       /* Policy "first invite wins" — jeśli w `parent_of/{me}` siedzi już KTOŚ inny,
@@ -5702,6 +5869,9 @@
 
   async function ptgEnsureReferralPipeline() {
       await ensureReferralSelfIndex();
+      /* Sprzątnij ewentualne stare, odwrócone atrybucje ZANIM puścimy nową —
+       * inaczej atrybucja zobaczy sprzeczny stan i nie wie, co jest prawdą. */
+      try { await ptgHealReversedSelfInviteIfAny(); } catch (_) {}
       await tryProcessReferralAttribution();
       bindReferralSummaryListener();
       ptgRebuildEliteSetFromCode();
