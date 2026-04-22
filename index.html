@@ -1935,18 +1935,18 @@
     }
     .player-logout-btn {
         align-self: stretch;
-        width: 34px;
+        width: 28px;
         border-radius: 0;
         border: none;
         background: transparent;
-        color: rgba(224, 231, 255, 0.86);
+        color: rgba(224, 231, 255, 0.85);
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin: -8px 10px -8px -14px;
-        padding: 0 10px;
-        border-right: 1px solid rgba(255, 255, 255, 0.95) !important;
-        box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.95);
+        margin: -8px 8px -8px -14px;
+        padding: 0 7px;
+        border-right: 1px solid rgba(96, 165, 250, 0.42) !important;
+        box-shadow: none;
         flex: 0 0 auto;
         cursor: pointer;
         transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.12s ease;
@@ -1966,7 +1966,9 @@
         display: block;
     }
     .player-chip-label {
+        flex: 0 1 auto;
         min-width: 0;
+        max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -1983,7 +1985,8 @@
         display: inline-flex;
         align-items: center;
         gap: 0;
-        min-width: 210px;
+        width: fit-content;
+        max-width: min(100%, 340px);
         padding: 8px 14px;
         overflow: hidden;
         border-color: rgba(96, 165, 250, 0.42) !important;
