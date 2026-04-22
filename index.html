@@ -1933,6 +1933,38 @@
         align-items: center;
         gap: 10px 12px;
     }
+    .player-chip-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+    .player-chip-wrap .game-status-pill--user {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .player-logout-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        border: 1px solid rgba(96, 165, 250, 0.45);
+        background: rgba(15, 23, 42, 0.88);
+        color: rgba(226, 232, 240, 0.95);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
+    }
+    .player-logout-btn:hover {
+        background: rgba(30, 41, 59, 0.95);
+        border-color: rgba(125, 211, 252, 0.55);
+    }
+    .player-logout-btn:active { transform: translateY(1px); }
+    .player-logout-btn:focus-visible {
+        outline: 2px solid rgba(56, 189, 248, 0.9);
+        outline-offset: 2px;
+    }
     .game-status-pill {
         max-width: 100%;
         min-width: 0;
@@ -3311,7 +3343,10 @@
 
     <div class="game-status-grid" aria-label="Game status">
       <div class="game-status-row game-status-row--top">
-        <div id="playerDisplay" class="chip user-chip game-status-pill game-status-pill--user" style="display:none; font-size: 11px;"></div>
+        <div class="player-chip-wrap">
+          <div id="playerDisplay" class="chip user-chip game-status-pill game-status-pill--user" style="display:none; font-size: 11px;"></div>
+          <button type="button" id="playerLogoutBtn" class="player-logout-btn" style="display:none;" title="Disconnect wallet session" aria-label="Disconnect wallet session">⎋</button>
+        </div>
         <div class="chip meta__category-chip game-status-pill game-status-pill--category" id="categoryDisplay">Category: Loading...</div>
       </div>
       <div class="game-status-row game-status-row--bottom">
@@ -7085,6 +7120,54 @@
       if (variant === "base") chip.classList.add("user-chip--base");
       else if (variant === "farcaster") chip.classList.add("user-chip--farcaster");
       else if (variant === "browser") chip.classList.add("user-chip--browser");
+      const logoutBtn = document.getElementById("playerLogoutBtn");
+      if (logoutBtn) logoutBtn.style.display = isLoggedIn() ? "inline-flex" : "none";
+  }
+
+  async function disconnectAppSession() {
+      const logoutBtn = document.getElementById("playerLogoutBtn");
+      if (logoutBtn) logoutBtn.disabled = true;
+      try {
+          const prevUserId = String(myUserId || "");
+          if (prevUserId && prevUserId !== "guest") {
+              try {
+                  localStorage.removeItem("ptg_activeRound_s" + LEADERBOARD_SEASON + "_" + prevUserId);
+              } catch (_) {}
+          }
+          myUsername = "Guest";
+          myUserId = "guest";
+          currentScore = 0;
+          gamesPlayedTodayCount = 0;
+          pendingMint = false;
+          profileActiveRound = null;
+          const chip = document.getElementById("playerDisplay");
+          if (chip) {
+              chip.textContent = "";
+              chip.title = "";
+              chip.style.display = "none";
+              chip.classList.remove("user-chip--base", "user-chip--farcaster", "user-chip--browser");
+          }
+          ptgUnsubscribeReferralListeners();
+          if (typeof userProfileUnsubscribe === "function") {
+              try {
+                  userProfileUnsubscribe();
+              } catch (_) {}
+          }
+          userProfileUnsubscribe = null;
+          await syncUserProfile();
+          setAuthGateVisible(true);
+          updateAuthGateUI();
+          updateScoreUI();
+          updateDailyUI();
+          checkGameStateAndRender();
+      } catch (e) {
+          console.warn("disconnectAppSession", e);
+      } finally {
+          if (logoutBtn) {
+              logoutBtn.disabled = false;
+              logoutBtn.style.display = "none";
+          }
+      }
   }
 
   function applyWalletIdentity(addr, hostKind) {
@@ -11388,6 +11471,9 @@
           ptgMarkInviteAcceptDismissedSession();
           ptgHideInviteAcceptOverlay();
       }
+  });
+  document.getElementById("playerLogoutBtn")?.addEventListener("click", function () {
+      void disconnectAppSession();
   });
 
   let __ptgNameRefreshLastMs = 0;
