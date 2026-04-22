@@ -4232,7 +4232,7 @@
    * - punkty lecą do nowego drzewa: players_s2_v{N}
    * - stare drzewo zostaje jako archiwum.
    */
-  const LEADERBOARD_DATA_VERSION = 2;
+  const LEADERBOARD_DATA_VERSION = 1;
   /**
    * Epoka punktowa wewnątrz tego samego sezonu.
    * Bump = twardy reset score dla wszystkich (bez zmiany LEADERBOARD_SEASON).
@@ -9078,9 +9078,31 @@
               applyCategoryPoolFromServer(data);
               applyProfileBadgesMintedFromServer(data);
           } else {
+              /* Nowy/zresetowany gracz ma wejść do rankingu od razu po loginie (score = 0),
+               * bez czekania na pierwszą wygraną. */
+              try {
+                  await set(userRef, {
+                      name: myUsername || "",
+                      score: 0,
+                      gamesPlayedToday: 0,
+                      pendingMint: false,
+                      leaderboardEpoch: LEADERBOARD_RESET_EPOCH,
+                  });
+              } catch (eInit) {
+                  console.warn("init leaderboard profile", eInit);
+              }
               mintCalendarDays = mergeMintCalendars(loadMintCalendarFromStorage(), {});
               profileActiveRound = null;
               applyProfileBadgesMintedFromServer(null);
+              applyServerProfileToLocalState(
+                  {
+                      score: 0,
+                      gamesPlayedToday: 0,
+                      pendingMint: false,
+                      leaderboardEpoch: LEADERBOARD_RESET_EPOCH,
+                  },
+                  { userRef, mayWriteNewDayReset: false }
+              );
           }
       } catch(e) {
           console.error("Sync Error", e);
