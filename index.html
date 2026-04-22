@@ -6010,7 +6010,6 @@
   }
 
   async function ptgMaybeShowInviteAcceptOverlay() {
-      if (!isLoggedIn() || myUserId === "guest") return;
       /* Defensywny re-sync: jeżeli URL ma `?ref=X&via=…`, a localStorage z jakiegoś
        * powodu został w międzyczasie wyczyszczony (np. przez purge po bumpie wersji
        * referrali), odtwórz pending z URL-a zanim zrezygnujemy. */
@@ -6024,37 +6023,42 @@
       if (!/^[a-f0-9]{12}$/.test(refCode)) return;
       let seenKey = "ptg_invite_accept_seen_" + refCode;
       if (!db) return;
+      const __ptgLogged = isLoggedIn() && myUserId && myUserId !== "guest";
       /* Zmiana tożsamości w tej samej karcie (np. inny portfel) — nowy user ma prawo
        * zobaczyć powitanie, więc czyścimy sesyjne dismissy z poprzedniej tożsamości. */
-      try {
-          const lastUid = sessionStorage.getItem("ptg_invite_last_uid");
-          const curUid = String(myUserId || "");
-          if (lastUid && lastUid !== curUid) {
-              const toDrop = [];
-              for (let i = 0; i < sessionStorage.length; i++) {
-                  const k = sessionStorage.key(i);
-                  if (!k) continue;
-                  if (k.indexOf("ptg_invite_accept_dismissed_") === 0) toDrop.push(k);
+      if (__ptgLogged) {
+          try {
+              const lastUid = sessionStorage.getItem("ptg_invite_last_uid");
+              const curUid = String(myUserId || "");
+              if (lastUid && lastUid !== curUid) {
+                  const toDrop = [];
+                  for (let i = 0; i < sessionStorage.length; i++) {
+                      const k = sessionStorage.key(i);
+                      if (!k) continue;
+                      if (k.indexOf("ptg_invite_accept_dismissed_") === 0) toDrop.push(k);
+                  }
+                  for (let i = 0; i < toDrop.length; i++) {
+                      try { sessionStorage.removeItem(toDrop[i]); } catch (_) {}
+                  }
               }
-              for (let i = 0; i < toDrop.length; i++) {
-                  try { sessionStorage.removeItem(toDrop[i]); } catch (_) {}
-              }
-          }
-          if (curUid) sessionStorage.setItem("ptg_invite_last_uid", curUid);
-      } catch (_) {}
+              if (curUid) sessionStorage.setItem("ptg_invite_last_uid", curUid);
+          } catch (_) {}
+      }
       /* „Seen" (permanentny) i session dismiss obowiązują TYLKO, gdy user
        * zaakceptował już jakiekolwiek zaproszenie (ma wpis `parent_of/{me}`).
        * Gdy nigdy żadnego nie przyjął — każde wejście z linka zapraszającej
        * osoby znów pokaże modal, nawet jeśli wcześniej kliknął „Not now"
        * albo zamknął auth-gate po „Accept invite" bez dokończenia loginu. */
       let __ptgHasAcceptedAnyInvite = false;
-      try {
-          const __psMe = await get(ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + myUserId));
-          if (__psMe.exists()) {
-              const __pv = __psMe.val();
-              if (__pv && typeof __pv === "object" && __pv.inviterId) __ptgHasAcceptedAnyInvite = true;
-          }
-      } catch (_) {}
+      if (__ptgLogged) {
+          try {
+              const __psMe = await get(ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + myUserId));
+              if (__psMe.exists()) {
+                  const __pv = __psMe.val();
+                  if (__pv && typeof __pv === "object" && __pv.inviterId) __ptgHasAcceptedAnyInvite = true;
+              }
+          } catch (_) {}
+      }
       if (__ptgHasAcceptedAnyInvite) {
           try {
               if (localStorage.getItem(seenKey)) return;
@@ -6069,36 +6073,42 @@
 
       /* Self-invite block — ktoś kliknął własny link (lub link innej swojej tożsamości).
        * Czyścimy pending + oznaczamy seen, żeby już nie wracało. */
-      if (await ptgIsSelfInviteCandidate(ownerId, refCode)) {
-          try {
-              localStorage.setItem(seenKey, String(Date.now()));
-          } catch (_) {}
-          ptgClearPendingRefCapture();
-          return;
-      }
-
-      /* Cycle block — „ja" nie mogę przyjąć zaproszenia od osoby, którą wcześniej
-       * sam(-a) zaprosiłem (pośrednio lub bezpośrednio). */
-      try {
-          if (await ptgInviterIsInMyDescendants(ownerId)) {
+      if (__ptgLogged) {
+          if (await ptgIsSelfInviteCandidate(ownerId, refCode)) {
               try {
                   localStorage.setItem(seenKey, String(Date.now()));
               } catch (_) {}
               ptgClearPendingRefCapture();
               return;
           }
-      } catch (_) {}
+      }
+
+      /* Cycle block — „ja" nie mogę przyjąć zaproszenia od osoby, którą wcześniej
+       * sam(-a) zaprosiłem (pośrednio lub bezpośrednio). */
+      if (__ptgLogged) {
+          try {
+              if (await ptgInviterIsInMyDescendants(ownerId)) {
+                  try {
+                      localStorage.setItem(seenKey, String(Date.now()));
+                  } catch (_) {}
+                  ptgClearPendingRefCapture();
+                  return;
+              }
+          } catch (_) {}
+      }
 
       /* Policy "first invite wins" — jeśli user już kiedyś zaakceptował zaproszenie
        * od KOGOKOLWIEK (dowolny inviter), nie pokazujemy nowego modala ani nie zmieniamy
        * drzewa. Kolejne linki są po cichu ignorowane. */
-      const existingInviter = await ptgGetExistingInviterId();
-      if (existingInviter && existingInviter !== ownerId) {
-          try {
-              localStorage.setItem(seenKey, String(Date.now()));
-          } catch (_) {}
-          ptgClearPendingRefCapture();
-          return;
+      if (__ptgLogged) {
+          const existingInviter = await ptgGetExistingInviterId();
+          if (existingInviter && existingInviter !== ownerId) {
+              try {
+                  localStorage.setItem(seenKey, String(Date.now()));
+              } catch (_) {}
+              ptgClearPendingRefCapture();
+              return;
+          }
       }
       /* UWAGA: nie blokujemy tu, gdy `existingInviter === ownerId`.
        * `tryProcessReferralAttribution` odpala się automatycznie po loginie
@@ -11620,8 +11630,13 @@
   });
   document.getElementById("inviteAcceptBtn")?.addEventListener("click", function () {
       /* Permanentne „seen" ustawiamy TYLKO po świadomym Accept — inaczej dismiss/backdrop
-       * kasowałyby zaproszenie na zawsze. */
-      ptgMarkInviteAcceptSeen();
+       * kasowałyby zaproszenie na zawsze.
+       * Dodatkowo: gdy user jest gościem, NIE ustawiamy trwałego seen —
+       * po wejściu z reflinka modal ma wracać, dopóki nie ma realnej akceptacji
+       * (zalogowany user + zapis parent_of). */
+      if (isLoggedIn() && myUserId && myUserId !== "guest") {
+          ptgMarkInviteAcceptSeen();
+      }
       ptgHideInviteAcceptOverlay();
       if (!isLoggedIn() || myUserId === "guest") {
           setAuthGateVisible(true);
