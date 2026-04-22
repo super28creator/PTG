@@ -6042,7 +6042,25 @@
       aliases.add(String(myUserId).toLowerCase());
       const root = ptgReferralsRtdbRoot();
 
-      /* 1) Łańcuch w górę od `ownerId` — jeśli trafi na mnie / alias, to ja ich zaprosiłem. */
+      /* Pomocnicza: weryfikacja BFS-hita w `parent_of/{child}` — chroni przed
+       * śmieciowymi wpisami "invite_entries/{me}/<edgeKey>/invitee" (testowe/zepsute
+       * dane, zerwany zapis atrybucji) fałszywie blokującymi modal jako „cykl".
+       * Prawdziwy cycle wymaga, by w drzewie child REALNIE miał mnie jako invitera. */
+      async function __ptgChildHasMeAsParent(childId) {
+          try {
+              const s = await get(ref(db, root + "/parent_of/" + childId));
+              if (!s.exists()) return false;
+              const pv = s.val();
+              const inv = pv && typeof pv === "object" ? pv.inviterId : typeof pv === "string" ? pv : null;
+              if (!inv) return false;
+              return aliases.has(String(inv).toLowerCase());
+          } catch (_) {
+              return false;
+          }
+      }
+
+      /* 1) Łańcuch w górę od `ownerId` — jeśli trafi na mnie / alias, to ja ich zaprosiłem.
+       * To jest jedyne twarde źródło prawdy: parent_of musi wskazywać na mój alias w łańcuchu. */
       try {
           let cur = ownerId;
           const visited = new Set();
@@ -6070,7 +6088,11 @@
           }
       } catch (_) {}
 
-      /* 2) BFS w dół: invite_entries/{mnie}/…/invitee. Ograniczone głębokością drzewa. */
+      /* 2) BFS w dół po "invite_entries/{me}/<edgeKey>/invitee" jako dodatkowy sygnał — ale
+       * KAŻDE trafienie musi być potwierdzone wpisem `parent_of/{child}.inviterId === alias`.
+       * Bez tego jednostronny śmieciowy wpis invite_entries blokowałby zaproszenia
+       * od zupełnie niespokrewnionych osób (rzeczywisty bug zgłoszony przez usera:
+       * ownerId='supercreatoreth' fałszywie klasyfikowany jako mój descendant). */
       try {
           const maxDepth = (typeof PTG_REF_MAX_DEPTH === "number" ? PTG_REF_MAX_DEPTH : 5) + 1;
           const queue = [];
@@ -6095,8 +6117,23 @@
                   const child = e && typeof e === "object" ? e.invitee : null;
                   if (!child) continue;
                   const childLc = String(child).toLowerCase();
-                  if (childLc === ownerLc) return true;
-                  if (!visited.has(childLc)) queue.push({ id: child, depth: depth + 1 });
+                  if (childLc === ownerLc) {
+                      const verified = await __ptgChildHasMeAsParent(child);
+                      if (verified) return true;
+                      try {
+                          console.warn("[ptg-invite] ignoring stale invite_entries hit (no parent_of match)", {
+                              parent: id,
+                              child,
+                          });
+                      } catch (_) {}
+                      continue;
+                  }
+                  if (!visited.has(childLc)) {
+                      /* Dalszy traversal też ma sens tylko jeśli potomek jest realnie
+                       * moim descendantem; inaczej wlec za sobą śmieci. */
+                      const verified = await __ptgChildHasMeAsParent(child);
+                      if (verified) queue.push({ id: child, depth: depth + 1 });
+                  }
               }
           }
       } catch (_) {}
