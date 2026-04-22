@@ -6173,8 +6173,9 @@
        * zapraszającej osoby znów pokaże modal. Proaktywnie kasujemy też session-dismiss
        * dla tego refCode, żeby „Not now" z poprzedniego wejścia nie blokował bieżącego. */
       let __ptgHasAcceptedAnyInvite = false;
+      const __ptgAcceptedOnceKey = "ptg_invite_accepted_once_" + String(myUserId || "").toLowerCase();
       try {
-          if (localStorage.getItem("ptg_invite_accepted_once") === "1") __ptgHasAcceptedAnyInvite = true;
+          if (localStorage.getItem(__ptgAcceptedOnceKey) === "1") __ptgHasAcceptedAnyInvite = true;
       } catch (_) {}
       if (__ptgHasAcceptedAnyInvite) {
           try {
@@ -11776,7 +11777,7 @@
           /* Świadoma zgoda usera — od teraz traktujemy go jako „zaakceptował".
            * Dzięki temu policy „first invite wins" + session-dismiss mają sens
            * dopiero po realnym kliknięciu „Accept invite" (a nie po auto-atrybucji). */
-          try { localStorage.setItem("ptg_invite_accepted_once", "1"); } catch (_) {}
+          try { localStorage.setItem("ptg_invite_accepted_once_" + String(myUserId || "").toLowerCase(), "1"); } catch (_) {}
       }
       ptgHideInviteAcceptOverlay();
       if (!isLoggedIn() || myUserId === "guest") {
