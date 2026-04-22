@@ -1706,6 +1706,117 @@
         background: linear-gradient(180deg, rgba(6, 182, 212, 0.28) 0%, rgba(8, 145, 178, 0.34) 100%);
         border-color: rgba(103, 232, 249, 0.62);
     }
+    /* Invite & earn: mobile compact mode (bez scrolla).
+     * Zmniejszamy cały panel, żeby na Farcaster/Base/mobile web mieścił się w całości. */
+    @media (max-width: 460px), (max-height: 760px) {
+        .referral-modal-card {
+            max-width: 352px;
+            max-height: min(94vh, 700px);
+            padding: 10px 10px 10px;
+        }
+        .referral-modal-topbar {
+            margin-bottom: 8px;
+        }
+        .referral-modal-topbar h2 {
+            font-size: 1rem;
+        }
+        .referral-modal-close {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            font-size: 20px;
+        }
+        .referral-invite-panel {
+            padding: 9px 9px 10px;
+            border-radius: 13px;
+            margin-bottom: 8px;
+        }
+        .referral-section-label {
+            margin-bottom: 7px;
+            font-size: 9px;
+        }
+        .referral-url-rows {
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .referral-url-channel-label {
+            margin-bottom: 4px;
+            font-size: 8px;
+        }
+        .referral-url-field {
+            min-height: 31px;
+            padding: 4px 5px 4px 8px;
+            border-radius: 10px;
+        }
+        .referral-url-text {
+            font-size: 9px;
+        }
+        .referral-url-copy-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+        }
+        .referral-share-row {
+            gap: 6px;
+        }
+        .referral-action-btn {
+            padding: 7px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            line-height: 1.2;
+        }
+        .referral-tier-strip {
+            margin-top: 8px;
+            padding-top: 8px;
+            gap: 6px;
+        }
+        .referral-tier-strip-label,
+        .referral-tier-strip-badge {
+            font-size: 8px;
+        }
+        .referral-rewards-panel {
+            margin-top: 2px;
+            padding: 9px 9px 9px;
+            border-radius: 13px;
+        }
+        .referral-balance-label {
+            margin-bottom: 4px;
+            font-size: 9px;
+        }
+        .referral-balance-amount {
+            font-size: clamp(1.45rem, 5.2vw, 1.7rem);
+        }
+        .referral-claim-row {
+            margin-top: 6px;
+            gap: 4px;
+        }
+        .referral-claim-btn {
+            padding: 9px 12px;
+            font-size: 12px;
+            border-radius: 10px;
+        }
+        .referral-claim-msg {
+            min-height: 14px;
+            font-size: 11px;
+        }
+        .referral-bottom-nav {
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .referral-nav-item {
+            padding: 8px 9px;
+            min-height: 56px;
+            border-radius: 11px;
+        }
+        .referral-nav-item__ic {
+            width: 28px;
+            height: 28px;
+            margin-bottom: 4px;
+        }
+        .referral-nav-item__label {
+            font-size: 11px;
+        }
+    }
 
     /* --- TYPOGRAPHY --- */
     h1 { 
