@@ -4221,15 +4221,27 @@
   const MAX_MISTAKES = 5; 
   const MAX_GAMES_PER_DAY = 3;
   /**
-   * Zwiększ po resecie rankingu (nowe drzewo w RTDB: players_s{N}).
-   * Zasady punktów bez zmian; stare sezony zostają w bazie jako archiwum.
+   * Numer sezonu widoczny dla graczy (UI / round-id / daily keys).
+   * Ma pozostać stały nawet przy "technicznym" resecie punktów.
    */
   const LEADERBOARD_SEASON = 2;
+  /**
+   * Wersja danych rankingu w RTDB.
+   * Bump tej wartości robi reset punktów BEZ zmiany numeru sezonu:
+   * - season zostaje np. "2"
+   * - punkty lecą do nowego drzewa: players_s2_v{N}
+   * - stare drzewo zostaje jako archiwum.
+   */
+  const LEADERBOARD_DATA_VERSION = 2;
+  function ptgLeaderboardPlayersRootPath() {
+    const suffix = LEADERBOARD_DATA_VERSION > 1 ? `_v${LEADERBOARD_DATA_VERSION}` : "";
+    return `players_s${LEADERBOARD_SEASON}${suffix}`;
+  }
   function playerDocRef(userId) {
-    return ref(db, `players_s${LEADERBOARD_SEASON}/` + userId);
+    return ref(db, ptgLeaderboardPlayersRootPath() + "/" + userId);
   }
   function playersRootRef() {
-    return ref(db, `players_s${LEADERBOARD_SEASON}`);
+    return ref(db, ptgLeaderboardPlayersRootPath());
   }
 
   /**
