@@ -6281,12 +6281,20 @@
        * sam(-a) zaprosiłem (pośrednio lub bezpośrednio). */
       try {
           if (await ptgInviterIsInMyDescendants(ownerId)) {
-              __ptgInviteDiag("skip:cycle_block", { refCode, ownerId });
-              try {
-                  localStorage.setItem(seenKey, String(Date.now()));
-              } catch (_) {}
-              ptgClearPendingRefCapture();
-              return;
+              if (__ptgHasAcceptedAnyInvite) {
+                  __ptgInviteDiag("skip:cycle_block", { refCode, ownerId, mode: "strict_after_accept" });
+                  try {
+                      localStorage.setItem(seenKey, String(Date.now()));
+                  } catch (_) {}
+                  ptgClearPendingRefCapture();
+                  return;
+              }
+              /* Dla kont, które nigdy nie kliknęły świadomie „Accept invite", nie blokujemy
+               * samego WYŚWIETLENIA modala nawet jeśli cycle-check zwraca true. W terenie
+               * mieliśmy fałszywe trafienia cycle na starych danych i user nie widział
+               * żadnego zaproszenia mimo poprawnego reflinka. Faktyczna atrybucja i tak
+               * ma własny cycle-guard przy zapisie do drzewa. */
+              __ptgInviteDiag("warn:cycle_hit_but_overlay_allowed", { refCode, ownerId, mode: "allow_pre_accept" });
           }
       } catch (_) {}
 
