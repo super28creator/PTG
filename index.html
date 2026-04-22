@@ -3694,11 +3694,14 @@
               if (cap && cap.ref) {
                   try {
                       localStorage.setItem("ptg_pending_ref", cap.ref);
+                      try { sessionStorage.setItem("ptg_pending_ref", cap.ref); } catch (_) {}
                       var via = cap.via;
                       if (via === "farcaster" || via === "base" || via === "web" || via === "browser") {
                           localStorage.setItem("ptg_pending_via", via === "browser" ? "web" : via);
+                          try { sessionStorage.setItem("ptg_pending_via", via === "browser" ? "web" : via); } catch (_) {}
                       } else {
                           localStorage.removeItem("ptg_pending_via");
+                          try { sessionStorage.removeItem("ptg_pending_via"); } catch (_) {}
                       }
                   } catch (e) {}
               }
@@ -5177,12 +5180,24 @@
       try {
           const keep = localStorage.getItem("ptg_pending_ref");
           if (keep) localStorage.setItem("ptg_invite_last_ref", keep);
+          const keepS = sessionStorage.getItem("ptg_pending_ref");
+          if (!keep && keepS) localStorage.setItem("ptg_invite_last_ref", keepS);
+          if (keep || keepS) {
+              try { sessionStorage.setItem("ptg_invite_last_ref", keep || keepS); } catch (_) {}
+          }
           const keepVia = localStorage.getItem("ptg_pending_via");
+          const keepViaS = sessionStorage.getItem("ptg_pending_via");
           if (keepVia === "farcaster" || keepVia === "base" || keepVia === "web" || keepVia === "browser") {
               localStorage.setItem("ptg_invite_last_via", keepVia === "browser" ? "web" : keepVia);
+              try { sessionStorage.setItem("ptg_invite_last_via", keepVia === "browser" ? "web" : keepVia); } catch (_) {}
+          } else if (keepViaS === "farcaster" || keepViaS === "base" || keepViaS === "web" || keepViaS === "browser") {
+              localStorage.setItem("ptg_invite_last_via", keepViaS === "browser" ? "web" : keepViaS);
+              try { sessionStorage.setItem("ptg_invite_last_via", keepViaS === "browser" ? "web" : keepViaS); } catch (_) {}
           }
           localStorage.removeItem("ptg_pending_ref");
           localStorage.removeItem("ptg_pending_via");
+          sessionStorage.removeItem("ptg_pending_ref");
+          sessionStorage.removeItem("ptg_pending_via");
       } catch (_) {}
   }
 
@@ -5241,6 +5256,7 @@
           if (!r || !/^[a-f0-9]{12}$/i.test(String(r).trim())) return;
           const rc = String(r).trim().toLowerCase();
           localStorage.setItem("ptg_pending_ref", rc);
+          try { sessionStorage.setItem("ptg_pending_ref", rc); } catch (_) {}
           /* Każde wejście z nowego linka kasuje sesyjny dismiss tego refa — user znów
            * dostaje modal, zgodnie z „jak ktoś nie zaakceptuje to przy kolejnym wejściu
            * powinno się pokazać". */
@@ -5248,8 +5264,14 @@
               sessionStorage.removeItem("ptg_invite_accept_dismissed_" + rc);
           } catch (_) {}
           const via = cap && cap.via;
-          if (via === "farcaster" || via === "base" || via === "web" || via === "browser") localStorage.setItem("ptg_pending_via", via === "browser" ? "web" : via);
-          else localStorage.removeItem("ptg_pending_via");
+          if (via === "farcaster" || via === "base" || via === "web" || via === "browser") {
+              const vv = via === "browser" ? "web" : via;
+              localStorage.setItem("ptg_pending_via", vv);
+              try { sessionStorage.setItem("ptg_pending_via", vv); } catch (_) {}
+          } else {
+              localStorage.removeItem("ptg_pending_via");
+              try { sessionStorage.removeItem("ptg_pending_via"); } catch (_) {}
+          }
       } catch (_) {}
   }
 
@@ -5258,7 +5280,11 @@
       ptgSyncPendingRefFromUrl();
       let pending = null;
       try {
-          pending = localStorage.getItem("ptg_pending_ref");
+          pending =
+              localStorage.getItem("ptg_pending_ref") ||
+              sessionStorage.getItem("ptg_pending_ref") ||
+              localStorage.getItem("ptg_invite_last_ref") ||
+              sessionStorage.getItem("ptg_invite_last_ref");
       } catch (_) {}
       if (!pending) return;
       const refCode = String(pending).trim().toLowerCase();
@@ -6019,7 +6045,11 @@
       try { ptgSyncPendingRefFromUrl(); } catch (_) {}
       let pending = null;
       try {
-          pending = localStorage.getItem("ptg_pending_ref") || localStorage.getItem("ptg_invite_last_ref");
+          pending =
+              localStorage.getItem("ptg_pending_ref") ||
+              sessionStorage.getItem("ptg_pending_ref") ||
+              localStorage.getItem("ptg_invite_last_ref") ||
+              sessionStorage.getItem("ptg_invite_last_ref");
       } catch (_) {}
       if (!pending) return;
       const refCode = String(pending).trim().toLowerCase();
@@ -6391,7 +6421,11 @@
       try { ptgSyncPendingRefFromUrl(); } catch (_) {}
       let pending = null;
       try {
-          pending = localStorage.getItem("ptg_pending_ref") || localStorage.getItem("ptg_invite_last_ref");
+          pending =
+              localStorage.getItem("ptg_pending_ref") ||
+              sessionStorage.getItem("ptg_pending_ref") ||
+              localStorage.getItem("ptg_invite_last_ref") ||
+              sessionStorage.getItem("ptg_invite_last_ref");
       } catch (_) {}
       if (!pending) return;
       const refCode = String(pending).trim().toLowerCase();
