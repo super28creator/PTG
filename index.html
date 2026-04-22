@@ -4233,6 +4233,11 @@
    * - stare drzewo zostaje jako archiwum.
    */
   const LEADERBOARD_DATA_VERSION = 2;
+  /**
+   * Epoka punktowa wewnątrz tego samego sezonu.
+   * Bump = twardy reset score dla wszystkich (bez zmiany LEADERBOARD_SEASON).
+   */
+  const LEADERBOARD_RESET_EPOCH = 2;
   function ptgLeaderboardPlayersRootPath() {
     const suffix = LEADERBOARD_DATA_VERSION > 1 ? `_v${LEADERBOARD_DATA_VERSION}` : "";
     return `players_s${LEADERBOARD_SEASON}${suffix}`;
@@ -9483,7 +9488,9 @@
       const mayWriteNewDayReset = !!(opts && opts.mayWriteNewDayReset);
       const userRef = opts && opts.userRef;
       if (!data || typeof data !== "object") return;
-      currentScore = data.score || 0;
+      const epochOk =
+          Number(data.leaderboardEpoch || 0) === LEADERBOARD_RESET_EPOCH;
+      currentScore = epochOk ? (data.score || 0) : 0;
       myLastPlayedDateKey =
           typeof data.lastPlayed === "string" && data.lastPlayed.length > 0
               ? data.lastPlayed
@@ -9493,7 +9500,18 @@
       const utcToday = utcDateKey();
       const utcYest = utcYesterdayDateKey();
       const lp = data.lastPlayed;
-      if (lp === today || lp === utcToday) {
+      if (!epochOk) {
+          gamesPlayedTodayCount = 0;
+          pendingMint = false;
+          if (mayWriteNewDayReset && userRef) {
+              void update(userRef, {
+                  leaderboardEpoch: LEADERBOARD_RESET_EPOCH,
+                  score: 0,
+                  gamesPlayedToday: 0,
+                  pendingMint: false,
+              });
+          }
+      } else if (lp === today || lp === utcToday) {
           let g = Number(data.gamesPlayedToday) || 0;
           if (g > MAX_GAMES_PER_DAY) {
               g = MAX_GAMES_PER_DAY;
@@ -9943,6 +9961,12 @@
           const today = localDateKey();
           runTransaction(userRef, (userData) => {
               if (userData) {
+                  if (Number(userData.leaderboardEpoch || 0) !== LEADERBOARD_RESET_EPOCH) {
+                      userData.score = 0;
+                      userData.gamesPlayedToday = 0;
+                      userData.pendingMint = false;
+                      userData.leaderboardEpoch = LEADERBOARD_RESET_EPOCH;
+                  }
                   if (__ptgCurrentRoundId && userData.roundLedgerKey === __ptgCurrentRoundId) {
                       return userData;
                   }
@@ -9955,6 +9979,7 @@
                   userData.pendingMint = true;
                   userData.lastPlayed = today;
                   userData.name = myUsername;
+                  userData.leaderboardEpoch = LEADERBOARD_RESET_EPOCH;
                   if (__ptgCurrentRoundId) userData.roundLedgerKey = __ptgCurrentRoundId;
               } else {
                   userData = {
@@ -9963,6 +9988,7 @@
                       lastPlayed: today,
                       gamesPlayedToday: 1,
                       pendingMint: true,
+                      leaderboardEpoch: LEADERBOARD_RESET_EPOCH,
                   };
                   if (__ptgCurrentRoundId) userData.roundLedgerKey = __ptgCurrentRoundId;
               }
@@ -11830,8 +11856,12 @@
           return;
       }
       const rows = Object.entries(data)
-          .map(([id, p]) => ({ id, p }))
-          .sort((a, b) => (b.p.score || 0) - (a.p.score || 0))
+          .map(([id, p]) => {
+              const po = p && typeof p === "object" ? p : {};
+              const epochOk = Number(po.leaderboardEpoch || 0) === LEADERBOARD_RESET_EPOCH;
+              return { id, p: po, scoreForBoard: epochOk ? (po.score || 0) : 0 };
+          })
+          .sort((a, b) => (b.scoreForBoard || 0) - (a.scoreForBoard || 0))
           .slice(0, 50);
       tbody.innerHTML = rows
           .map((row, i) => {
@@ -11858,7 +11888,7 @@
                   "\">" +
                   esc +
                   "</td><td style=\"text-align:right; font-weight:700;\">" +
-                  (row.p.score || 0) +
+                  (row.scoreForBoard || 0) +
                   "</td></tr>"
               );
           })
