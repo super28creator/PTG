@@ -1933,26 +1933,18 @@
         align-items: center;
         gap: 10px 12px;
     }
-    .player-chip-wrap {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        min-width: 0;
-    }
-    .player-chip-wrap .game-status-pill--user {
-        flex: 1 1 auto;
-        min-width: 0;
-    }
     .player-logout-btn {
-        width: 30px;
-        height: 30px;
+        width: 20px;
+        height: 20px;
         border-radius: 999px;
-        border: 1px solid rgba(96, 165, 250, 0.42);
-        background: rgba(10, 18, 34, 0.92);
-        color: rgba(224, 231, 255, 0.95);
+        border: 1px solid rgba(96, 165, 250, 0.35);
+        background: rgba(15, 23, 42, 0.65);
+        color: rgba(224, 231, 255, 0.9);
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        margin-left: 4px;
+        flex: 0 0 auto;
         cursor: pointer;
         transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
     }
@@ -1966,9 +1958,15 @@
         outline-offset: 2px;
     }
     .player-logout-btn svg {
-        width: 14px;
-        height: 14px;
+        width: 11px;
+        height: 11px;
         display: block;
+    }
+    .player-chip-label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     .game-status-pill {
         max-width: 100%;
@@ -3348,7 +3346,8 @@
 
     <div class="game-status-grid" aria-label="Game status">
       <div class="game-status-row game-status-row--top">
-        <div class="player-chip-wrap">
+        <div id="playerDisplay" class="chip user-chip game-status-pill game-status-pill--user" style="display:none; font-size: 11px;">
+          <span id="playerDisplayText" class="player-chip-label"></span>
           <button type="button" id="playerLogoutBtn" class="player-logout-btn" style="display:none;" title="Disconnect wallet session" aria-label="Disconnect wallet session">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M10 6V4h8v16h-8v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -3356,7 +3355,6 @@
               <path d="M7.5 8.5L4 12l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
           </button>
-          <div id="playerDisplay" class="chip user-chip game-status-pill game-status-pill--user" style="display:none; font-size: 11px;"></div>
         </div>
         <div class="chip meta__category-chip game-status-pill game-status-pill--category" id="categoryDisplay">Category: Loading...</div>
       </div>
@@ -7125,7 +7123,9 @@
   function setPlayerChip(text, variant) {
       const chip = document.getElementById("playerDisplay");
       if (!chip) return;
-      chip.textContent = text;
+      const textEl = document.getElementById("playerDisplayText");
+      if (textEl) textEl.textContent = text;
+      else chip.textContent = text;
       chip.style.display = "inline-flex";
       chip.classList.remove("user-chip--base", "user-chip--farcaster", "user-chip--browser");
       if (variant === "base") chip.classList.add("user-chip--base");
@@ -7152,8 +7152,10 @@
           pendingMint = false;
           profileActiveRound = null;
           const chip = document.getElementById("playerDisplay");
+          const textEl = document.getElementById("playerDisplayText");
           if (chip) {
-              chip.textContent = "";
+              if (textEl) textEl.textContent = "";
+              else chip.textContent = "";
               chip.title = "";
               chip.style.display = "none";
               chip.classList.remove("user-chip--base", "user-chip--farcaster", "user-chip--browser");
@@ -7171,6 +7173,9 @@
           updateScoreUI();
           updateDailyUI();
           checkGameStateAndRender();
+          try {
+              sessionStorage.setItem("ptg_manual_disconnect", "1");
+          } catch (_) {}
       } catch (e) {
           console.warn("disconnectAppSession", e);
       } finally {
@@ -7237,6 +7242,11 @@
    * Przeglądarka: bez auto-loginu (guest + przycisk).
    */
   async function resolveMiniAppIdentity() {
+      try {
+          if (sessionStorage.getItem("ptg_manual_disconnect") === "1") {
+              return;
+          }
+      } catch (_) {}
       ptgHost = "browser";
       try {
           if (!sdk) {
@@ -7354,6 +7364,9 @@
       if (btn) btn.disabled = true;
       if (labelEl) labelEl.textContent = "Connecting…";
       try {
+          try {
+              sessionStorage.removeItem("ptg_manual_disconnect");
+          } catch (_) {}
           if (ptgHost === "base") {
               const provider = getEmbeddedEthProvider();
               if (!provider) {
@@ -7381,15 +7394,7 @@
                       return;
                   }
               }
-              let ctx;
-              try {
-                  ctx = await sdk.context;
-              } catch (_) {}
-              if (ctx && applyFarcasterProfileUser(ctx.user, false)) {
-                  await finishLoginAfterIdentity();
-                  return;
-              }
-              throw new Error("Open this game inside Farcaster and approve wallet access, or use a browser wallet.");
+              throw new Error("Approve wallet access in Farcaster to connect the current address.");
           }
 
           /* Przeglądarka — tylko wstrzyknięty portfel (MetaMask itd.), bez Mini App. */
