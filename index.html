@@ -6185,18 +6185,29 @@
        * powodu został w międzyczasie wyczyszczony (np. przez purge po bumpie wersji
        * referrali), odtwórz pending z URL-a zanim zrezygnujemy. */
       try { ptgSyncPendingRefFromUrl(); } catch (_) {}
+      /* Modal pokazujemy TYLKO dla świeżego wejścia z reflinka w obrębie tej karty/sesji:
+       *   1) aktualny URL ma `?ref=X` (zwykły web / Base z query), albo
+       *   2) `sessionStorage.ptg_pending_ref` jest ustawiony (Farcaster Mini App — SDK
+       *      wpisuje ref z `ctx.location.embed` do sessionStorage przed uruchomieniem overlay).
+       * Celowo ignorujemy tu `localStorage`, cookies i `last_ref` — inaczej stary reflink
+       * (np. wczorajsza wizyta) podnosiłby modal przy wejściu na czystą stronę. */
       let pending = null;
       try {
-          pending =
-              localStorage.getItem("ptg_pending_ref") ||
-              sessionStorage.getItem("ptg_pending_ref") ||
-              ptgGetCookie("ptg_pending_ref") ||
-              localStorage.getItem("ptg_invite_last_ref") ||
-              sessionStorage.getItem("ptg_invite_last_ref") ||
-              ptgGetCookie("ptg_invite_last_ref");
+          const __cap =
+              typeof window !== "undefined" && typeof window.__ptgCaptureRefViaFromUrl === "function"
+                  ? window.__ptgCaptureRefViaFromUrl()
+                  : null;
+          if (__cap && __cap.ref && /^[a-f0-9]{12}$/i.test(String(__cap.ref).trim())) {
+              pending = String(__cap.ref).trim().toLowerCase();
+          }
       } catch (_) {}
       if (!pending) {
-          __ptgInviteDiag("skip:no_pending_ref");
+          try { pending = sessionStorage.getItem("ptg_pending_ref") || null; } catch (_) {}
+      }
+      if (!pending) {
+          __ptgInviteDiag("skip:no_fresh_ref", {
+              note: "no ?ref= in URL and no sessionStorage pending — treating as normal visit",
+          });
           return;
       }
       const refCode = String(pending).trim().toLowerCase();
@@ -6629,16 +6640,23 @@
   async function ptgWarmInviterPreviewFromStorage() {
       if (!db) return;
       try { ptgSyncPendingRefFromUrl(); } catch (_) {}
+      /* Prefetch awatara tylko dla świeżego wejścia z reflinka (spójne z regułą overlay):
+       * URL ma `?ref=` albo sessionStorage trzyma pending z tej karty. Bez tego
+       * rozgrzewaliśmy Neynar/RTDB/ENS dla starych refów tylko po to, żeby modala potem
+       * wcale nie pokazać — marnowaliśmy zapytania i ryzykowaliśmy stare dane. */
       let pending = null;
       try {
-          pending =
-              localStorage.getItem("ptg_pending_ref") ||
-              sessionStorage.getItem("ptg_pending_ref") ||
-              ptgGetCookie("ptg_pending_ref") ||
-              localStorage.getItem("ptg_invite_last_ref") ||
-              sessionStorage.getItem("ptg_invite_last_ref") ||
-              ptgGetCookie("ptg_invite_last_ref");
+          const __cap =
+              typeof window !== "undefined" && typeof window.__ptgCaptureRefViaFromUrl === "function"
+                  ? window.__ptgCaptureRefViaFromUrl()
+                  : null;
+          if (__cap && __cap.ref && /^[a-f0-9]{12}$/i.test(String(__cap.ref).trim())) {
+              pending = String(__cap.ref).trim().toLowerCase();
+          }
       } catch (_) {}
+      if (!pending) {
+          try { pending = sessionStorage.getItem("ptg_pending_ref") || null; } catch (_) {}
+      }
       if (!pending) return;
       const refCode = String(pending).trim().toLowerCase();
       if (!/^[a-f0-9]{12}$/.test(refCode)) return;
