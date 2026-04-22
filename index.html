@@ -6344,9 +6344,12 @@
           nickEl.classList.add("invite-accept-nick--loading");
       }
       if (avEl) {
-          avEl.classList.add("invite-accept-avatar--loading");
-          const stale = avEl.querySelector("img");
-          if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
+          /* Nie czyścimy istniejącego avatara na starcie renderu, bo overlay może
+           * zostać wywołany ponownie chwilę później (np. kolejny trigger po auth).
+           * Wcześniejsze usuwanie "stale" img powodowało flash: avatar pojawia się
+           * na moment i znika, zanim kolejne źródło preview znów go dorysuje. */
+          const hasExistingAvatar = !!avEl.querySelector("img");
+          if (!hasExistingAvatar) avEl.classList.add("invite-accept-avatar--loading");
       }
       if (srcEl) {
           srcEl.hidden = true;
@@ -6434,9 +6437,11 @@
       const fullP = ptgResolveInviterPreviewCached(ownerId, __ptgInviteCh).catch(() => null);
 
       let __ptgQuickRendered = false;
+      let quick = null;
       quickP.then(function (q) {
           if (!q || (!q.name && !q.avatarUrl)) return;
           if (!overlay.classList.contains("show")) return;
+          quick = q;
           renderPreviewIntoModal(q, { isFinal: false });
           __ptgQuickRendered = true;
       });
@@ -6454,6 +6459,7 @@
           try {
               const q2 = await quickP;
               if (q2 && (q2.name || q2.avatarUrl) && overlay.classList.contains("show")) {
+                  quick = q2;
                   renderPreviewIntoModal(q2, { isFinal: false });
               }
           } catch (_) {}
