@@ -6120,9 +6120,27 @@
   }
 
   async function ptgMaybeShowInviteAcceptOverlay() {
+      const __ptgInviteDiag = function (stage, extra) {
+          try {
+              const payload = {
+                  stage,
+                  ts: Date.now(),
+                  logged: !!isLoggedIn(),
+                  uid: myUserId || null,
+                  host: typeof ptgHost === "string" ? ptgHost : null,
+                  href: typeof location !== "undefined" ? String(location.href || "") : "",
+                  ...(extra && typeof extra === "object" ? extra : {}),
+              };
+              try { window.__ptgInviteLastDiag = payload; } catch (_) {}
+              try { console.info("[ptg-invite]", payload); } catch (_) {}
+          } catch (_) {}
+      };
       /* Modal zaproszenia ma sens dopiero po podłączeniu konta:
        * Connect Wallet / Farcaster. Przed loginem nie pokazujemy go. */
-      if (!isLoggedIn() || !myUserId || myUserId === "guest") return;
+      if (!isLoggedIn() || !myUserId || myUserId === "guest") {
+          __ptgInviteDiag("skip:not_logged");
+          return;
+      }
       /* Defensywny re-sync: jeżeli URL ma `?ref=X&via=…`, a localStorage z jakiegoś
        * powodu został w międzyczasie wyczyszczony (np. przez purge po bumpie wersji
        * referrali), odtwórz pending z URL-a zanim zrezygnujemy. */
@@ -6137,11 +6155,20 @@
               sessionStorage.getItem("ptg_invite_last_ref") ||
               ptgGetCookie("ptg_invite_last_ref");
       } catch (_) {}
-      if (!pending) return;
+      if (!pending) {
+          __ptgInviteDiag("skip:no_pending_ref");
+          return;
+      }
       const refCode = String(pending).trim().toLowerCase();
-      if (!/^[a-f0-9]{12}$/.test(refCode)) return;
+      if (!/^[a-f0-9]{12}$/.test(refCode)) {
+          __ptgInviteDiag("skip:invalid_ref_format", { refCode });
+          return;
+      }
       let seenKey = "ptg_invite_accept_seen_" + refCode;
-      if (!db) return;
+      if (!db) {
+          __ptgInviteDiag("skip:no_db", { refCode });
+          return;
+      }
       /* Zmiana tożsamości w tej samej karcie (np. inny portfel) — nowy user ma prawo
        * zobaczyć powitanie, więc czyścimy sesyjne dismissy z poprzedniej tożsamości. */
       try {
@@ -6179,9 +6206,15 @@
       } catch (_) {}
       if (__ptgHasAcceptedAnyInvite) {
           try {
-              if (localStorage.getItem(seenKey)) return;
+              if (localStorage.getItem(seenKey)) {
+                  __ptgInviteDiag("skip:seen_after_accept", { refCode, seenKey });
+                  return;
+              }
           } catch (_) {}
-          if (ptgInviteAcceptDismissedThisSession(refCode)) return;
+          if (ptgInviteAcceptDismissedThisSession(refCode)) {
+              __ptgInviteDiag("skip:dismissed_session_after_accept", { refCode });
+              return;
+          }
       } else {
           try {
               sessionStorage.removeItem("ptg_invite_accept_dismissed_" + refCode);
@@ -6191,11 +6224,15 @@
       try {
           ownerId = await ptgResolveOwnerIdForRefCodeAnyVersion(refCode);
       } catch (_) {}
-      if (!ownerId) return;
+      if (!ownerId) {
+          __ptgInviteDiag("skip:owner_not_found_for_ref", { refCode });
+          return;
+      }
 
       /* Self-invite block — ktoś kliknął własny link (lub link innej swojej tożsamości).
        * Czyścimy pending + oznaczamy seen, żeby już nie wracało. */
       if (await ptgIsSelfInviteCandidate(ownerId, refCode)) {
+          __ptgInviteDiag("skip:self_invite", { refCode, ownerId });
           try {
               localStorage.setItem(seenKey, String(Date.now()));
           } catch (_) {}
@@ -6207,6 +6244,7 @@
        * sam(-a) zaprosiłem (pośrednio lub bezpośrednio). */
       try {
           if (await ptgInviterIsInMyDescendants(ownerId)) {
+              __ptgInviteDiag("skip:cycle_block", { refCode, ownerId });
               try {
                   localStorage.setItem(seenKey, String(Date.now()));
               } catch (_) {}
@@ -6223,6 +6261,7 @@
       if (__ptgHasAcceptedAnyInvite) {
           const existingInviter = await ptgGetExistingInviterId();
           if (existingInviter && existingInviter !== ownerId) {
+              __ptgInviteDiag("skip:first_invite_wins_block", { refCode, ownerId, existingInviter });
               try {
                   localStorage.setItem(seenKey, String(Date.now()));
               } catch (_) {}
@@ -6236,7 +6275,10 @@
        * O tym, czy modal już był pokazany, decyduje wyłącznie `seenKey`
        * (ustawiany przy Accept / Not now / klik-tło). */
       const overlay = document.getElementById("inviteAcceptOverlay");
-      if (!overlay) return;
+      if (!overlay) {
+          __ptgInviteDiag("skip:no_overlay_dom", { refCode, ownerId });
+          return;
+      }
       const nickEl = document.getElementById("inviteAcceptNick");
       const avEl = document.getElementById("inviteAcceptAvatar");
       const fallbackEl = document.getElementById("inviteAcceptAvatarFallback");
@@ -6268,6 +6310,7 @@
 
       overlay.classList.add("show");
       overlay.setAttribute("aria-hidden", "false");
+      __ptgInviteDiag("show:overlay", { refCode, ownerId });
 
       function renderPreviewIntoModal(preview, { isFinal } = {}) {
           if (!preview) return;
@@ -6586,6 +6629,47 @@
           return false;
       }
   }
+  window.ptgInviteDebugSnapshot = function () {
+      let cap = { ref: null, via: null };
+      try {
+          if (typeof window.__ptgCaptureRefViaFromUrl === "function") cap = window.__ptgCaptureRefViaFromUrl() || cap;
+      } catch (_) {}
+      let pendingRef = null;
+      let pendingVia = null;
+      let lastRef = null;
+      let lastVia = null;
+      try {
+          pendingRef =
+              localStorage.getItem("ptg_pending_ref") ||
+              sessionStorage.getItem("ptg_pending_ref") ||
+              ptgGetCookie("ptg_pending_ref");
+          pendingVia =
+              localStorage.getItem("ptg_pending_via") ||
+              sessionStorage.getItem("ptg_pending_via") ||
+              ptgGetCookie("ptg_pending_via");
+          lastRef =
+              localStorage.getItem("ptg_invite_last_ref") ||
+              sessionStorage.getItem("ptg_invite_last_ref") ||
+              ptgGetCookie("ptg_invite_last_ref");
+          lastVia =
+              localStorage.getItem("ptg_invite_last_via") ||
+              sessionStorage.getItem("ptg_invite_last_via") ||
+              ptgGetCookie("ptg_invite_last_via");
+      } catch (_) {}
+      const out = {
+          href: typeof location !== "undefined" ? String(location.href || "") : "",
+          logged: !!isLoggedIn(),
+          uid: myUserId || null,
+          capturedFromUrl: cap,
+          pendingRef,
+          pendingVia,
+          lastRef,
+          lastVia,
+          lastDiag: window.__ptgInviteLastDiag || null,
+      };
+      try { console.info("[ptg-invite-snapshot]", out); } catch (_) {}
+      return out;
+  };
 
   /** Musi być identyczny z `buildClaimMessage` w `api/ptg-referral-payout.js`. */
   function ptgReferralPayoutSignMessage(userId, claimAmountCents) {
