@@ -5168,6 +5168,90 @@
       return out;
   }
 
+  /**
+   * Policz WSZYSTKICH zaproszonych (L1 + L2 + … do `PTG_REF_MAX_DEPTH`) przypisanych
+   * do kanału wg korzenia gałęzi (tak samo jak robi to
+   * `ptgComputeChannelLifetimeEarningsCents`). Wcześniej licznik w nagłówku
+   * kanału pokazywał tylko L1, mimo że procent naliczasz od całego poddrzewa —
+   * „Farcaster 1” pokazywało 1, choć realnie zarabiałeś od L1 + L2.
+   * De-duplikujemy globalnie, żeby ten sam user nie został policzony w dwóch
+   * kanałach (gdyby pojawił się w wielu gałęziach, co bywa przy migracjach).
+   */
+  async function ptgCountInviteesInChannelTree(split) {
+      const out = { fc: 0, web: 0, base: 0 };
+      if (!db || !split || typeof split !== "object") return out;
+      const root = ptgReferralsRtdbRoot();
+      const maxDepth = typeof PTG_REF_MAX_DEPTH === "number" ? PTG_REF_MAX_DEPTH : 5;
+      const seen = new Set();
+      const myAliases = ptgGetMyIdentityAliasesLc();
+      myAliases.add(String(myUserId || "").toLowerCase());
+
+      async function walkDown(parentId, chKey, depth, ancestorsLc) {
+          if (!parentId || depth > maxDepth) return;
+          let snap;
+          try {
+              snap = await get(ref(db, root + "/invite_entries/" + parentId));
+          } catch (_) {
+              return;
+          }
+          if (!snap.exists()) return;
+          const raw = snap.val();
+          if (!raw || typeof raw !== "object") return;
+          const keys = Object.keys(raw);
+          for (let i = 0; i < keys.length; i++) {
+              const e = raw[keys[i]];
+              const child = e && typeof e === "object" ? e.invitee : null;
+              if (!child) continue;
+              const cLc = String(child).toLowerCase();
+              if (ancestorsLc.has(cLc)) continue;
+              if (seen.has(cLc)) continue;
+              /* Sanity: jeżeli `parent_of/{child}` istnieje, ale wskazuje na kogoś
+               * INNEGO niż bieżący rodzic gałęzi, to wpis jest „duchem” i nie
+               * powinien zawyżać licznika. */
+              try {
+                  const ps = await get(ref(db, root + "/parent_of/" + child));
+                  if (ps.exists()) {
+                      const pv = ps.val();
+                      const inv =
+                          pv && typeof pv === "object"
+                              ? pv.inviterId
+                              : typeof pv === "string"
+                                  ? pv
+                                  : null;
+                      if (inv && String(inv).toLowerCase() !== String(parentId).toLowerCase()) {
+                          continue;
+                      }
+                  }
+              } catch (_) {}
+              seen.add(cLc);
+              out[chKey]++;
+              if (depth < maxDepth) {
+                  const newAnc = new Set(ancestorsLc);
+                  newAnc.add(cLc);
+                  await walkDown(child, chKey, depth + 1, newAnc);
+              }
+          }
+      }
+
+      const channels = ["fc", "base", "web"];
+      for (let ci = 0; ci < channels.length; ci++) {
+          const chKey = channels[ci];
+          const rows = Array.isArray(split[chKey]) ? split[chKey] : [];
+          for (let i = 0; i < rows.length; i++) {
+              const inv = rows[i] && rows[i].v && rows[i].v.invitee ? String(rows[i].v.invitee) : "";
+              if (!inv) continue;
+              const iLc = inv.toLowerCase();
+              if (seen.has(iLc)) continue;
+              seen.add(iLc);
+              out[chKey]++;
+              const ancestors = new Set(myAliases);
+              ancestors.add(iLc);
+              await walkDown(inv, chKey, 2, ancestors);
+          }
+      }
+      return out;
+  }
+
   async function ptgPaintReferralInvitesList(val) {
       const host = document.getElementById("referralDetailListHost");
       if (!host) return;
@@ -5188,6 +5272,18 @@
       } catch (_) {}
       await ptgLoadEarningsFromMap();
       const channelTotals = await ptgComputeChannelLifetimeEarningsCents(val, __ptgEarningsFromEntries);
+      /* Licznik w nagłówku kanału musi obejmować CAŁE poddrzewo (L1..L_MAX),
+       * bo procent dostajemy od każdego poziomu, nie tylko od L1. */
+      let channelCounts = { fc: 0, web: 0, base: 0 };
+      try {
+          channelCounts = await ptgCountInviteesInChannelTree(split);
+      } catch (_) {
+          channelCounts = {
+              fc: (split.fc || []).length,
+              web: (split.web || []).length,
+              base: (split.base || []).length,
+          };
+      }
       const sections = [
           { key: "fc", label: "Farcaster", cls: "referral-invite-acc-item--fc", rows: split.fc },
           { key: "web", label: "Web", cls: "referral-invite-acc-item--web", rows: split.web },
@@ -5199,7 +5295,7 @@
       for (let i = 0; i < sections.length; i++) {
           const s = sections[i];
           const isOpen = !!openKey && s.key === openKey;
-          const n = s.rows.length;
+          const n = channelCounts[s.key] || 0;
           const lifeCents =
               s.key === "fc"
                   ? channelTotals.fc
