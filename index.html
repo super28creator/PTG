@@ -6016,13 +6016,25 @@
           }
           if (curUid) sessionStorage.setItem("ptg_invite_last_uid", curUid);
       } catch (_) {}
-      /* Permanentny „seen" ustawiamy wyłącznie po „Accept invite". Jeśli istnieje,
-       * naprawdę kończymy (user świadomie potwierdził). Sesyjny dismiss (Not now /
-       * backdrop) blokuje tylko tę kartę — kolejne wejście z linka znów pokaże modal. */
+      /* „Seen" (permanentny) i session dismiss obowiązują TYLKO, gdy user
+       * zaakceptował już jakiekolwiek zaproszenie (ma wpis `parent_of/{me}`).
+       * Gdy nigdy żadnego nie przyjął — każde wejście z linka zapraszającej
+       * osoby znów pokaże modal, nawet jeśli wcześniej kliknął „Not now"
+       * albo zamknął auth-gate po „Accept invite" bez dokończenia loginu. */
+      let __ptgHasAcceptedAnyInvite = false;
       try {
-          if (localStorage.getItem(seenKey)) return;
+          const __psMe = await get(ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + myUserId));
+          if (__psMe.exists()) {
+              const __pv = __psMe.val();
+              if (__pv && typeof __pv === "object" && __pv.inviterId) __ptgHasAcceptedAnyInvite = true;
+          }
       } catch (_) {}
-      if (ptgInviteAcceptDismissedThisSession(refCode)) return;
+      if (__ptgHasAcceptedAnyInvite) {
+          try {
+              if (localStorage.getItem(seenKey)) return;
+          } catch (_) {}
+          if (ptgInviteAcceptDismissedThisSession(refCode)) return;
+      }
       let ownerId = null;
       try {
           ownerId = await ptgResolveOwnerIdForRefCodeAnyVersion(refCode);
@@ -6132,6 +6144,8 @@
               img.alt = "";
               img.loading = "eager";
               img.decoding = "async";
+              try { img.fetchPriority = "high"; } catch (_) {}
+              try { img.setAttribute("fetchpriority", "high"); } catch (_) {}
               img.referrerPolicy = "no-referrer";
               img.setAttribute("data-src", preview.avatarUrl);
               img.addEventListener(
@@ -6167,24 +6181,38 @@
           }
       }
 
-      /* 1) Szybka pierwsza warstwa: RTDB + derywacja .eth/.base.eth z samej nazwy.
-       * Awatar z ENS metadata CDN zaczyna się ładować natychmiast — bez czekania na Neynar. */
-      let quick = null;
-      try {
-          quick = await ptgResolveInviterPreviewQuick(ownerId, ptgInviteChannelFromStorage());
-      } catch (_) {
-          quick = null;
-      }
-      if (quick && (quick.name || quick.avatarUrl)) {
-          renderPreviewIntoModal(quick, { isFinal: false });
-      }
+      /* 1) Szybka pierwsza warstwa + 2) pełny resolve — puszczone RÓWNOLEGLE
+       * i wykorzystujące wspólny cache z warm-upu. Szybki wynik renderuje się
+       * natychmiast po przyjściu (niezależnie od pełnego), a końcowy nadpisuje go
+       * dopiero gdy realnie przyniesie nowe dane. */
+      const __ptgInviteCh = ptgInviteChannelFromStorage();
+      const quickP = ptgResolveInviterPreviewQuickCached(ownerId, __ptgInviteCh).catch(() => null);
+      const fullP = ptgResolveInviterPreviewCached(ownerId, __ptgInviteCh).catch(() => null);
 
-      /* 2) Pełny resolve (Neynar, reverse RPC) w tle — aktualizuje avatar/nick jeśli coś nowego. */
+      let __ptgQuickRendered = false;
+      quickP.then(function (q) {
+          if (!q || (!q.name && !q.avatarUrl)) return;
+          if (!overlay.classList.contains("show")) return;
+          renderPreviewIntoModal(q, { isFinal: false });
+          __ptgQuickRendered = true;
+      });
+
       let preview = null;
       try {
-          preview = await ptgResolveInviterPreview(ownerId, ptgInviteChannelFromStorage());
+          preview = await fullP;
       } catch (_) {
           preview = null;
+      }
+      /* Gdyby pełny wyścignął szybki (np. z cache): upewnij się, że quick wynik
+       * z cache też dostaje szansę wypełnić braki (source/basename) — ale NIE
+       * nadpisuje tego, co już przyszło z pełnego resolve. */
+      if (!__ptgQuickRendered) {
+          try {
+              const q2 = await quickP;
+              if (q2 && (q2.name || q2.avatarUrl) && overlay.classList.contains("show")) {
+                  renderPreviewIntoModal(q2, { isFinal: false });
+              }
+          } catch (_) {}
       }
       if (nickEl) nickEl.classList.remove("invite-accept-nick--loading");
       if (avEl) avEl.classList.remove("invite-accept-avatar--loading");
@@ -6267,6 +6295,86 @@
           else preview.source = "letter";
       }
       return preview;
+  }
+
+  /**
+   * Cache promise'ów resolve'u podglądu zapraszającego — kluczowane per kanał+ownerId.
+   * Dzięki temu modal „You were invited!" używa wyników warm-upu zamiast startować
+   * od zera (co w sumie cięło czas do pierwszego awatara z ~1-2s do ~50ms).
+   */
+  const __ptgInviterPreviewQuickCache = Object.create(null);
+  const __ptgInviterPreviewFullCache = Object.create(null);
+  const __ptgAvatarPreloadSeen = Object.create(null);
+
+  function __ptgInviterCacheKey(ownerId, inviteChannel) {
+      const ch = inviteChannel || ptgInviteChannelFromStorage() || "";
+      return String(ch) + "|" + String(ownerId || "").toLowerCase();
+  }
+
+  function __ptgPreloadAvatarImage(url) {
+      if (!url || typeof url !== "string") return;
+      if (!/^https?:\/\//i.test(url)) return;
+      if (__ptgAvatarPreloadSeen[url]) return;
+      __ptgAvatarPreloadSeen[url] = true;
+      try {
+          const img = new Image();
+          try { img.decoding = "async"; } catch (_) {}
+          try { img.fetchPriority = "high"; } catch (_) {}
+          try { img.setAttribute("fetchpriority", "high"); } catch (_) {}
+          try { img.referrerPolicy = "no-referrer"; } catch (_) {}
+          img.src = url;
+      } catch (_) {}
+  }
+
+  function ptgResolveInviterPreviewQuickCached(ownerId, inviteChannel) {
+      const key = __ptgInviterCacheKey(ownerId, inviteChannel);
+      let p = __ptgInviterPreviewQuickCache[key];
+      if (!p) {
+          p = ptgResolveInviterPreviewQuick(ownerId, inviteChannel).then(function (q) {
+              if (q && q.avatarUrl) __ptgPreloadAvatarImage(q.avatarUrl);
+              return q;
+          });
+          __ptgInviterPreviewQuickCache[key] = p;
+      }
+      return p;
+  }
+
+  function ptgResolveInviterPreviewCached(ownerId, inviteChannel) {
+      const key = __ptgInviterCacheKey(ownerId, inviteChannel);
+      let p = __ptgInviterPreviewFullCache[key];
+      if (!p) {
+          p = ptgResolveInviterPreview(ownerId, inviteChannel).then(function (r) {
+              if (r && r.avatarUrl) __ptgPreloadAvatarImage(r.avatarUrl);
+              return r;
+          });
+          __ptgInviterPreviewFullCache[key] = p;
+      }
+      return p;
+  }
+
+  /**
+   * Rozgrzewka resolve'u zapraszającego — uruchamiana zaraz gdy mamy `db` i
+   * znany `ptg_pending_ref` / `ptg_invite_last_ref`. Nie blokuje bootu; jeśli
+   * zdążymy rozwiązać avatar zanim użytkownik się zaloguje, modal pojawi się
+   * z ready-to-go avatar.
+   */
+  async function ptgWarmInviterPreviewFromStorage() {
+      if (!db) return;
+      let pending = null;
+      try {
+          pending = localStorage.getItem("ptg_pending_ref") || localStorage.getItem("ptg_invite_last_ref");
+      } catch (_) {}
+      if (!pending) return;
+      const refCode = String(pending).trim().toLowerCase();
+      if (!/^[a-f0-9]{12}$/.test(refCode)) return;
+      let ownerId = null;
+      try {
+          ownerId = await ptgResolveOwnerIdForRefCodeAnyVersion(refCode);
+      } catch (_) { ownerId = null; }
+      if (!ownerId) return;
+      const ch = ptgInviteChannelFromStorage();
+      try { void ptgResolveInviterPreviewQuickCached(ownerId, ch); } catch (_) {}
+      try { void ptgResolveInviterPreviewCached(ownerId, ch); } catch (_) {}
   }
 
   function ptgMarkInviteAcceptSeen() {
@@ -8208,6 +8316,11 @@
           db = getDatabase(app);
           const seasonEl = document.getElementById("leaderboardSeasonLabel");
           if (seasonEl) seasonEl.textContent = "Season " + LEADERBOARD_SEASON;
+
+          /* Rozgrzewka podglądu zapraszającego — równolegle do całej identity/boot
+           * flow. Celem jest, by w momencie pokazania modala „You were invited!"
+           * avatar już siedział w cache przeglądarki. */
+          try { void ptgWarmInviterPreviewFromStorage(); } catch (_) {}
 
           await withTimeout(resolveMiniAppIdentity(), PTG_BOOT_IDENTITY_MS, "boot identity").catch((e) => {
               console.warn("Boot identity timed out, continuing with fallback UI", e);
