@@ -6483,8 +6483,10 @@
 
       /* Stan loadingowy — shimmer na nicku + awatarze, dopóki preview nie przyjdzie. */
       const initialLetter = ptgInviterAvatarMarkup("", ownerId);
+      const __ptgExistingLoadedAvatar =
+          !!(avEl && avEl.querySelector("img.invite-accept-avatar-img--loaded"));
       if (fallbackEl) {
-          fallbackEl.style.display = "";
+          fallbackEl.style.display = __ptgExistingLoadedAvatar ? "none" : "";
           fallbackEl.textContent = initialLetter || "?";
       }
       if (nickEl) {
@@ -6532,7 +6534,10 @@
           if (avEl && preview.avatarUrl) {
               const current = avEl.querySelector("img");
               if (current && current.getAttribute("data-src") === preview.avatarUrl) {
-                  /* Ten sam URL po pełnym resolve — nie przeładowujemy. */
+                  /* Ten sam URL po pełnym resolve — nie przeładowujemy.
+                   * Upewnij się jednak, że fallback nie wrócił po retry triggerze. */
+                  if (fallbackEl) fallbackEl.style.display = "none";
+                  if (avEl) avEl.classList.remove("invite-accept-avatar--loading");
                   return;
               }
               const img = document.createElement("img");
