@@ -4196,7 +4196,7 @@
       ptgRefreshTierModeBadge();
       let chipCore = basename;
       if (hostKind === "base") chipCore = "Base · " + basename;
-      else if (hostKind === "farcaster") chipCore = "FC · " + basename;
+      else if (hostKind === "farcaster") chipCore = basename;
       setPlayerChip(truncateDisplayName(chipCore, 36), hostKind);
       const chip = document.getElementById("playerDisplay");
       if (chip) chip.title = basename + " · " + myUserId;
@@ -6998,7 +6998,7 @@
           ptgRefreshTierModeBadge();
           let chipCore = resolved;
           if (ptgHost === "base") chipCore = "Base · " + resolved;
-          else if (ptgHost === "farcaster") chipCore = "FC · " + resolved;
+          else if (ptgHost === "farcaster") chipCore = resolved;
           setPlayerChip(
               truncateDisplayName(chipCore, 36),
               ptgHost === "base" ? "base" : ptgHost === "farcaster" ? "farcaster" : "browser"
@@ -7205,7 +7205,7 @@
       if (hostKind === "base") {
           setPlayerChip("Base · " + myUsername, "base");
       } else if (hostKind === "farcaster") {
-          setPlayerChip("FC · " + myUsername, "farcaster");
+          setPlayerChip(myUsername, "farcaster");
       } else {
           setPlayerChip(myUsername, "browser");
       }
@@ -7236,7 +7236,7 @@
           myUserId = "fcfid" + fidStr.replace(/\D/g, "");
           ptgRememberIdentityAlias(myUserId);
           ptgRefreshTierModeBadge();
-          const label = viaBase ? "Base · FID " + fidStr : "FC · FID " + fidStr;
+          const label = viaBase ? "Base · FID " + fidStr : "FID " + fidStr;
           setPlayerChip(label, chipVariant);
           const chip = document.getElementById("playerDisplay");
           if (chip) chip.title = viaBase ? "Farcaster FID via Base App" : "Farcaster FID";
