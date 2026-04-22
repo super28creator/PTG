@@ -7394,6 +7394,14 @@
           }
 
           if (ptgHost === "farcaster") {
+              let ctx;
+              try {
+                  ctx = await withTimeout(Promise.resolve(sdk.context), 1800, "farcaster context");
+              } catch (_) {}
+              if (ctx && ctx.user && applyFarcasterProfileUser(ctx.user, false)) {
+                  await finishLoginAfterIdentity();
+                  return;
+              }
               const provider = getEmbeddedEthProvider();
               if (provider) {
                   await ensureBaseMainnet(provider);
@@ -7403,7 +7411,7 @@
                       return;
                   }
               }
-              throw new Error("Approve wallet access in Farcaster to connect the current address.");
+              throw new Error("Could not read Farcaster profile. Reopen in Farcaster or use wallet connect.");
           }
 
           /* Przeglądarka — tylko wstrzyknięty portfel (MetaMask itd.), bez Mini App. */
