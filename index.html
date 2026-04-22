@@ -6161,23 +6161,30 @@
           if (curUid) sessionStorage.setItem("ptg_invite_last_uid", curUid);
       } catch (_) {}
       /* „Seen" (permanentny) i session dismiss obowiązują TYLKO, gdy user
-       * zaakceptował już jakiekolwiek zaproszenie (ma wpis `parent_of/{me}`).
-       * Gdy nigdy żadnego nie przyjął — każde wejście z linka zapraszającej
-       * osoby znów pokaże modal, nawet jeśli wcześniej kliknął „Not now"
-       * albo zamknął auth-gate po „Accept invite" bez dokończenia loginu. */
+       * ŚWIADOMIE kliknął już kiedyś „Accept invite" (flag `ptg_invite_accepted_once`).
+       *
+       * UWAGA: wcześniej oparliśmy ten warunek o `parent_of/{me}`, ale to był błąd —
+       * `tryProcessReferralAttribution` zapisuje `parent_of/{me}` automatycznie przy
+       * pierwszym wejściu z reflinka, bez jakiejkolwiek zgody usera. W efekcie po kliknięciu
+       * „Not now" i ponownym wejściu w ten sam reflink modal traktował go tak, jakby
+       * już raz zaakceptował, i respektował session-dismiss → modal nigdy nie wracał.
+       *
+       * Gdy user nigdy jeszcze nie dał świadomej zgody — każde wejście z linka
+       * zapraszającej osoby znów pokaże modal. Proaktywnie kasujemy też session-dismiss
+       * dla tego refCode, żeby „Not now" z poprzedniego wejścia nie blokował bieżącego. */
       let __ptgHasAcceptedAnyInvite = false;
       try {
-          const __psMe = await get(ref(db, ptgReferralsRtdbRoot() + "/parent_of/" + myUserId));
-          if (__psMe.exists()) {
-              const __pv = __psMe.val();
-              if (__pv && typeof __pv === "object" && __pv.inviterId) __ptgHasAcceptedAnyInvite = true;
-          }
+          if (localStorage.getItem("ptg_invite_accepted_once") === "1") __ptgHasAcceptedAnyInvite = true;
       } catch (_) {}
       if (__ptgHasAcceptedAnyInvite) {
           try {
               if (localStorage.getItem(seenKey)) return;
           } catch (_) {}
           if (ptgInviteAcceptDismissedThisSession(refCode)) return;
+      } else {
+          try {
+              sessionStorage.removeItem("ptg_invite_accept_dismissed_" + refCode);
+          } catch (_) {}
       }
       let ownerId = null;
       try {
@@ -6207,16 +6214,20 @@
           }
       } catch (_) {}
 
-      /* Policy "first invite wins" — jeśli user już kiedyś zaakceptował zaproszenie
-       * od KOGOKOLWIEK (dowolny inviter), nie pokazujemy nowego modala ani nie zmieniamy
-       * drzewa. Kolejne linki są po cichu ignorowane. */
-      const existingInviter = await ptgGetExistingInviterId();
-      if (existingInviter && existingInviter !== ownerId) {
-          try {
-              localStorage.setItem(seenKey, String(Date.now()));
-          } catch (_) {}
-          ptgClearPendingRefCapture();
-          return;
+      /* Policy "first invite wins" — obowiązuje TYLKO po świadomej zgodzie
+       * (`ptg_invite_accepted_once === "1"`). Bez tego `existingInviter` bazowałby na
+       * `parent_of/{me}`, które `tryProcessReferralAttribution` zapisuje automatycznie
+       * przy pierwszym wejściu — i wtedy kolejny zapraszający miałby modal ukryty,
+       * mimo że user nigdy jeszcze niczego nie zaakceptował. */
+      if (__ptgHasAcceptedAnyInvite) {
+          const existingInviter = await ptgGetExistingInviterId();
+          if (existingInviter && existingInviter !== ownerId) {
+              try {
+                  localStorage.setItem(seenKey, String(Date.now()));
+              } catch (_) {}
+              ptgClearPendingRefCapture();
+              return;
+          }
       }
       /* UWAGA: nie blokujemy tu, gdy `existingInviter === ownerId`.
        * `tryProcessReferralAttribution` odpala się automatycznie po loginie
@@ -11762,6 +11773,10 @@
        * (zalogowany user + zapis parent_of). */
       if (isLoggedIn() && myUserId && myUserId !== "guest") {
           ptgMarkInviteAcceptSeen();
+          /* Świadoma zgoda usera — od teraz traktujemy go jako „zaakceptował".
+           * Dzięki temu policy „first invite wins" + session-dismiss mają sens
+           * dopiero po realnym kliknięciu „Accept invite" (a nie po auto-atrybucji). */
+          try { localStorage.setItem("ptg_invite_accepted_once", "1"); } catch (_) {}
       }
       ptgHideInviteAcceptOverlay();
       if (!isLoggedIn() || myUserId === "guest") {
