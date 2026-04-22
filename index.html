@@ -7244,6 +7244,47 @@
       );
   }
 
+  /**
+   * Base/Farcaster embedded providery potrafią zwrócić niepełny obiekt błędu
+   * dla `signer.signMessage()` (np. "Cannot read properties of undefined (reading 'error')").
+   * Fallbackujemy więc na surowe RPC: `personal_sign` i `eth_sign`, żeby user
+   * zawsze dostał popup podpisu claimu.
+   */
+  async function ptgSignReferralClaimMessageWithFallback(prov, signer, fromAddr, message) {
+      if (signer && typeof signer.signMessage === "function") {
+          try {
+              return await signer.signMessage(message);
+          } catch (eSign) {
+              try { console.warn("claim signMessage failed, trying provider.request fallback", eSign); } catch (_) {}
+          }
+      }
+      if (!prov || typeof prov.request !== "function") {
+          throw new Error("Wallet provider is unavailable for signing.");
+      }
+      const from = String(fromAddr || "");
+      const msgHex =
+          "0x" +
+          Array.from(new TextEncoder().encode(String(message || "")))
+              .map((b) => b.toString(16).padStart(2, "0"))
+              .join("");
+      const attempts = [
+          { method: "personal_sign", params: [msgHex, from] },
+          { method: "personal_sign", params: [String(message || ""), from] },
+          { method: "eth_sign", params: [from, msgHex] },
+      ];
+      let lastErr = null;
+      for (let i = 0; i < attempts.length; i++) {
+          try {
+              const out = await prov.request(attempts[i]);
+              if (typeof out === "string" && out.startsWith("0x") && out.length > 20) return out;
+          } catch (e) {
+              lastErr = e;
+          }
+      }
+      const m = lastErr && lastErr.message ? String(lastErr.message) : "Could not sign claim message.";
+      throw new Error(m);
+  }
+
   async function claimReferralRewardsFromUi() {
       const btn = document.getElementById("referralClaimBtn");
       const msg = document.getElementById("referralClaimMsg");
@@ -7285,7 +7326,12 @@
               return;
           }
           const signMsg = ptgReferralPayoutSignMessage(myUserId, claimAmount);
-          const signature = await signer.signMessage(signMsg);
+          const signature = await ptgSignReferralClaimMessageWithFallback(
+              prov,
+              signer,
+              addr,
+              signMsg
+          );
           const origin =
               typeof location !== "undefined" && location.origin ? location.origin : "";
           const res = await fetch(origin + "/api/ptg-referral-payout", {
