@@ -38,20 +38,34 @@ function referralRoot() {
   return `referrals_v1/s${season}${suffix}`;
 }
 
+/**
+ * Kwota claimu jest trzymana w centach (w RTDB `pendingReward`), ale minty są
+ * bardzo tanie, więc nagrody realnie potrafią być frakcyjnymi centami
+ * (np. 0.5 centa = $0.005). USDC na Base ma 6 miejsc po przecinku — 1 cent =
+ * 10 000 jednostek USDC, 1 jednostka = $0.000001. Konwertujemy claim do liczby
+ * całkowitej jednostek USDC — to też format, w którym kwota trafia do podpisu
+ * (żeby klient i serwer nigdy nie rozjechały się na floacie).
+ */
+function claimUnitsFromCents(cents) {
+  const n = Number(cents);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.max(0, Math.round(n * 10000));
+}
+
 function buildClaimMessage(userId, claimAmountCents) {
+  const units = claimUnitsFromCents(claimAmountCents);
   return (
     `Phrase To Guess — referral payout (Base)\n` +
     `Wallet: ${String(userId).toLowerCase()}\n` +
-    `Amount (cents): ${Math.floor(Number(claimAmountCents) || 0)}\n` +
+    `Amount (USDC units): ${units}\n` +
     `Chain: ${CHAIN_ID}`
   );
 }
 
 function centsToUsdcUnits(cents) {
-  const n = Math.floor(Number(cents) || 0);
-  if (n <= 0) return 0n;
-  // 1 cent = $0.01 = 10^4 jednostek USDC (6 decimals)
-  return BigInt(n) * 10000n;
+  const units = claimUnitsFromCents(cents);
+  if (units <= 0) return 0n;
+  return BigInt(units);
 }
 
 module.exports = async (req, res) => {
@@ -129,7 +143,12 @@ module.exports = async (req, res) => {
   if (pending <= 0) {
     return res.status(400).json({ error: "nothing_to_claim" });
   }
-  if (Math.floor(pending) !== Math.floor(claimAmountCents)) {
+  /* Porównujemy kwotę w całkowitych jednostkach USDC (6 decimals), nie w centach.
+   * Dzięki temu frakcyjne centy (np. 0.5¢ = 5000 jednostek) działają poprawnie,
+   * a porównanie jest nadal ścisłe i nie podatne na błędy floata. */
+  const pendingUnits = claimUnitsFromCents(pending);
+  const claimUnits = claimUnitsFromCents(claimAmountCents);
+  if (pendingUnits !== claimUnits) {
     return res.status(409).json({
       error: "amount_stale",
       pendingReward: pending,
@@ -137,7 +156,7 @@ module.exports = async (req, res) => {
     });
   }
 
-  const amountUnits = centsToUsdcUnits(pending);
+  const amountUnits = BigInt(pendingUnits);
   if (amountUnits <= 0n) {
     return res.status(400).json({ error: "amount_too_small" });
   }

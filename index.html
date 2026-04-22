@@ -4592,8 +4592,16 @@
   }
 
   function ptgFormatReferralCents(n) {
+      /* Minty są bardzo tanie, więc nagrody potrafią być rzędu $0.0001.
+       * Renderujemy z 4-miejscową precyzją i obcinamy końcowe zera
+       * powyżej dwóch, żeby zwykłe kwoty nadal wyglądały jak „1.23”,
+       * a mikronagrody („0.0001”) były w ogóle widoczne zamiast „0.00”. */
       const x = typeof n === "number" && !isNaN(n) ? n : 0;
-      return (x / 100).toFixed(2);
+      let s = (x / 100).toFixed(4);
+      if (s.indexOf(".") >= 0) {
+          s = s.replace(/(\.\d{2})(\d*?)0+$/, "$1$2");
+      }
+      return s;
   }
 
   function ptgEscapeReferralHtml(s) {
@@ -6888,15 +6896,25 @@
       return out;
   };
 
+  /** Deterministyczna reprezentacja kwoty jako całkowitych jednostek USDC
+   *  (USDC ma 6 miejsc po przecinku, 1 cent = 10 000 jednostek, 1 jednostka = $0.000001).
+   *  Trzymanie tego w integerze pozwala podpisać też frakcyjne centy
+   *  bez ryzyka różnic float client ↔ serwer. */
+  function ptgReferralClaimUnitsFromCents(claimAmountCents) {
+      const n = Number(claimAmountCents);
+      if (!Number.isFinite(n) || n <= 0) return 0;
+      return Math.max(0, Math.round(n * 10000));
+  }
   /** Musi być identyczny z `buildClaimMessage` w `api/ptg-referral-payout.js`. */
   function ptgReferralPayoutSignMessage(userId, claimAmountCents) {
+      const units = ptgReferralClaimUnitsFromCents(claimAmountCents);
       return (
           "Phrase To Guess — referral payout (Base)\n" +
           "Wallet: " +
           String(userId).toLowerCase() +
           "\n" +
-          "Amount (cents): " +
-          String(Math.floor(Number(claimAmountCents) || 0)) +
+          "Amount (USDC units): " +
+          String(units) +
           "\n" +
           "Chain: 8453"
       );
@@ -7064,7 +7082,10 @@
           const elite = ptgIsEliteUser(inviterId, nameKey);
           const tiers = elite ? PTG_REF_TIER_PCT_ELITE : PTG_REF_TIER_PCT_NORMAL;
           const pct = tiers[level - 1] || 0;
-          const reward = Math.floor((amt * pct) / 100);
+          /* Utrzymujemy 2 miejsca po przecinku w centach (= 4 po przecinku w USD, czyli do $0.0001).
+           * Wcześniejsze `Math.floor` zerowało mikronagrody z tanich mintów, przez co
+           * `pendingReward` nigdy nie dorastał, a user widział „Earned 0.00$” w nieskończoność. */
+          const reward = Math.round(amt * pct) / 100;
 
           if (reward > 0) {
               try {
