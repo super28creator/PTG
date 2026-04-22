@@ -4371,6 +4371,13 @@
    * Stare dane zostają w RTDB jako archiwum; `REFERRAL_RTDB_SEASON` zostaje bez zmian, o ile nie migrujesz całości.
    */
   const REFERRAL_DATA_VERSION = 6;
+  /**
+   * Bumpnij, gdy zmieni się wzór/stawki wyliczania rewardów i chcesz, żeby każdy
+   * zalogowany user jednorazowo dostał wyzerowane: `summary.pendingReward`,
+   * `summary.earnedTotal`, `earnings_from/{me}/*`. Struktura drzewa (invite_entries,
+   * parent_of, index) oraz `claim_history` pozostają nietknięte.
+   */
+  const REFERRAL_REWARDS_RESET_EPOCH = 1;
   function ptgReferralsRtdbRoot() {
       const suffix = REFERRAL_DATA_VERSION > 1 ? "_v" + REFERRAL_DATA_VERSION : "";
       return "referrals_v1/s" + REFERRAL_RTDB_SEASON + suffix;
@@ -4546,12 +4553,16 @@
           document.cookie = n + "=; path=/; max-age=0; SameSite=Lax";
       } catch (_) {}
   }
-  /** Base amount (cents) used to size MLM payouts per event type. */
+  /** Base amount (cents) used to size MLM payouts per event type.
+   *  UWAGA: wszystkie eventy trzymamy tu w cents realnego kosztu tx (obecnie $0.01 ≈ 1 cent).
+   *  Wcześniejsze wartości 20/25 rozjeżdżały referrale: hint dawał 50% z $0.20 mimo, że
+   *  gracz realnie płacił grosze — stąd puchnięcie pendingReward do wartości nijak nie
+   *  odpowiadających rzeczywistemu spendowi. */
   const PTG_REF_EVENT_BASE_CENTS = {
-      hint: 20,
-      mint: 1, // current mint price = $0.01
-      mint_badge: 1, // current badge mint price = $0.01
-      generic: 25,
+      hint: 1,
+      mint: 1,
+      mint_badge: 1,
+      generic: 1,
   };
   /**
    * Elite inviters — edytujesz TYLKO tutaj w repo (deploy). Nie ma zapisu z UI.
@@ -5957,11 +5968,64 @@
       });
   }
 
+  /**
+   * Jednorazowa korekta sald referralowych po zmianie wzoru rewardów.
+   * Wcześniejsze `hint/generic` baseCents (20/25) inflowały pendingReward
+   * wielokrotnie ponad realny spend gracza. Tego nie da się precyzyjnie odwrócić
+   * bez pełnego replayu reward_events, więc dla bieżącego usera zerujemy:
+   *   - summary/{me}.pendingReward
+   *   - summary/{me}.earnedTotal
+   *   - earnings_from/{me}/*
+   * Po tym nowe eventy naliczają się już wg poprawnych stawek.
+   * Drzewo zaproszeń i historia claimów nie są ruszane.
+   * Gate: localStorage("ptg_ref_rewards_reset_epoch_" + myUserId.lowercase()).
+   */
+  async function ptgApplyRewardsResetIfNeeded() {
+      if (!db || !isLoggedIn() || !myUserId || myUserId === "guest") return;
+      const key = "ptg_ref_rewards_reset_epoch_" + String(myUserId).toLowerCase();
+      let already = 0;
+      try {
+          const raw = localStorage.getItem(key);
+          already = Number(raw || "0") || 0;
+      } catch (_) {}
+      if (already >= REFERRAL_REWARDS_RESET_EPOCH) return;
+      const root = ptgReferralsRtdbRoot();
+      try {
+          await runTransaction(ref(db, root + "/summary/" + myUserId), (cur) => {
+              const o = cur && typeof cur === "object" ? cur : {};
+              return {
+                  ...o,
+                  pendingReward: 0,
+                  earnedTotal: 0,
+                  lastRewardResetEpoch: REFERRAL_REWARDS_RESET_EPOCH,
+                  lastRewardResetAt: Date.now(),
+              };
+          });
+      } catch (e) {
+          try { console.warn("ptgApplyRewardsResetIfNeeded summary", e); } catch (_) {}
+          return;
+      }
+      try {
+          await remove(ref(db, root + "/earnings_from/" + myUserId));
+      } catch (e) {
+          try { console.warn("ptgApplyRewardsResetIfNeeded earnings_from", e); } catch (_) {}
+      }
+      try {
+          localStorage.setItem(key, String(REFERRAL_REWARDS_RESET_EPOCH));
+      } catch (_) {}
+      try {
+          __ptgEarningsFromMap = {};
+          __ptgEarningsFromEntries = [];
+      } catch (_) {}
+  }
+
   async function ptgEnsureReferralPipeline() {
       await ensureReferralSelfIndex();
       /* Sprzątnij ewentualne stare, odwrócone atrybucje ZANIM puścimy nową —
        * inaczej atrybucja zobaczy sprzeczny stan i nie wie, co jest prawdą. */
       try { await ptgHealReversedSelfInviteIfAny(); } catch (_) {}
+      /* Jednorazowa korekta pod zmianę stawek rewardów (hint/generic 20/25 → 1). */
+      try { await ptgApplyRewardsResetIfNeeded(); } catch (_) {}
       await tryProcessReferralAttribution();
       bindReferralSummaryListener();
       ptgRebuildEliteSetFromCode();
