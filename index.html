@@ -565,12 +565,15 @@
         border-color: rgba(96, 165, 250, 0.6);
     }
     .invite-accept-avatar img {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
         opacity: 0;
         transition: opacity 0.28s ease;
+        z-index: 2;
     }
     .invite-accept-avatar img.invite-accept-avatar-img--loaded {
         opacity: 1;
@@ -6409,13 +6412,22 @@
               img.addEventListener(
                   "load",
                   function () {
-                      /* Usuń poprzedni obraz dopiero po udanym załadowaniu — brak „pustego" flasha. */
-                      const olds = avEl.querySelectorAll("img");
-                      for (let i = 0; i < olds.length; i++) {
-                          if (olds[i] !== img && olds[i].parentNode) olds[i].parentNode.removeChild(olds[i]);
-                      }
-                      if (fallbackEl) fallbackEl.style.display = "none";
+                      /* Najpierw odsłaniamy nowy obraz (stackuje się absolutnie nad starym),
+                       * potem — dopiero po zakończonym fade-in — usuwamy poprzedników.
+                       * Bez tego był widoczny przeskok: stare img usunięte, nowe jeszcze
+                       * w opacity 0 → kilkaset ms pustego awatara. */
                       img.classList.add("invite-accept-avatar-img--loaded");
+                      if (fallbackEl) fallbackEl.style.display = "none";
+                      const olds = Array.prototype.slice
+                          .call(avEl.querySelectorAll("img"))
+                          .filter(function (n) { return n !== img; });
+                      if (olds.length) {
+                          setTimeout(function () {
+                              for (let i = 0; i < olds.length; i++) {
+                                  if (olds[i].parentNode) olds[i].parentNode.removeChild(olds[i]);
+                              }
+                          }, 320);
+                      }
                   },
                   { once: true },
               );
