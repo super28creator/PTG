@@ -3695,13 +3695,16 @@
                   try {
                       localStorage.setItem("ptg_pending_ref", cap.ref);
                       try { sessionStorage.setItem("ptg_pending_ref", cap.ref); } catch (_) {}
+                      try { document.cookie = "ptg_pending_ref=" + encodeURIComponent(String(cap.ref)) + "; path=/; max-age=1209600; SameSite=Lax"; } catch (_) {}
                       var via = cap.via;
                       if (via === "farcaster" || via === "base" || via === "web" || via === "browser") {
                           localStorage.setItem("ptg_pending_via", via === "browser" ? "web" : via);
                           try { sessionStorage.setItem("ptg_pending_via", via === "browser" ? "web" : via); } catch (_) {}
+                          try { document.cookie = "ptg_pending_via=" + encodeURIComponent(String(via === "browser" ? "web" : via)) + "; path=/; max-age=1209600; SameSite=Lax"; } catch (_) {}
                       } else {
                           localStorage.removeItem("ptg_pending_via");
                           try { sessionStorage.removeItem("ptg_pending_via"); } catch (_) {}
+                          try { document.cookie = "ptg_pending_via=; path=/; max-age=0; SameSite=Lax"; } catch (_) {}
                       }
                   } catch (e) {}
               }
@@ -4362,9 +4365,13 @@
                       : null;
               if (cap && cap.ref && /^[a-f0-9]{12}$/i.test(String(cap.ref).trim())) {
                   localStorage.setItem("ptg_pending_ref", String(cap.ref).trim().toLowerCase());
+                  sessionStorage.setItem("ptg_pending_ref", String(cap.ref).trim().toLowerCase());
+                  ptgSetCookie("ptg_pending_ref", String(cap.ref).trim().toLowerCase());
                   const v = cap.via;
                   if (v === "farcaster" || v === "base" || v === "web" || v === "browser") {
                       localStorage.setItem("ptg_pending_via", v === "browser" ? "web" : v);
+                      sessionStorage.setItem("ptg_pending_via", v === "browser" ? "web" : v);
+                      ptgSetCookie("ptg_pending_via", v === "browser" ? "web" : v);
                   }
               }
           } catch (_) {}
@@ -4380,6 +4387,34 @@
   const PTG_REF_TIER_PCT_NORMAL = [25, 5, 5, 5, 5];
   const PTG_REF_TIER_PCT_ELITE = [50, 10, 10, 10, 10];
   const PTG_REF_MAX_DEPTH = 5;
+  const PTG_INVITE_COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 14;
+  function ptgGetCookie(name) {
+      try {
+          const key = String(name || "") + "=";
+          const arr = String(document.cookie || "").split(";");
+          for (let i = 0; i < arr.length; i++) {
+              const c = arr[i].trim();
+              if (c.indexOf(key) === 0) return decodeURIComponent(c.slice(key.length));
+          }
+      } catch (_) {}
+      return "";
+  }
+  function ptgSetCookie(name, value, maxAgeSec) {
+      try {
+          const n = String(name || "").trim();
+          if (!n) return;
+          const v = encodeURIComponent(String(value || ""));
+          const age = Number(maxAgeSec) > 0 ? Number(maxAgeSec) : PTG_INVITE_COOKIE_MAX_AGE_SEC;
+          document.cookie = n + "=" + v + "; path=/; max-age=" + String(Math.floor(age)) + "; SameSite=Lax";
+      } catch (_) {}
+  }
+  function ptgDeleteCookie(name) {
+      try {
+          const n = String(name || "").trim();
+          if (!n) return;
+          document.cookie = n + "=; path=/; max-age=0; SameSite=Lax";
+      } catch (_) {}
+  }
   /** Base amount (cents) used to size MLM payouts per event type. */
   const PTG_REF_EVENT_BASE_CENTS = {
       hint: 20,
@@ -5114,16 +5149,22 @@
           const prevRef = localStorage.getItem("ptg_pending_ref");
           const prevVia = localStorage.getItem("ptg_pending_via");
           localStorage.setItem("ptg_pending_ref", refCode);
+          try { sessionStorage.setItem("ptg_pending_ref", refCode); } catch (_) {}
+          ptgSetCookie("ptg_pending_ref", refCode);
           if (via) {
               /* embed miał jawne via → ono wygrywa (np. ktoś przekazał linka z `via=web`
                * dalej w Farcasterze — chcemy zachować web). */
               localStorage.setItem("ptg_pending_via", via);
+              try { sessionStorage.setItem("ptg_pending_via", via); } catch (_) {}
+              ptgSetCookie("ptg_pending_via", via);
           } else if (prevRef === refCode && (prevVia === "farcaster" || prevVia === "base" || prevVia === "web" || prevVia === "browser")) {
               /* Embed bez via, ale mamy już zapisane via dla tego samego refa
                * (z paska adresu, np. `?ref=X&via=web`) → NIE czyścić, inaczej
                * host Base/FC błędnie nadpisze kanał na siebie. */
           } else {
               localStorage.removeItem("ptg_pending_via");
+              try { sessionStorage.removeItem("ptg_pending_via"); } catch (_) {}
+              ptgDeleteCookie("ptg_pending_via");
           }
       } catch (_) {}
   }
@@ -5182,22 +5223,34 @@
           if (keep) localStorage.setItem("ptg_invite_last_ref", keep);
           const keepS = sessionStorage.getItem("ptg_pending_ref");
           if (!keep && keepS) localStorage.setItem("ptg_invite_last_ref", keepS);
+          const keepC = ptgGetCookie("ptg_pending_ref");
+          if (!keep && !keepS && keepC) localStorage.setItem("ptg_invite_last_ref", keepC);
           if (keep || keepS) {
               try { sessionStorage.setItem("ptg_invite_last_ref", keep || keepS); } catch (_) {}
           }
+          if (keep || keepS || keepC) ptgSetCookie("ptg_invite_last_ref", keep || keepS || keepC);
           const keepVia = localStorage.getItem("ptg_pending_via");
           const keepViaS = sessionStorage.getItem("ptg_pending_via");
+          const keepViaC = ptgGetCookie("ptg_pending_via");
           if (keepVia === "farcaster" || keepVia === "base" || keepVia === "web" || keepVia === "browser") {
               localStorage.setItem("ptg_invite_last_via", keepVia === "browser" ? "web" : keepVia);
               try { sessionStorage.setItem("ptg_invite_last_via", keepVia === "browser" ? "web" : keepVia); } catch (_) {}
+              ptgSetCookie("ptg_invite_last_via", keepVia === "browser" ? "web" : keepVia);
           } else if (keepViaS === "farcaster" || keepViaS === "base" || keepViaS === "web" || keepViaS === "browser") {
               localStorage.setItem("ptg_invite_last_via", keepViaS === "browser" ? "web" : keepViaS);
               try { sessionStorage.setItem("ptg_invite_last_via", keepViaS === "browser" ? "web" : keepViaS); } catch (_) {}
+              ptgSetCookie("ptg_invite_last_via", keepViaS === "browser" ? "web" : keepViaS);
+          } else if (keepViaC === "farcaster" || keepViaC === "base" || keepViaC === "web" || keepViaC === "browser") {
+              localStorage.setItem("ptg_invite_last_via", keepViaC === "browser" ? "web" : keepViaC);
+              try { sessionStorage.setItem("ptg_invite_last_via", keepViaC === "browser" ? "web" : keepViaC); } catch (_) {}
+              ptgSetCookie("ptg_invite_last_via", keepViaC === "browser" ? "web" : keepViaC);
           }
           localStorage.removeItem("ptg_pending_ref");
           localStorage.removeItem("ptg_pending_via");
           sessionStorage.removeItem("ptg_pending_ref");
           sessionStorage.removeItem("ptg_pending_via");
+          ptgDeleteCookie("ptg_pending_ref");
+          ptgDeleteCookie("ptg_pending_via");
       } catch (_) {}
   }
 
@@ -5257,6 +5310,7 @@
           const rc = String(r).trim().toLowerCase();
           localStorage.setItem("ptg_pending_ref", rc);
           try { sessionStorage.setItem("ptg_pending_ref", rc); } catch (_) {}
+          ptgSetCookie("ptg_pending_ref", rc);
           /* Każde wejście z nowego linka kasuje sesyjny dismiss tego refa — user znów
            * dostaje modal, zgodnie z „jak ktoś nie zaakceptuje to przy kolejnym wejściu
            * powinno się pokazać". */
@@ -5268,9 +5322,11 @@
               const vv = via === "browser" ? "web" : via;
               localStorage.setItem("ptg_pending_via", vv);
               try { sessionStorage.setItem("ptg_pending_via", vv); } catch (_) {}
+              ptgSetCookie("ptg_pending_via", vv);
           } else {
               localStorage.removeItem("ptg_pending_via");
               try { sessionStorage.removeItem("ptg_pending_via"); } catch (_) {}
+              ptgDeleteCookie("ptg_pending_via");
           }
       } catch (_) {}
   }
@@ -5283,8 +5339,10 @@
           pending =
               localStorage.getItem("ptg_pending_ref") ||
               sessionStorage.getItem("ptg_pending_ref") ||
+              ptgGetCookie("ptg_pending_ref") ||
               localStorage.getItem("ptg_invite_last_ref") ||
-              sessionStorage.getItem("ptg_invite_last_ref");
+              sessionStorage.getItem("ptg_invite_last_ref") ||
+              ptgGetCookie("ptg_invite_last_ref");
       } catch (_) {}
       if (!pending) return;
       const refCode = String(pending).trim().toLowerCase();
@@ -5361,7 +5419,13 @@
       else if (ptgHost === "farcaster") viaHost = "farcaster";
       else {
           try {
-              const pv = localStorage.getItem("ptg_pending_via");
+              const pv =
+                  localStorage.getItem("ptg_pending_via") ||
+                  sessionStorage.getItem("ptg_pending_via") ||
+                  ptgGetCookie("ptg_pending_via") ||
+                  localStorage.getItem("ptg_invite_last_via") ||
+                  sessionStorage.getItem("ptg_invite_last_via") ||
+                  ptgGetCookie("ptg_invite_last_via");
               if (pv === "farcaster" || pv === "base" || pv === "web" || pv === "browser") {
                   viaHost = pv === "browser" ? "web" : pv;
               }
@@ -5802,7 +5866,27 @@
           if (pv === "browser") return "web";
       } catch (_) {}
       try {
+          const pv = sessionStorage.getItem("ptg_pending_via");
+          if (pv === "farcaster" || pv === "base" || pv === "web") return pv;
+          if (pv === "browser") return "web";
+      } catch (_) {}
+      try {
+          const pv = ptgGetCookie("ptg_pending_via");
+          if (pv === "farcaster" || pv === "base" || pv === "web") return pv;
+          if (pv === "browser") return "web";
+      } catch (_) {}
+      try {
           const lv = localStorage.getItem("ptg_invite_last_via");
+          if (lv === "farcaster" || lv === "base" || lv === "web") return lv;
+          if (lv === "browser") return "web";
+      } catch (_) {}
+      try {
+          const lv = sessionStorage.getItem("ptg_invite_last_via");
+          if (lv === "farcaster" || lv === "base" || lv === "web") return lv;
+          if (lv === "browser") return "web";
+      } catch (_) {}
+      try {
+          const lv = ptgGetCookie("ptg_invite_last_via");
           if (lv === "farcaster" || lv === "base" || lv === "web") return lv;
           if (lv === "browser") return "web";
       } catch (_) {}
@@ -6048,8 +6132,10 @@
           pending =
               localStorage.getItem("ptg_pending_ref") ||
               sessionStorage.getItem("ptg_pending_ref") ||
+              ptgGetCookie("ptg_pending_ref") ||
               localStorage.getItem("ptg_invite_last_ref") ||
-              sessionStorage.getItem("ptg_invite_last_ref");
+              sessionStorage.getItem("ptg_invite_last_ref") ||
+              ptgGetCookie("ptg_invite_last_ref");
       } catch (_) {}
       if (!pending) return;
       const refCode = String(pending).trim().toLowerCase();
@@ -6424,8 +6510,10 @@
           pending =
               localStorage.getItem("ptg_pending_ref") ||
               sessionStorage.getItem("ptg_pending_ref") ||
+              ptgGetCookie("ptg_pending_ref") ||
               localStorage.getItem("ptg_invite_last_ref") ||
-              sessionStorage.getItem("ptg_invite_last_ref");
+              sessionStorage.getItem("ptg_invite_last_ref") ||
+              ptgGetCookie("ptg_invite_last_ref");
       } catch (_) {}
       if (!pending) return;
       const refCode = String(pending).trim().toLowerCase();
@@ -6443,7 +6531,13 @@
   function ptgMarkInviteAcceptSeen() {
       let pending = null;
       try {
-          pending = localStorage.getItem("ptg_pending_ref") || localStorage.getItem("ptg_invite_last_ref");
+          pending =
+              localStorage.getItem("ptg_pending_ref") ||
+              sessionStorage.getItem("ptg_pending_ref") ||
+              ptgGetCookie("ptg_pending_ref") ||
+              localStorage.getItem("ptg_invite_last_ref") ||
+              sessionStorage.getItem("ptg_invite_last_ref") ||
+              ptgGetCookie("ptg_invite_last_ref");
       } catch (_) {}
       if (!pending) return;
       const refCode = String(pending).trim().toLowerCase();
@@ -6457,7 +6551,13 @@
   function ptgMarkInviteAcceptDismissedSession() {
       let pending = null;
       try {
-          pending = localStorage.getItem("ptg_pending_ref") || localStorage.getItem("ptg_invite_last_ref");
+          pending =
+              localStorage.getItem("ptg_pending_ref") ||
+              sessionStorage.getItem("ptg_pending_ref") ||
+              ptgGetCookie("ptg_pending_ref") ||
+              localStorage.getItem("ptg_invite_last_ref") ||
+              sessionStorage.getItem("ptg_invite_last_ref") ||
+              ptgGetCookie("ptg_invite_last_ref");
       } catch (_) {}
       if (!pending) return;
       const refCode = String(pending).trim().toLowerCase();
