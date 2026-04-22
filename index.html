@@ -1934,23 +1934,25 @@
         gap: 10px 12px;
     }
     .player-logout-btn {
-        width: 20px;
-        height: 20px;
-        border-radius: 999px;
-        border: 1px solid rgba(96, 165, 250, 0.35);
-        background: rgba(15, 23, 42, 0.65);
-        color: rgba(224, 231, 255, 0.9);
+        align-self: stretch;
+        width: 34px;
+        border-radius: 0;
+        border: none;
+        background: transparent;
+        color: rgba(224, 231, 255, 0.86);
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin-left: 4px;
+        margin: -8px 10px -8px -14px;
+        padding: 0 10px;
+        border-right: 1px solid rgba(2, 6, 23, 0.9);
         flex: 0 0 auto;
         cursor: pointer;
-        transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.12s ease;
     }
     .player-logout-btn:hover {
-        background: rgba(20, 33, 61, 0.96);
-        border-color: rgba(125, 211, 252, 0.62);
+        color: rgba(236, 246, 255, 0.98);
+        background: rgba(255, 255, 255, 0.04);
     }
     .player-logout-btn:active { transform: translateY(1px); }
     .player-logout-btn:focus-visible {
@@ -1958,8 +1960,8 @@
         outline-offset: 2px;
     }
     .player-logout-btn svg {
-        width: 11px;
-        height: 11px;
+        width: 12px;
+        height: 12px;
         display: block;
     }
     .player-chip-label {
@@ -1977,24 +1979,27 @@
         font-weight: 600;
     }
     .game-status-pill--user {
+        display: inline-flex;
+        align-items: center;
+        gap: 0;
+        min-width: 210px;
+        padding: 8px 14px;
         overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        border-color: rgba(192, 132, 252, 0.55) !important;
-        background: rgba(76, 29, 149, 0.2) !important;
+        border-color: rgba(96, 165, 250, 0.42) !important;
+        background: rgba(17, 34, 64, 0.9) !important;
         color: #fff;
     }
     .game-status-grid .user-chip--base {
-        border-color: rgba(0, 82, 255, 0.55) !important;
-        background: rgba(0, 40, 120, 0.22) !important;
+        border-color: rgba(96, 165, 250, 0.42) !important;
+        background: rgba(17, 34, 64, 0.9) !important;
     }
     .game-status-grid .user-chip--farcaster {
-        border-color: rgba(168, 85, 247, 0.6) !important;
-        background: rgba(70, 40, 120, 0.22) !important;
+        border-color: rgba(96, 165, 250, 0.42) !important;
+        background: rgba(17, 34, 64, 0.9) !important;
     }
     .game-status-grid .user-chip--browser {
-        border-color: rgba(96, 165, 250, 0.5) !important;
-        background: rgba(30, 58, 95, 0.2) !important;
+        border-color: rgba(96, 165, 250, 0.42) !important;
+        background: rgba(17, 34, 64, 0.9) !important;
     }
     .game-status-pill--category {
         flex: 0 1 auto;
@@ -3347,7 +3352,6 @@
     <div class="game-status-grid" aria-label="Game status">
       <div class="game-status-row game-status-row--top">
         <div id="playerDisplay" class="chip user-chip game-status-pill game-status-pill--user" style="display:none; font-size: 11px;">
-          <span id="playerDisplayText" class="player-chip-label"></span>
           <button type="button" id="playerLogoutBtn" class="player-logout-btn" style="display:none;" title="Disconnect wallet session" aria-label="Disconnect wallet session">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M10 6V4h8v16h-8v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -3355,6 +3359,7 @@
               <path d="M7.5 8.5L4 12l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
           </button>
+          <span id="playerDisplayText" class="player-chip-label"></span>
         </div>
         <div class="chip meta__category-chip game-status-pill game-status-pill--category" id="categoryDisplay">Category: Loading...</div>
       </div>
