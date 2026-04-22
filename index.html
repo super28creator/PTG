@@ -6270,14 +6270,20 @@
       }
 
       /* Self-invite block — ktoś kliknął własny link (lub link innej swojej tożsamości).
-       * Czyścimy pending + oznaczamy seen, żeby już nie wracało. */
+       * Tak jak przy cycle_block: twardo blokujemy tylko jeśli user świadomie kiedyś
+       * kliknął „Accept". Przed pierwszym accept pokazujemy modal (real-world scenariusz:
+       * testy między własnymi kontami + fałszywe trafienia na zarchiwizowanych aliasach).
+       * Faktyczna atrybucja ma własny, niezależny self-invite guard przy zapisie do RTDB. */
       if (await ptgIsSelfInviteCandidate(ownerId, refCode)) {
-          __ptgInviteDiag("skip:self_invite", { refCode, ownerId });
-          try {
-              localStorage.setItem(seenKey, String(Date.now()));
-          } catch (_) {}
-          ptgClearPendingRefCapture();
-          return;
+          if (__ptgHasAcceptedAnyInvite) {
+              __ptgInviteDiag("skip:self_invite", { refCode, ownerId, mode: "strict_after_accept" });
+              try {
+                  localStorage.setItem(seenKey, String(Date.now()));
+              } catch (_) {}
+              ptgClearPendingRefCapture();
+              return;
+          }
+          __ptgInviteDiag("warn:self_invite_hit_but_overlay_allowed", { refCode, ownerId, mode: "allow_pre_accept" });
       }
 
       /* Cycle block — „ja" nie mogę przyjąć zaproszenia od osoby, którą wcześniej
@@ -7788,6 +7794,18 @@
           checkGameStateAndRender();
       }
       void ptgMaybeShowInviteAcceptOverlay();
+      /* Retry overlay po świeżym loginie — w Base/FC Mini App pierwsza próba zdarza się
+       * zanim `db` / pending_ref / URL-capture dobiegną do stanu „ready", przez co modal
+       * nigdy nie wyskakuje. Ponowne odpalenie po chwili łapie ten przypadek bez dodatkowych
+       * zmian w reszcie pipeline'u. */
+      setTimeout(function () {
+          try { ptgSyncPendingRefFromUrl(); } catch (_) {}
+          void ptgMaybeShowInviteAcceptOverlay();
+      }, 900);
+      setTimeout(function () {
+          try { ptgSyncPendingRefFromUrl(); } catch (_) {}
+          void ptgMaybeShowInviteAcceptOverlay();
+      }, 2200);
       setTimeout(function () {
           if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface || ptgNotificationSurfaceHint()) {
               scheduleNotificationPrompt();
