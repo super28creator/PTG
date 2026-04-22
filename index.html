@@ -4592,16 +4592,10 @@
   }
 
   function ptgFormatReferralCents(n) {
-      /* Minty są bardzo tanie, więc nagrody potrafią być rzędu $0.0001.
-       * Renderujemy z 4-miejscową precyzją i obcinamy końcowe zera
-       * powyżej dwóch, żeby zwykłe kwoty nadal wyglądały jak „1.23”,
-       * a mikronagrody („0.0001”) były w ogóle widoczne zamiast „0.00”. */
+      /* Product: zawsze pokazujemy 4 miejsca po przecinku (np. 0.0000$),
+       * żeby nawet bardzo małe zmiany były czytelne i spójne w całym UI. */
       const x = typeof n === "number" && !isNaN(n) ? n : 0;
-      let s = (x / 100).toFixed(4);
-      if (s.indexOf(".") >= 0) {
-          s = s.replace(/(\.\d{2})(\d*?)0+$/, "$1$2");
-      }
-      return s;
+      return (x / 100).toFixed(4);
   }
 
   function ptgEscapeReferralHtml(s) {
