@@ -6532,57 +6532,54 @@
               }
           }
           if (avEl && preview.avatarUrl) {
-              const current = avEl.querySelector("img");
-              if (current && current.getAttribute("data-src") === preview.avatarUrl) {
-                  /* Ten sam URL po pełnym resolve — nie przeładowujemy.
-                   * Upewnij się jednak, że fallback nie wrócił po retry triggerze. */
+              /* Bulletproof avatar swap:
+               * 1) W kółku avatara trzymamy DOKŁADNIE JEDEN element <img>.
+               * 2) Nowe URL-e preloadujemy niewidocznym Image() w pamięci.
+               * 3) `src` na widocznym <img> podmieniamy DOPIERO po sukcesie preloadu —
+               *    dzięki cache'owi przeglądarki podmiana jest natychmiastowa,
+               *    więc user nigdy nie widzi momentu pustego kółka ani flash'a
+               *    „pojawia się i znika”. */
+              const newUrl = preview.avatarUrl;
+              const liveImg = avEl.querySelector("img");
+              if (liveImg && liveImg.getAttribute("data-src") === newUrl) {
+                  liveImg.classList.add("invite-accept-avatar-img--loaded");
                   if (fallbackEl) fallbackEl.style.display = "none";
                   if (avEl) avEl.classList.remove("invite-accept-avatar--loading");
-                  return;
-              }
-              const img = document.createElement("img");
-              img.alt = "";
-              img.loading = "eager";
-              img.decoding = "async";
-              try { img.fetchPriority = "high"; } catch (_) {}
-              try { img.setAttribute("fetchpriority", "high"); } catch (_) {}
-              img.referrerPolicy = "no-referrer";
-              img.setAttribute("data-src", preview.avatarUrl);
-              img.addEventListener(
-                  "error",
-                  function () {
-                      if (img.parentNode) img.parentNode.removeChild(img);
+              } else {
+                  const probe = new Image();
+                  try { probe.decoding = "async"; } catch (_) {}
+                  try { probe.fetchPriority = "high"; } catch (_) {}
+                  try { probe.setAttribute("fetchpriority", "high"); } catch (_) {}
+                  try { probe.referrerPolicy = "no-referrer"; } catch (_) {}
+                  probe.onload = function () {
+                      let target = avEl.querySelector("img");
+                      if (!target) {
+                          target = document.createElement("img");
+                          target.alt = "";
+                          target.decoding = "async";
+                          try { target.referrerPolicy = "no-referrer"; } catch (_) {}
+                          avEl.appendChild(target);
+                      }
+                      const extras = Array.prototype.slice
+                          .call(avEl.querySelectorAll("img"))
+                          .filter(function (n) { return n !== target; });
+                      for (let i = 0; i < extras.length; i++) {
+                          if (extras[i].parentNode) extras[i].parentNode.removeChild(extras[i]);
+                      }
+                      target.setAttribute("data-src", newUrl);
+                      target.src = newUrl;
+                      target.classList.add("invite-accept-avatar-img--loaded");
+                      if (fallbackEl) fallbackEl.style.display = "none";
+                      if (avEl) avEl.classList.remove("invite-accept-avatar--loading");
+                  };
+                  probe.onerror = function () {
                       if (!avEl.querySelector("img")) {
                           if (fallbackEl) fallbackEl.style.display = "";
                           if (badgeEl) badgeEl.style.display = "";
                       }
-                  },
-                  { once: true },
-              );
-              img.addEventListener(
-                  "load",
-                  function () {
-                      /* Najpierw odsłaniamy nowy obraz (stackuje się absolutnie nad starym),
-                       * potem — dopiero po zakończonym fade-in — usuwamy poprzedników.
-                       * Bez tego był widoczny przeskok: stare img usunięte, nowe jeszcze
-                       * w opacity 0 → kilkaset ms pustego awatara. */
-                      img.classList.add("invite-accept-avatar-img--loaded");
-                      if (fallbackEl) fallbackEl.style.display = "none";
-                      const olds = Array.prototype.slice
-                          .call(avEl.querySelectorAll("img"))
-                          .filter(function (n) { return n !== img; });
-                      if (olds.length) {
-                          setTimeout(function () {
-                              for (let i = 0; i < olds.length; i++) {
-                                  if (olds[i].parentNode) olds[i].parentNode.removeChild(olds[i]);
-                              }
-                          }, 320);
-                      }
-                  },
-                  { once: true },
-              );
-              img.src = preview.avatarUrl;
-              if (!avEl.contains(img)) avEl.appendChild(img);
+                  };
+                  probe.src = newUrl;
+              }
           }
           if (isFinal) {
               if (nickEl) nickEl.classList.remove("invite-accept-nick--loading");
