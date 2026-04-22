@@ -1944,12 +1944,12 @@
         min-width: 0;
     }
     .player-logout-btn {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
         border-radius: 999px;
-        border: 1px solid rgba(96, 165, 250, 0.45);
-        background: rgba(15, 23, 42, 0.88);
-        color: rgba(226, 232, 240, 0.95);
+        border: 1px solid rgba(96, 165, 250, 0.42);
+        background: rgba(10, 18, 34, 0.92);
+        color: rgba(224, 231, 255, 0.95);
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -1957,13 +1957,18 @@
         transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
     }
     .player-logout-btn:hover {
-        background: rgba(30, 41, 59, 0.95);
-        border-color: rgba(125, 211, 252, 0.55);
+        background: rgba(20, 33, 61, 0.96);
+        border-color: rgba(125, 211, 252, 0.62);
     }
     .player-logout-btn:active { transform: translateY(1px); }
     .player-logout-btn:focus-visible {
         outline: 2px solid rgba(56, 189, 248, 0.9);
         outline-offset: 2px;
+    }
+    .player-logout-btn svg {
+        width: 14px;
+        height: 14px;
+        display: block;
     }
     .game-status-pill {
         max-width: 100%;
@@ -3344,8 +3349,14 @@
     <div class="game-status-grid" aria-label="Game status">
       <div class="game-status-row game-status-row--top">
         <div class="player-chip-wrap">
+          <button type="button" id="playerLogoutBtn" class="player-logout-btn" style="display:none;" title="Disconnect wallet session" aria-label="Disconnect wallet session">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M10 6V4h8v16h-8v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path d="M15 12H4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+              <path d="M7.5 8.5L4 12l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </button>
           <div id="playerDisplay" class="chip user-chip game-status-pill game-status-pill--user" style="display:none; font-size: 11px;"></div>
-          <button type="button" id="playerLogoutBtn" class="player-logout-btn" style="display:none;" title="Disconnect wallet session" aria-label="Disconnect wallet session">⎋</button>
         </div>
         <div class="chip meta__category-chip game-status-pill game-status-pill--category" id="categoryDisplay">Category: Loading...</div>
       </div>
@@ -7361,6 +7372,15 @@
           }
 
           if (ptgHost === "farcaster") {
+              const provider = getEmbeddedEthProvider();
+              if (provider) {
+                  await ensureBaseMainnet(provider);
+                  const accounts = await provider.request({ method: "eth_requestAccounts" });
+                  if (accounts && accounts[0] && applyWalletIdentity(accounts[0], "farcaster")) {
+                      await finishLoginAfterIdentity();
+                      return;
+                  }
+              }
               let ctx;
               try {
                   ctx = await sdk.context;
@@ -7369,20 +7389,7 @@
                   await finishLoginAfterIdentity();
                   return;
               }
-              const provider = getEmbeddedEthProvider();
-              if (!provider) {
-                  throw new Error("Open this game inside Farcaster and try again, or use a browser with a wallet.");
-              }
-              await ensureBaseMainnet(provider);
-              const accounts = await provider.request({ method: "eth_requestAccounts" });
-              if (!accounts || !accounts[0]) {
-                  throw new Error("Approve the request in your Farcaster client.");
-              }
-              if (!applyWalletIdentity(accounts[0], "farcaster")) {
-                  throw new Error("Invalid address from wallet.");
-              }
-              await finishLoginAfterIdentity();
-              return;
+              throw new Error("Open this game inside Farcaster and approve wallet access, or use a browser wallet.");
           }
 
           /* Przeglądarka — tylko wstrzyknięty portfel (MetaMask itd.), bez Mini App. */
