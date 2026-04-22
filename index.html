@@ -4314,6 +4314,12 @@
   /**
    * Jednorazowy wipe localStorage przy zmianie partycji referrali lub wersji danych —
    * stare pending/seen nie mogą reaktywować modala ani brudzić nowego roota RTDB.
+   *
+   * UWAGA: ten purge biegnie w module-script PO klasycznym skrypcie, który już zdążył
+   * zapisać świeże `ptg_pending_ref` / `ptg_pending_via` z URL-a. Gdybyśmy po prostu
+   * wszystko wyczyścili, pierwsza wizyta osoby zapraszanej w nowej wersji (typowo:
+   * wejście przez `?ref=X&via=farcaster` na web) traciłaby ref → modal nigdy się nie
+   * pokazuje. Dlatego po purge'u re-capture'ujemy z URL-a.
    */
   (function ptgPurgeStaleReferralLocalStorage() {
       try {
@@ -4343,6 +4349,22 @@
               } catch (_) {}
           }
           localStorage.setItem(markerKey, cur);
+          /* Re-capture świeżego ref/via z URL-a — gdy ktoś ląduje na linku
+           * `?ref=X&via=farcaster` pierwszy raz po bumpie wersji, chcemy zachować
+           * zaproszenie, nie skasować go po drodze. */
+          try {
+              const cap =
+                  typeof window !== "undefined" && typeof window.__ptgCaptureRefViaFromUrl === "function"
+                      ? window.__ptgCaptureRefViaFromUrl()
+                      : null;
+              if (cap && cap.ref && /^[a-f0-9]{12}$/i.test(String(cap.ref).trim())) {
+                  localStorage.setItem("ptg_pending_ref", String(cap.ref).trim().toLowerCase());
+                  const v = cap.via;
+                  if (v === "farcaster" || v === "base" || v === "web" || v === "browser") {
+                      localStorage.setItem("ptg_pending_via", v === "browser" ? "web" : v);
+                  }
+              }
+          } catch (_) {}
       } catch (_) {}
   })();
 
@@ -5989,6 +6011,10 @@
 
   async function ptgMaybeShowInviteAcceptOverlay() {
       if (!isLoggedIn() || myUserId === "guest") return;
+      /* Defensywny re-sync: jeżeli URL ma `?ref=X&via=…`, a localStorage z jakiegoś
+       * powodu został w międzyczasie wyczyszczony (np. przez purge po bumpie wersji
+       * referrali), odtwórz pending z URL-a zanim zrezygnujemy. */
+      try { ptgSyncPendingRefFromUrl(); } catch (_) {}
       let pending = null;
       try {
           pending = localStorage.getItem("ptg_pending_ref") || localStorage.getItem("ptg_invite_last_ref");
@@ -6360,6 +6386,7 @@
    */
   async function ptgWarmInviterPreviewFromStorage() {
       if (!db) return;
+      try { ptgSyncPendingRefFromUrl(); } catch (_) {}
       let pending = null;
       try {
           pending = localStorage.getItem("ptg_pending_ref") || localStorage.getItem("ptg_invite_last_ref");
