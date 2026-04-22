@@ -11881,10 +11881,16 @@
           .map(([id, p]) => {
               const po = p && typeof p === "object" ? p : {};
               const epochOk = Number(po.leaderboardEpoch || 0) === LEADERBOARD_RESET_EPOCH;
-              return { id, p: po, scoreForBoard: epochOk ? (po.score || 0) : 0 };
+              return { id, p: po, epochOk, scoreForBoard: epochOk ? (po.score || 0) : 0 };
           })
+          .filter((row) => row.epochOk)
           .sort((a, b) => (b.scoreForBoard || 0) - (a.scoreForBoard || 0))
           .slice(0, 50);
+      if (rows.length === 0) {
+          tbody.innerHTML =
+              '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">No scores yet.</td></tr>';
+          return;
+      }
       tbody.innerHTML = rows
           .map((row, i) => {
               const rank = i + 1;
