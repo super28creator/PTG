@@ -16,10 +16,12 @@
       "includeFiles": "farcaster-manifest.json"
     },
     "api/send-notification.js": {
-      "includeFiles": "lib/**"
+      "includeFiles": "lib/**",
+      "maxDuration": 60
     },
     "api/cron-daily-notification.js": {
-      "includeFiles": "lib/**"
+      "includeFiles": "lib/**",
+      "maxDuration": 60
     },
     "api/webhook.js": {
       "includeFiles": "lib/**"

@@ -873,6 +873,35 @@
         color: rgba(226, 232, 240, 0.88);
         font-variant-numeric: tabular-nums;
     }
+    .referral-claim-history-tx {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        color: #a7f3d0;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        font-variant-numeric: tabular-nums;
+        text-decoration: none;
+        transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+    }
+    .referral-claim-history-tx:hover,
+    .referral-claim-history-tx:focus-visible {
+        background: rgba(16, 185, 129, 0.22);
+        border-color: rgba(16, 185, 129, 0.6);
+        color: #ecfdf5;
+    }
+    .referral-claim-history-tx svg {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+        opacity: 0.85;
+    }
     .referral-invite-split {
         display: flex;
         flex-direction: row;
@@ -1160,6 +1189,10 @@
         overflow: hidden;
         text-overflow: ellipsis;
         word-break: normal;
+    }
+    .referral-inv-name.referral-inv-name--elite {
+        color: #ffd12f;
+        font-weight: 800;
     }
     .referral-inv-meta {
         font-size: 10px;
@@ -2170,6 +2203,13 @@
     .user-chip--base { border-color: rgba(0, 82, 255, 0.55); background: rgba(0, 40, 120, 0.2); }
     .user-chip--farcaster { border-color: rgba(138, 99, 255, 0.5); background: rgba(70, 40, 120, 0.18); }
     .user-chip--browser { border-color: rgba(60, 138, 255, 0.5); }
+    .user-chip--elite {
+        border-color: rgba(255, 209, 47, 0.72) !important;
+        background: linear-gradient(180deg, rgba(88, 68, 14, 0.92) 0%, rgba(44, 34, 10, 0.95) 100%) !important;
+        color: #ffe38a !important;
+        text-shadow: none !important;
+        box-shadow: none !important;
+    }
 
     /* --- SOCIAL & FOOTER: te same błękity co reszta UI (base blue / cerulean), lekko przygaszone --- */
     .social-section {
@@ -2640,6 +2680,36 @@
     .leaderboard-table th { text-align: left; color: var(--text-muted); font-size: 12px; padding-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
     .leaderboard-table td { padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 15px; }
     .leaderboard-table .lb-name-cell { word-break: break-word; overflow-wrap: anywhere; }
+    .leaderboard-table .lb-name-cell.lb-name-cell--me {
+        font-weight: 800;
+        position: relative;
+    }
+    .leaderboard-table .lb-name-cell.lb-name-cell--me::after {
+        content: "You";
+        display: inline-block;
+        margin-left: 8px;
+        padding: 1px 6px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 800;
+        line-height: 1.4;
+        vertical-align: middle;
+        color: #0b1222;
+        background: #93c5fd;
+        border: 1px solid rgba(147, 197, 253, 0.7);
+    }
+    .leaderboard-table .lb-name-cell.lb-name-cell--me:not(.lb-name-cell--elite) {
+        color: #3c8aff;
+    }
+    .leaderboard-table .lb-name-cell.lb-name-cell--me.lb-name-cell--elite::after {
+        color: #2a1b00;
+        background: #ffd12f;
+        border-color: rgba(255, 209, 47, 0.75);
+    }
+    .leaderboard-table .lb-name-cell.lb-name-cell--elite {
+        color: #ffd12f;
+        font-weight: 800;
+    }
     .rank-badge { 
         width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; 
         border-radius: 6px; font-weight: 800; font-size: 12px; 
@@ -2727,6 +2797,17 @@
     .cal-icon-svg--star {
         fill: currentColor;
         stroke: none;
+    }
+    .cal-icon-btn.cal-icon-btn--elite {
+        border-color: rgba(255, 209, 47, 0.62);
+        background: linear-gradient(180deg, rgba(92, 73, 15, 0.9) 0%, rgba(47, 36, 10, 0.94) 100%);
+        color: #ffd12f;
+        box-shadow: 0 0 0 1px rgba(255, 209, 47, 0.2), 0 4px 16px rgba(255, 193, 7, 0.22);
+    }
+    .cal-icon-btn.cal-icon-btn--elite:hover {
+        border-color: rgba(255, 217, 92, 0.85);
+        color: #ffe38a;
+        box-shadow: 0 0 0 1px rgba(255, 209, 47, 0.26), 0 6px 18px rgba(255, 193, 7, 0.28);
     }
     .header-icon-btn {
         padding: 8px 10px;
@@ -3309,6 +3390,765 @@
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
     @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); } }
+
+    /* =========================================================
+       PTG DOCS — Professional documentation modal
+       ========================================================= */
+    button.social-btn {
+        font-family: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+    }
+    .docs-modal-card {
+        max-width: 720px;
+        width: 100%;
+        max-height: min(92vh, 900px);
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: linear-gradient(175deg, #141a2c 0%, #0b1122 60%, #080d1a 100%);
+        border: 1px solid rgba(60, 138, 255, 0.32);
+        box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+            0 25px 70px rgba(0, 0, 0, 0.65),
+            0 0 80px rgba(0, 82, 255, 0.18);
+    }
+    .docs-modal-header {
+        position: relative;
+        padding: 22px 56px 18px;
+        text-align: center;
+        border-bottom: 1px solid rgba(60, 138, 255, 0.18);
+        background:
+            radial-gradient(120% 200% at 50% 0%, rgba(60, 138, 255, 0.22) 0%, rgba(60, 138, 255, 0) 60%),
+            linear-gradient(180deg, rgba(20, 32, 66, 0.65) 0%, rgba(10, 15, 30, 0) 100%);
+        flex-shrink: 0;
+    }
+    .docs-modal-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--cerulean);
+        background: rgba(60, 138, 255, 0.12);
+        border: 1px solid rgba(60, 138, 255, 0.35);
+        border-radius: 999px;
+        padding: 4px 10px;
+        margin-bottom: 10px;
+    }
+    .docs-modal-eyebrow::before {
+        content: "";
+        display: block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--cerulean);
+        box-shadow: 0 0 10px var(--cerulean);
+    }
+    .docs-modal-title {
+        margin: 0 0 4px;
+        font-size: clamp(1.35rem, 4.2vw, 1.75rem);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: #fff;
+        background: linear-gradient(135deg, #ffffff 0%, #bcd4ff 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .docs-modal-subtitle {
+        margin: 0;
+        font-size: 0.88rem;
+        font-weight: 500;
+        color: rgba(180, 198, 230, 0.82);
+        line-height: 1.5;
+    }
+    .docs-modal-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 38px;
+        height: 38px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 22px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    }
+    .docs-modal-close:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        transform: rotate(90deg);
+    }
+
+    .docs-nav {
+        flex-shrink: 0;
+        display: flex;
+        gap: 6px;
+        padding: 10px 14px;
+        overflow-x: auto;
+        background: rgba(6, 10, 20, 0.6);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        scrollbar-width: none;
+    }
+    .docs-nav::-webkit-scrollbar { display: none; }
+    .docs-nav__chip {
+        flex-shrink: 0;
+        padding: 7px 12px;
+        font-size: 11.5px;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        color: rgba(200, 214, 240, 0.78);
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        cursor: pointer;
+        transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+        white-space: nowrap;
+    }
+    .docs-nav__chip:hover {
+        color: #fff;
+        background: rgba(60, 138, 255, 0.12);
+        border-color: rgba(60, 138, 255, 0.35);
+    }
+    .docs-nav__chip.is-active {
+        color: #fff;
+        background: linear-gradient(135deg, rgba(60, 138, 255, 0.4), rgba(0, 82, 255, 0.6));
+        border-color: rgba(120, 180, 255, 0.5);
+        box-shadow: 0 4px 14px rgba(0, 82, 255, 0.3);
+    }
+
+    .docs-modal-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 20px clamp(14px, 3vw, 24px) 28px;
+        scroll-behavior: smooth;
+    }
+    .docs-modal-body::-webkit-scrollbar { width: 8px; }
+    .docs-modal-body::-webkit-scrollbar-track { background: transparent; }
+    .docs-modal-body::-webkit-scrollbar-thumb {
+        background: rgba(60, 138, 255, 0.22);
+        border-radius: 999px;
+    }
+    .docs-modal-body::-webkit-scrollbar-thumb:hover { background: rgba(60, 138, 255, 0.4); }
+
+    .docs-section {
+        scroll-margin-top: 16px;
+        padding: 18px 0;
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.07);
+    }
+    .docs-section:last-of-type { border-bottom: none; }
+    .docs-section__head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+    .docs-section__num {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 800;
+        color: #fff;
+        background: linear-gradient(145deg, var(--cerulean), var(--base-blue));
+        box-shadow: 0 4px 14px rgba(0, 82, 255, 0.4);
+        letter-spacing: 0.02em;
+    }
+    .docs-section__title {
+        margin: 0;
+        font-size: 1.12rem;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        color: #fff;
+        text-align: left;
+    }
+    .docs-section__lead {
+        margin: 0 0 14px;
+        font-size: 0.92rem;
+        font-weight: 500;
+        color: rgba(198, 212, 238, 0.92);
+        line-height: 1.6;
+        text-align: left;
+    }
+    .docs-figure {
+        margin: 0 0 14px;
+        padding: 10px;
+        background: radial-gradient(120% 120% at 50% 0%, rgba(60, 138, 255, 0.12) 0%, rgba(60, 138, 255, 0) 60%), rgba(10, 15, 28, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 18px;
+        overflow: hidden;
+        position: relative;
+    }
+    .docs-figure img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 12px;
+        background: #fff;
+    }
+    .docs-figure--dark img { background: transparent; }
+    .docs-figure__caption {
+        display: block;
+        margin-top: 8px;
+        font-size: 11.5px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: rgba(170, 188, 220, 0.75);
+        text-align: center;
+    }
+    .docs-figure-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 0 0 14px;
+    }
+    @media (max-width: 560px) {
+        .docs-figure-pair { grid-template-columns: 1fr; }
+    }
+    .docs-body-copy { text-align: left; color: rgba(210, 222, 242, 0.92); font-size: 0.92rem; line-height: 1.65; }
+    .docs-body-copy p { margin: 0 0 10px; }
+    .docs-body-copy p:last-child { margin-bottom: 0; }
+    .docs-body-copy strong { color: #fff; font-weight: 700; }
+    .docs-body-copy em { color: var(--cerulean); font-style: normal; font-weight: 700; }
+
+    .docs-list {
+        margin: 0 0 4px;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+    }
+    .docs-list li {
+        position: relative;
+        padding: 10px 12px 10px 36px;
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        font-size: 0.88rem;
+        line-height: 1.5;
+        color: rgba(215, 226, 245, 0.92);
+        text-align: left;
+    }
+    .docs-list li::before {
+        content: "";
+        position: absolute;
+        left: 12px;
+        top: 14px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, var(--cerulean) 0%, var(--base-blue) 100%);
+        box-shadow: 0 0 0 3px rgba(60, 138, 255, 0.12);
+    }
+    .docs-list--check li { padding-left: 40px; }
+    .docs-list--check li::before {
+        content: "";
+        left: 12px;
+        top: 12px;
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        background:
+            linear-gradient(135deg, rgba(102, 200, 0, 0.95), rgba(72, 150, 0, 0.95));
+        box-shadow: 0 2px 8px rgba(102, 200, 0, 0.35);
+    }
+    .docs-list--check li::after {
+        content: "";
+        position: absolute;
+        left: 17px;
+        top: 16px;
+        width: 8px;
+        height: 4px;
+        border-left: 2px solid #fff;
+        border-bottom: 2px solid #fff;
+        transform: rotate(-45deg);
+    }
+
+    .docs-grid-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-top: 4px;
+    }
+    .docs-mini-card {
+        padding: 12px 12px 14px;
+        background: linear-gradient(150deg, rgba(60, 138, 255, 0.16) 0%, rgba(10, 18, 36, 0.6) 100%);
+        border: 1px solid rgba(60, 138, 255, 0.24);
+        border-radius: 14px;
+        text-align: left;
+    }
+    .docs-mini-card__eyebrow {
+        display: block;
+        font-size: 9.5px;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--cerulean);
+        margin-bottom: 4px;
+    }
+    .docs-mini-card__title {
+        margin: 0 0 4px;
+        font-size: 0.98rem;
+        font-weight: 800;
+        color: #fff;
+    }
+    .docs-mini-card__desc {
+        margin: 0;
+        font-size: 0.78rem;
+        color: rgba(185, 200, 225, 0.88);
+        line-height: 1.45;
+    }
+
+    .docs-callout {
+        display: flex;
+        gap: 12px;
+        padding: 12px 14px;
+        margin: 14px 0 0;
+        background: linear-gradient(140deg, rgba(60, 138, 255, 0.16), rgba(60, 138, 255, 0.04));
+        border: 1px solid rgba(60, 138, 255, 0.35);
+        border-radius: 14px;
+        text-align: left;
+    }
+    .docs-callout__icon {
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: linear-gradient(145deg, var(--cerulean), var(--base-blue));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        font-weight: 800;
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(0, 82, 255, 0.4);
+    }
+    .docs-callout__icon svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        display: block;
+    }
+    .docs-callout__text {
+        margin: 0;
+        font-size: 0.85rem;
+        line-height: 1.55;
+        color: rgba(216, 228, 248, 0.94);
+    }
+    .docs-callout--gold {
+        background: linear-gradient(140deg, rgba(255, 209, 47, 0.18), rgba(255, 209, 47, 0.04));
+        border-color: rgba(255, 209, 47, 0.4);
+    }
+    .docs-callout--gold .docs-callout__icon {
+        background: linear-gradient(145deg, #ffd12f, #f59e0b);
+        box-shadow: 0 4px 14px rgba(255, 193, 7, 0.4);
+        color: #2a1900;
+    }
+
+    .docs-tier-compare {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 4px;
+    }
+    @media (max-width: 480px) {
+        .docs-tier-compare { grid-template-columns: 1fr; }
+    }
+    .docs-tier-card {
+        padding: 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(10, 15, 28, 0.5);
+        text-align: left;
+    }
+    .docs-tier-card--standard {
+        background: linear-gradient(160deg, rgba(60, 138, 255, 0.12), rgba(10, 15, 28, 0.6));
+        border-color: rgba(60, 138, 255, 0.28);
+    }
+    .docs-tier-card--elite {
+        background: linear-gradient(160deg, rgba(255, 209, 47, 0.14), rgba(10, 15, 28, 0.6));
+        border-color: rgba(255, 209, 47, 0.38);
+        box-shadow: 0 4px 22px rgba(255, 193, 7, 0.08);
+    }
+    .docs-tier-card__badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 999px;
+        margin-bottom: 8px;
+    }
+    .docs-tier-card--standard .docs-tier-card__badge {
+        color: var(--cerulean);
+        background: rgba(60, 138, 255, 0.14);
+        border: 1px solid rgba(60, 138, 255, 0.35);
+    }
+    .docs-tier-card--elite .docs-tier-card__badge {
+        color: #ffd12f;
+        background: rgba(255, 209, 47, 0.15);
+        border: 1px solid rgba(255, 209, 47, 0.5);
+    }
+    .docs-tier-card__title {
+        margin: 0 0 6px;
+        font-size: 1.02rem;
+        font-weight: 800;
+        color: #fff;
+    }
+    .docs-tier-card__rates {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .docs-tier-rate {
+        flex: 1;
+        padding: 6px 4px;
+        border-radius: 10px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .docs-tier-rate__big {
+        display: block;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+    }
+    .docs-tier-rate__label {
+        display: block;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(180, 196, 224, 0.75);
+        margin-top: 1px;
+    }
+    .docs-tier-card__desc {
+        margin: 0;
+        font-size: 0.82rem;
+        line-height: 1.5;
+        color: rgba(198, 212, 238, 0.88);
+    }
+
+    .docs-footer-cta {
+        margin: 22px 0 0;
+        padding: 18px 16px;
+        border-radius: 18px;
+        text-align: center;
+        background:
+            radial-gradient(120% 160% at 50% 0%, rgba(60, 138, 255, 0.28) 0%, rgba(60, 138, 255, 0) 60%),
+            linear-gradient(180deg, rgba(18, 26, 54, 0.7) 0%, rgba(8, 14, 28, 0.7) 100%);
+        border: 1px solid rgba(60, 138, 255, 0.32);
+    }
+    .docs-footer-cta p {
+        margin: 0 0 10px;
+        font-size: 0.9rem;
+        color: rgba(205, 219, 245, 0.92);
+    }
+    .docs-footer-cta__btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 999px;
+        border: 1px solid rgba(120, 180, 255, 0.5);
+        background: linear-gradient(135deg, var(--cerulean), var(--base-blue));
+        color: #fff;
+        font-weight: 800;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        box-shadow: 0 8px 26px rgba(0, 82, 255, 0.45);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .docs-footer-cta__btn:hover { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(0, 82, 255, 0.55); }
+
+    .docs-pricing-heading {
+      margin: 20px 0 8px;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: #fff;
+      text-align: left;
+    }
+    .docs-pricing-lead {
+      margin: 0 0 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: rgba(210, 224, 248, 0.95);
+      line-height: 1.55;
+      text-align: left;
+    }
+    .docs-pricing-foot {
+      margin: 12px 0 0;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: rgba(170, 188, 220, 0.88);
+      line-height: 1.55;
+      text-align: left;
+    }
+
+    /* Hint asset: square crop, no caption */
+    .docs-hint-icon-only {
+      width: 120px;
+      margin: 18px auto 12px;
+      display: block;
+      line-height: 0;
+    }
+    .docs-hint-icon-only img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .docs-modal-body code {
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.38);
+      color: rgba(230, 238, 255, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .docs-mini-card.docs-mini-card--platform-base .docs-mini-card__eyebrow { color: var(--cerulean); }
+    .docs-mini-card.docs-mini-card--platform-fc .docs-mini-card__eyebrow { color: #c4b5fd; }
+    .docs-mini-card.docs-mini-card--platform-web .docs-mini-card__eyebrow { color: #22d3ee; }
+    .docs-mini-card.docs-mini-card--platform-base {
+      border-color: rgba(60, 138, 255, 0.38);
+      box-shadow: 0 4px 18px rgba(0, 82, 255, 0.12);
+    }
+    .docs-mini-card.docs-mini-card--platform-fc {
+      border-color: rgba(167, 139, 250, 0.42);
+      box-shadow: 0 4px 18px rgba(139, 92, 246, 0.12);
+    }
+    .docs-mini-card.docs-mini-card--platform-web {
+      border-color: rgba(34, 211, 238, 0.38);
+      box-shadow: 0 4px 18px rgba(34, 211, 238, 0.1);
+    }
+
+    /* =====================================================================
+       Onboarding tour (first-visit walkthrough)
+       ===================================================================== */
+    .ptg-tour-root {
+      position: fixed;
+      inset: 0;
+      z-index: 20000;
+      pointer-events: none;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #fff;
+      opacity: 1;
+      transition: opacity 0.25s ease;
+    }
+    .ptg-tour-root--active { pointer-events: auto; }
+    .ptg-tour-root--fade-out { opacity: 0; }
+
+    .ptg-tour-backdrop {
+      position: fixed;
+      inset: 0;
+      background: transparent;
+      pointer-events: auto;
+    }
+
+    .ptg-tour-cutout {
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      width: 0;
+      height: 0;
+      border-radius: 14px;
+      pointer-events: none;
+      box-shadow:
+        0 0 0 9999px rgba(6, 8, 16, 0.82),
+        0 0 0 2px rgba(60, 138, 255, 0.95),
+        0 0 28px 6px rgba(60, 138, 255, 0.55);
+      transition: left 0.32s cubic-bezier(0.2, 0.9, 0.3, 1),
+                  top 0.32s cubic-bezier(0.2, 0.9, 0.3, 1),
+                  width 0.32s cubic-bezier(0.2, 0.9, 0.3, 1),
+                  height 0.32s cubic-bezier(0.2, 0.9, 0.3, 1),
+                  border-radius 0.2s ease,
+                  opacity 0.25s ease;
+      will-change: left, top, width, height;
+    }
+    .ptg-tour-cutout--hidden {
+      opacity: 0;
+      box-shadow: 0 0 0 9999px rgba(6, 8, 16, 0.82);
+    }
+    @keyframes ptgTourPulse {
+      0%, 100% {
+        box-shadow:
+          0 0 0 9999px rgba(6, 8, 16, 0.82),
+          0 0 0 2px rgba(60, 138, 255, 0.95),
+          0 0 28px 6px rgba(60, 138, 255, 0.55);
+      }
+      50% {
+        box-shadow:
+          0 0 0 9999px rgba(6, 8, 16, 0.82),
+          0 0 0 3px rgba(60, 138, 255, 1),
+          0 0 40px 10px rgba(60, 138, 255, 0.85);
+      }
+    }
+    .ptg-tour-cutout--pulse { animation: ptgTourPulse 2.2s ease-in-out infinite; }
+
+    .ptg-tour-tooltip {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      max-width: min(380px, calc(100vw - 24px));
+      width: calc(100vw - 24px);
+      box-sizing: border-box;
+      background: linear-gradient(180deg, rgba(22, 26, 40, 0.98), rgba(14, 17, 28, 0.98));
+      border: 1px solid rgba(60, 138, 255, 0.32);
+      border-radius: 16px;
+      padding: 18px 20px 16px;
+      color: #fff;
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.55),
+        0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+      pointer-events: auto;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    @media (min-width: 420px) {
+      .ptg-tour-tooltip { width: auto; }
+    }
+    @keyframes ptgTourIn {
+      from { opacity: 0; transform: translateY(6px) scale(0.985); }
+      to   { opacity: 1; transform: translateY(0)   scale(1); }
+    }
+    .ptg-tour-tooltip { animation: ptgTourIn 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+
+    .ptg-tour-tooltip__progress {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--cerulean, #3c8aff);
+      margin-bottom: 10px;
+    }
+    .ptg-tour-tooltip__progress-dots {
+      display: inline-flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      max-width: 55%;
+    }
+    .ptg-tour-tooltip__progress-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(60, 138, 255, 0.22);
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+    .ptg-tour-tooltip__progress-dot--done {
+      background: rgba(60, 138, 255, 0.55);
+    }
+    .ptg-tour-tooltip__progress-dot--active {
+      background: var(--cerulean, #3c8aff);
+      box-shadow: 0 0 8px rgba(60, 138, 255, 0.85);
+      transform: scale(1.25);
+    }
+
+    .ptg-tour-tooltip__title {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 0 0 6px;
+      line-height: 1.25;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+    .ptg-tour-tooltip__body {
+      font-size: 14px;
+      line-height: 1.55;
+      color: rgba(255, 255, 255, 0.82);
+      margin: 0 0 14px;
+      font-weight: 400;
+    }
+    .ptg-tour-tooltip__actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .ptg-tour-tooltip__actions-right {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .ptg-tour-btn {
+      appearance: none;
+      border: none;
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.78);
+      font-weight: 700;
+      font-size: 13px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+      line-height: 1;
+    }
+    .ptg-tour-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+    .ptg-tour-btn:active { transform: translateY(1px); }
+    .ptg-tour-btn--primary {
+      background: linear-gradient(180deg, #0b5cff, #0040ff);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(0, 64, 255, 0.4);
+    }
+    .ptg-tour-btn--primary:hover {
+      background: linear-gradient(180deg, #1c6bff, #0e4dff);
+      box-shadow: 0 6px 22px rgba(0, 64, 255, 0.55);
+      color: #fff;
+    }
+    .ptg-tour-btn--skip {
+      background: transparent;
+      color: rgba(255, 255, 255, 0.55);
+      padding: 6px 4px;
+      font-size: 12px;
+    }
+    .ptg-tour-btn--skip:hover { background: transparent; color: rgba(255, 255, 255, 0.9); }
+
+    @media (max-width: 480px) {
+      .ptg-tour-tooltip { padding: 16px 16px 14px; border-radius: 14px; }
+      .ptg-tour-tooltip__title { font-size: 16px; }
+      .ptg-tour-tooltip__body { font-size: 13px; margin-bottom: 12px; }
+      .ptg-tour-btn { padding: 8px 12px; font-size: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ptg-tour-cutout,
+      .ptg-tour-tooltip { transition: none !important; animation: none !important; }
+      .ptg-tour-cutout--pulse { animation: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -3444,13 +4284,13 @@
                 </button>
                 <div class="score-milestones" id="scoreMilestones" aria-label="Score milestone badges">
                   <button type="button" class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" data-badge-kind="10" disabled title="Unlock at 10 points">
-                    <img class="milestone-badge-img" src="/badge-10.png" width="44" height="44" alt="10 win badge" decoding="async" />
+                    <img class="milestone-badge-img" src="/badge-10.png" width="44" height="44" alt="10 points milestone badge" decoding="async" />
                   </button>
                   <button type="button" class="score-milestone score-milestone--100 score-milestone--locked" id="scoreMilestone100" data-badge-kind="100" disabled title="Unlock at 100 points">
-                    <img class="milestone-badge-img" src="/badge-100.png" width="44" height="44" alt="100 win badge" decoding="async" />
+                    <img class="milestone-badge-img" src="/badge-100.png" width="44" height="44" alt="100 points milestone badge" decoding="async" />
                   </button>
                   <button type="button" class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" data-badge-kind="1000" disabled title="Unlock at 1000 points">
-                    <img class="milestone-badge-img" src="/badge-1000.png" width="44" height="44" alt="1000 win badge" decoding="async" />
+                    <img class="milestone-badge-img" src="/badge-1000.png" width="44" height="44" alt="1000 points milestone badge" decoding="async" />
                   </button>
                 </div>
               </div>
@@ -3542,13 +4382,19 @@
                 </span>
             </a>
         </div>
-        <div class="social-row social-row--single">
+        <div class="social-row">
             <a href="https://social-connect28.vercel.app/" target="_blank" rel="noopener noreferrer" class="social-btn" title="Super Creator — founder hub">
                 <span class="social-btn__body">
                   <span class="social-icon-sq" aria-hidden="true"><svg class="social-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>
                   <span class="social-btn__text">About Founder</span>
                 </span>
             </a>
+            <button type="button" id="openDocsBtn" class="social-btn" title="PTG Docs — how the game works" aria-haspopup="dialog" aria-controls="docsOverlay">
+                <span class="social-btn__body">
+                  <span class="social-icon-sq" aria-hidden="true"><svg class="social-icon" viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 13h8v2H8v-2zm0 4h8v2H8v-2zm0-8h5v2H8V9z"/></svg></span>
+                  <span class="social-btn__text">PTG Docs</span>
+                </span>
+            </button>
         </div>
         <ul class="contract-links-row" aria-label="Smart contracts on Base">
             <li><a href="https://basescan.org/address/0x9f9343A6833190EE0c816f71D72CE450b1ee8530" target="_blank" rel="noopener noreferrer" class="contract-link-chip" title="Daily Mint — BaseScan" aria-label="Daily Mint on BaseScan"><svg class="social-icon social-icon--basescan" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true"><path class="basescan-ring" fill-rule="evenodd" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,4c4.42,0,8,3.58,8,8s-3.58,8-8,8s-8-3.58-8-8S7.58,4,12,4z"/><g class="basescan-bars"><rect x="6.75" y="12.55" width="1.78" height="4.45" rx="0.5"/><rect x="9.05" y="11.28" width="1.78" height="5.72" rx="0.5"/><rect x="11.35" y="10.02" width="1.78" height="6.98" rx="0.5"/><rect x="13.65" y="8.75" width="1.78" height="8.25" rx="0.5"/></g></svg></a></li>
@@ -3727,11 +4573,372 @@
   </div>
 </div>
 
+<!-- =========================================================
+     PTG DOCS: Full documentation modal
+     ========================================================= -->
+<div class="modal-overlay" id="docsOverlay" aria-hidden="true" role="dialog" aria-labelledby="docsModalTitle" aria-modal="true">
+  <div class="mint-card docs-modal-card">
+    <div class="docs-modal-header">
+      <span class="docs-modal-eyebrow">PTG Docs · v1.0</span>
+      <h2 id="docsModalTitle" class="docs-modal-title">Phrase&nbsp;To&nbsp;Guess: Player Guide</h2>
+      <p class="docs-modal-subtitle">Everything you need to play, win, mint and earn on Base - in one place.</p>
+      <button type="button" class="docs-modal-close" id="docsModalCloseBtn" aria-label="Close documentation">×</button>
+    </div>
+
+    <nav class="docs-nav" id="docsNav" aria-label="Documentation sections">
+      <button type="button" class="docs-nav__chip is-active" data-docs-target="docs-sec-intro">Overview</button>
+      <button type="button" class="docs-nav__chip" data-docs-target="docs-sec-platforms">Platforms</button>
+      <button type="button" class="docs-nav__chip" data-docs-target="docs-sec-play">How to Play</button>
+      <button type="button" class="docs-nav__chip" data-docs-target="docs-sec-categories">Categories</button>
+      <button type="button" class="docs-nav__chip" data-docs-target="docs-sec-nft">NFT Badges</button>
+      <button type="button" class="docs-nav__chip" data-docs-target="docs-sec-leaderboard">Leaderboard</button>
+      <button type="button" class="docs-nav__chip" data-docs-target="docs-sec-referral">Referral Program</button>
+      <button type="button" class="docs-nav__chip" data-docs-target="docs-sec-invite">Invite &amp; Earn</button>
+      <button type="button" class="docs-nav__chip" data-docs-target="docs-sec-community">Community</button>
+    </nav>
+
+    <div class="docs-modal-body" id="docsModalBody">
+
+      <!-- ================= OVERVIEW ================= -->
+      <section class="docs-section" id="docs-sec-intro">
+        <div class="docs-section__head">
+          <span class="docs-section__num">01</span>
+          <h3 class="docs-section__title">What is Phrase To Guess?</h3>
+        </div>
+        <p class="docs-section__lead">
+          Phrase&nbsp;To&nbsp;Guess (PTG) is a skill-based word guessing game built natively on <strong>Base</strong>.
+          Every day you get a handful of puzzles across different knowledge categories - guess the hidden phrase, mint an on-chain trophy,
+          climb the global leaderboard and earn rewards for inviting friends.
+        </p>
+
+        <div class="docs-grid-cards">
+          <div class="docs-mini-card">
+            <span class="docs-mini-card__eyebrow">Daily</span>
+            <h4 class="docs-mini-card__title">3 games / day</h4>
+            <p class="docs-mini-card__desc">Three puzzles every 24h - keep your streak alive.</p>
+          </div>
+          <div class="docs-mini-card">
+            <span class="docs-mini-card__eyebrow">On-chain</span>
+            <h4 class="docs-mini-card__title">Solve → Mint</h4>
+            <p class="docs-mini-card__desc">Each solved puzzle unlocks your daily trophy mint on Base (micro-price, see NFT section).</p>
+          </div>
+          <div class="docs-mini-card">
+            <span class="docs-mini-card__eyebrow">Social</span>
+            <h4 class="docs-mini-card__title">Earn by inviting</h4>
+            <p class="docs-mini-card__desc">Get a % of friends' fees - forever.</p>
+          </div>
+          <div class="docs-mini-card">
+            <span class="docs-mini-card__eyebrow">Global</span>
+            <h4 class="docs-mini-card__title">Seasonal leaderboard</h4>
+            <p class="docs-mini-card__desc">Compete worldwide, reset every season.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PLATFORMS: BASE / FARCASTER / WEB ================= -->
+      <section class="docs-section" id="docs-sec-platforms">
+        <div class="docs-section__head">
+          <span class="docs-section__num">02</span>
+          <h3 class="docs-section__title">Base, Farcaster &amp; Web: how it splits</h3>
+        </div>
+        <p class="docs-section__lead">
+          PTG has <strong>one on-chain backend: Base</strong>. Every transaction is always on Base. This section only explains the <strong>entry channel split</strong> - Base App, Farcaster, or Web - and how referral links are tagged.
+        </p>
+
+        <div class="docs-grid-cards">
+          <div class="docs-mini-card docs-mini-card--platform-base">
+            <span class="docs-mini-card__eyebrow">Base App</span>
+            <h4 class="docs-mini-card__title">Native Base entry</h4>
+            <p class="docs-mini-card__desc">Open PTG directly inside the Base App with native wallet context and smooth signing flow. This is the most direct path for users already in the Base ecosystem, including invite sharing with <code>via=base</code>.</p>
+          </div>
+          <div class="docs-mini-card docs-mini-card--platform-fc">
+            <span class="docs-mini-card__eyebrow">Farcaster</span>
+            <h4 class="docs-mini-card__title">Mini App entry</h4>
+            <p class="docs-mini-card__desc">Open PTG as a Farcaster Mini App, where identity and discovery come from the Farcaster social graph. Invites shared from this channel carry <code>via=farcaster</code>, while gameplay and transaction settlement remain on Base.</p>
+          </div>
+          <div class="docs-mini-card docs-mini-card--platform-web">
+            <span class="docs-mini-card__eyebrow">Web</span>
+            <h4 class="docs-mini-card__title">Web entry</h4>
+            <p class="docs-mini-card__desc">Open <strong>phrasetoguess.xyz</strong> in any browser and connect any EVM wallet such as MetaMask or Coinbase Wallet. This channel is ideal for open links, X posts, Discord communities, and direct onboarding with <code>via=web</code>.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= HOW TO PLAY ================= -->
+      <section class="docs-section" id="docs-sec-play">
+        <div class="docs-section__head">
+          <span class="docs-section__num">03</span>
+          <h3 class="docs-section__title">How to Play</h3>
+        </div>
+        <p class="docs-section__lead">
+          You see an image and a <strong>partially revealed phrase</strong>. Tap letters on the keyboard to uncover the word.
+          Green means the letter exists, red means it doesn't - watch your misses, you have a limited number of strikes.
+        </p>
+
+        <figure class="docs-figure docs-figure--dark">
+          <img src="docs-assets/gameplay.png" alt="Phrase To Guess gameplay screen with keyboard and hidden phrase" loading="lazy" />
+        </figure>
+
+        <div class="docs-body-copy">
+          <p>Every round you get:</p>
+        </div>
+        <ul class="docs-list docs-list--check">
+          <li><strong>Visual clue</strong> - an image or chart that hints at the answer.</li>
+          <li><strong>Category label</strong> - the topic of the puzzle (e.g. <em>Crypto</em>, <em>Sports</em>, <em>Stars</em>).</li>
+          <li><strong>Hint button</strong> - optional on-chain hint (<strong>$0.01</strong>) that reveals one random correct letter you have not already uncovered.</li>
+          <li><strong>Dynamic keyboard</strong> - tapped letters are locked; correct = blue, wrong = red.</li>
+        </ul>
+
+        <div class="docs-hint-icon-only" role="img" aria-label="Hint button">
+          <img src="docs-assets/hint-icon.png" alt="" width="200" height="156" loading="lazy" decoding="async" />
+        </div>
+
+        <div class="docs-body-copy">
+          <p><strong>How hints work:</strong> During an active round, tap the lightbulb. Your wallet submits one transaction to the PTG <strong>Hint</strong> contract on Base. The contract charges a flat <strong>$0.01</strong>. In return the game reveals <strong>one random letter</strong> that belongs in the answer and is still hidden. Letters you already guessed on the keyboard do not count, so you never pay for information you already had. Network gas is extra.</p>
+        </div>
+
+        <div class="docs-callout">
+          <span class="docs-callout__icon">!</span>
+          <p class="docs-callout__text">
+            Solve the puzzle before you run out of attempts to qualify for a <strong>trophy mint</strong> and score a point on the leaderboard.
+          </p>
+        </div>
+      </section>
+
+      <!-- ================= CATEGORIES ================= -->
+      <section class="docs-section" id="docs-sec-categories">
+        <div class="docs-section__head">
+          <span class="docs-section__num">04</span>
+          <h3 class="docs-section__title">Choose Your Categories</h3>
+        </div>
+        <p class="docs-section__lead">
+          Tailor the game to your strengths. Pick at least <strong>4 categories</strong> from the pool and PTG will only serve puzzles from that set - your daily runs, your way.
+        </p>
+
+        <figure class="docs-figure docs-figure--dark">
+          <img src="docs-assets/category-pool.png" alt="Category selection grid - Animals, Sports, Pokemon, Stars and more" loading="lazy" />
+        </figure>
+
+        <div class="docs-body-copy">
+          <p>Available categories include <strong>Animals, Crypto, Onchain, Economics, Finance, DeFi, Science, Sports, Games, Pokemon, Movies, Stars</strong> and more. The selection is saved locally so each of your 3 daily games is drawn from your custom pool.</p>
+        </div>
+      </section>
+
+      <!-- ================= NFT BADGES ================= -->
+      <section class="docs-section" id="docs-sec-nft">
+        <div class="docs-section__head">
+          <span class="docs-section__num">05</span>
+          <h3 class="docs-section__title">On-chain Trophies &amp; Badges</h3>
+        </div>
+        <p class="docs-section__lead">
+          Solved puzzles let you claim a verifiable <strong>daily trophy</strong> NFT on Base. Milestone badges (10 / 100 / 1000) unlock when your <strong>lifetime score</strong> - the same points that power the leaderboard - crosses each threshold.
+        </p>
+
+        <figure class="docs-figure docs-figure--dark">
+          <img src="docs-assets/badges.png" alt="OG badge and 10, 100, and 1000 points milestone NFT badges" loading="lazy" />
+        </figure>
+
+        <div class="docs-tier-compare" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+          <div class="docs-tier-card">
+            <span class="docs-tier-card__badge" style="color:#3c8aff;background:rgba(60,138,255,.14);border-color:rgba(60,138,255,.4);">OG</span>
+            <h4 class="docs-tier-card__title">OG Badge</h4>
+            <p class="docs-tier-card__desc">Limited founding-community badge. Proof that you were here early.</p>
+          </div>
+          <div class="docs-tier-card">
+            <span class="docs-tier-card__badge">10 POINTS</span>
+            <h4 class="docs-tier-card__title">Rookie</h4>
+            <p class="docs-tier-card__desc">Unlocked when your lifetime score reaches <strong>10 points</strong> (each solved puzzle adds one point).</p>
+          </div>
+          <div class="docs-tier-card">
+            <span class="docs-tier-card__badge">100 POINTS</span>
+            <h4 class="docs-tier-card__title">Pro</h4>
+            <p class="docs-tier-card__desc">Unlocked at <strong>100 lifetime points</strong> - serious PTG pedigree.</p>
+          </div>
+          <div class="docs-tier-card docs-tier-card--elite">
+            <span class="docs-tier-card__badge">1000 POINTS</span>
+            <h4 class="docs-tier-card__title">Legend</h4>
+            <p class="docs-tier-card__desc">Hall-of-Fame tier: <strong>1000 lifetime points</strong>. The rarest badge in PTG.</p>
+          </div>
+        </div>
+
+        <h4 class="docs-pricing-heading">Micro-prices (paid on Base)</h4>
+        <p class="docs-pricing-lead">Every line below is <strong>$0.01</strong> per action at the contract (ETH amount follows the live on-chain price; gas is always separate).</p>
+        <ul class="docs-list docs-list--check">
+          <li><strong>In-round hint</strong> - one random correct letter via the Hint contract.</li>
+          <li><strong>Daily trophy mint</strong> - after you win the round, claim the season trophy NFT.</li>
+          <li><strong>OG badge</strong> - founding badge mint.</li>
+          <li><strong>10 / 100 / 1000 point badges</strong> - milestone mints once your lifetime score crosses each threshold.</li>
+        </ul>
+        <div class="docs-callout">
+          <span class="docs-callout__icon">⛓</span>
+          <p class="docs-callout__text">
+            All trophies are minted via audited smart contracts on Base - links to each contract are available in the community footer.
+          </p>
+        </div>
+      </section>
+
+      <!-- ================= LEADERBOARD ================= -->
+      <section class="docs-section" id="docs-sec-leaderboard">
+        <div class="docs-section__head">
+          <span class="docs-section__num">06</span>
+          <h3 class="docs-section__title">Global Leaderboard &amp; Seasons</h3>
+        </div>
+        <p class="docs-section__lead">
+          Every correct guess earns you a point in the current <strong>season</strong>. The global leaderboard ranks all players worldwide and resets on each season rollover - giving everyone a fair shot at the top.
+        </p>
+
+        <figure class="docs-figure docs-figure--dark">
+          <img src="docs-assets/leaderboard.png" alt="Global leaderboard showing top players by score for the current season, with gold nicknames marking Elite tier players" loading="lazy" />
+        </figure>
+
+        <ul class="docs-list">
+          <li><strong>1 point</strong> is awarded for each solved puzzle.</li>
+          <li>Usernames are resolved from <strong>Farcaster</strong>, <strong>Basename</strong> or your wallet address - best name wins.</li>
+          <li>Seasons are fixed periods. Rank rewards and recognition are distributed per season.</li>
+          <li><strong>Nickname colour = referral tier.</strong> A <span style="color:#ffd12f; font-weight:800;">gold nickname</span> marks an <strong>Elite tier</strong> player (invitation-only, double referral rates). A <span style="color:#ffffff; font-weight:800;">white nickname</span> is the default <strong>Normal tier</strong>. See the Referral section below for the full breakdown.</li>
+        </ul>
+      </section>
+
+      <!-- ================= REFERRAL ================= -->
+      <section class="docs-section" id="docs-sec-referral">
+        <div class="docs-section__head">
+          <span class="docs-section__num">07</span>
+          <h3 class="docs-section__title">Referral Program: Earn Forever</h3>
+        </div>
+        <p class="docs-section__lead">
+          PTG is designed to reward the people who grow the community. When friends you invite pay fees (hints, mints, tools), a slice of that fee flows back to you - <strong>for life</strong>. The further down your tree, the smaller the slice; the bigger your tree, the bigger the cashflow.
+        </p>
+
+        <div class="docs-tier-compare">
+          <div class="docs-tier-card docs-tier-card--standard">
+            <span class="docs-tier-card__badge">STANDARD</span>
+            <h4 class="docs-tier-card__title">Default Tier</h4>
+            <div class="docs-tier-card__rates">
+              <div class="docs-tier-rate"><span class="docs-tier-rate__big">25%</span><span class="docs-tier-rate__label">Level&nbsp;1</span></div>
+              <div class="docs-tier-rate"><span class="docs-tier-rate__big">5%</span><span class="docs-tier-rate__label">Level&nbsp;2+</span></div>
+            </div>
+            <p class="docs-tier-card__desc">Every player starts here. Earn <strong>25%</strong> of fees from anyone you invite directly and <strong>5%</strong> from everyone they invite (and so on).</p>
+          </div>
+          <div class="docs-tier-card docs-tier-card--elite">
+            <span class="docs-tier-card__badge">ELITE</span>
+            <h4 class="docs-tier-card__title">Elite Tier</h4>
+            <div class="docs-tier-card__rates">
+              <div class="docs-tier-rate"><span class="docs-tier-rate__big">50%</span><span class="docs-tier-rate__label">Level&nbsp;1</span></div>
+              <div class="docs-tier-rate"><span class="docs-tier-rate__big">10%</span><span class="docs-tier-rate__label">Level&nbsp;2+</span></div>
+            </div>
+            <p class="docs-tier-card__desc"><strong>Invitation-only</strong> - the PTG team upgrades selected accounts; it is not a paid upgrade. <strong>Double</strong> the standard rates at every level of your referral tree.</p>
+          </div>
+        </div>
+
+        <div class="docs-body-copy" style="margin-top: 14px;">
+          <p><strong>How you can earn Elite:</strong> There is no button to flip on yourself. We periodically invite players onto Elite when their <strong>community footprint</strong> clearly helps the game grow the right way - for example staying active and constructive in <strong>Discord</strong> or on <strong>Farcaster</strong>, helping newcomers, sharing fair tips, and answering questions, publishing quality content that brings <em>real</em> players and not bot farms, or being among the <strong>earliest, most consistent supporters</strong> who showed up when PTG was still finding its audience. In short: be visible, be helpful, play fair, and onboard humans you would actually want in the community. If the team selects you, your Invite panel switches to <em>Elite tiers active</em> automatically - no extra steps.</p>
+        </div>
+
+        <div class="docs-figure-pair">
+          <figure class="docs-figure">
+            <img src="docs-assets/referral-standard.png" alt="Standard referral tier - 25% direct, 5% indirect fees" loading="lazy" />
+          </figure>
+          <figure class="docs-figure">
+            <img src="docs-assets/referral-elite.png" alt="Elite referral tier - 50% direct, 10% indirect fees" loading="lazy" />
+          </figure>
+        </div>
+
+        <div class="docs-callout docs-callout--gold">
+          <span class="docs-callout__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </span>
+          <p class="docs-callout__text">
+            <strong>Elite tiers active</strong> means your wallet was upgraded by the team - every qualifying fee from your referral tree now pays at the <strong>higher percentages</strong> above. If you still see Standard rates, keep building in public: we notice consistent, positive community work and early loyalty.
+          </p>
+        </div>
+      </section>
+
+      <!-- ================= INVITE & EARN ================= -->
+      <section class="docs-section" id="docs-sec-invite">
+        <div class="docs-section__head">
+          <span class="docs-section__num">08</span>
+          <h3 class="docs-section__title">Invite &amp; Earn Dashboard</h3>
+        </div>
+        <p class="docs-section__lead">
+          Share your personal invite links, track the people who joined through you and claim your accumulated rewards - all from one panel.
+        </p>
+
+        <figure class="docs-figure docs-figure--dark">
+          <img src="docs-assets/invite-modal.png" alt="Invite and earn dashboard with referral links, claim button and invites tab" loading="lazy" />
+        </figure>
+
+        <ul class="docs-list docs-list--check">
+          <li><strong>Three invite links</strong> - optimized for Farcaster, Base App and the open Web.</li>
+          <li><strong>Tier status</strong> - Standard for everyone by default; <strong>Elite</strong> only after a manual team upgrade (see Referral Program).</li>
+          <li><strong>Available to claim</strong> - real-time balance of referral rewards in USD.</li>
+          <li><strong>Claims &amp; Invites</strong> - browse historical payouts and the list of people who joined via your link.</li>
+        </ul>
+
+        <div class="docs-callout">
+          <span class="docs-callout__icon">$</span>
+          <p class="docs-callout__text">
+            Rewards accumulate automatically. When your balance is ready, press <strong>Claim referral rewards</strong> to send the payout on-chain to your wallet.
+          </p>
+        </div>
+      </section>
+
+      <!-- ================= COMMUNITY ================= -->
+      <section class="docs-section" id="docs-sec-community">
+        <div class="docs-section__head">
+          <span class="docs-section__num">09</span>
+          <h3 class="docs-section__title">Community &amp; On-chain Transparency</h3>
+        </div>
+        <p class="docs-section__lead">
+          PTG is an open community project. Join us on social channels, meet the founder and verify every contract that powers the game - directly on BaseScan.
+        </p>
+
+        <figure class="docs-figure docs-figure--dark">
+          <img src="docs-assets/community.png" alt="Community buttons: X, Discord, About Founder and BaseScan contract chips" loading="lazy" />
+        </figure>
+
+        <div class="docs-grid-cards">
+          <div class="docs-mini-card">
+            <span class="docs-mini-card__eyebrow">Social</span>
+            <h4 class="docs-mini-card__title">X / Discord</h4>
+            <p class="docs-mini-card__desc">Announcements, drops, community chat.</p>
+          </div>
+          <div class="docs-mini-card">
+            <span class="docs-mini-card__eyebrow">Team</span>
+            <h4 class="docs-mini-card__title">About Founder</h4>
+            <p class="docs-mini-card__desc">Learn who is building PTG and why.</p>
+          </div>
+          <div class="docs-mini-card">
+            <span class="docs-mini-card__eyebrow">On-chain</span>
+            <h4 class="docs-mini-card__title">BaseScan Chips</h4>
+            <p class="docs-mini-card__desc">Open every PTG contract in one click - fully transparent.</p>
+          </div>
+          <div class="docs-mini-card">
+            <span class="docs-mini-card__eyebrow">Soon</span>
+            <h4 class="docs-mini-card__title">$PTG Token</h4>
+            <p class="docs-mini-card__desc">The native utility token is coming - stay tuned.</p>
+          </div>
+        </div>
+
+        <div class="docs-footer-cta">
+          <p>Ready to play? Close these docs and jump into your next puzzle.</p>
+          <button type="button" class="docs-footer-cta__btn" id="docsCtaCloseBtn">Start Playing →</button>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="leaderboardOverlay">
   <div class="mint-card" style="max-height: 80vh; display: flex; flex-direction: column;">
     <div class="leaderboard-header">
         <h2 style="margin:0; font-size:20px; color: #fff;">🏆 Global Leaderboard</h2>
-        <div id="leaderboardSeasonLabel" style="font-size: 12px; color: var(--text-muted);">Season —</div>
+        <div id="leaderboardSeasonLabel" style="font-size: 12px; color: var(--text-muted);">Season -</div>
     </div>
     
     <div style="overflow-y: auto; flex: 1;">
@@ -3929,7 +5136,7 @@
     "function mintPriceWei() view returns (uint256)",
     "function balanceOf(address owner) view returns (uint256)",
   ];
-  /** Odznaki win / OG — na Base: PTGBadgeSigned721 (`mintWithSig` + voucher EIP-712 z /api/ptg-badge-voucher). */
+  /** Odznaki punktowe (10/100/1000) + OG — na Base: PTGBadgeSigned721 (`mintWithSig` + voucher EIP-712 z /api/ptg-badge-voucher). */
   const PTG_OG_BADGE_NFT = "0x901969555E3495D79a04c6F44B97968cd0a4B466";
   const PTG_WIN10_BADGE_NFT = "0x6fc798704Ff94F925Cc7b01B45E5333d2629C42D";
   const PTG_WIN100_BADGE_NFT = "0xa93EEE6d23dB560c22BDCC63e37EebbC0d60B4b6";
@@ -4113,6 +5320,32 @@
               throw e;
           }
       }
+  }
+
+  /**
+   * Przy wysyłce claimu: w samej Base App NIE odpalamy agresywnie
+   * `wallet_switchEthereumChain` (potrafi „wisieć” bez widocznego UI). Tylko
+   * szybki odczyt `eth_chainId` — jeśli to nie Base, czytelny błąd. W
+   * przeglądarce zostawiamy pełne `ensureBaseMainnet` (MetaMask itd.).
+   */
+  async function ensureBaseMainnetForClaimSend(provider) {
+      if (!provider || typeof provider.request !== "function") return;
+      if (ptgHost === "base" || ptgHost === "farcaster" || ptgNotifDetectBaseSurface()) {
+          try {
+              const cid = await withTimeout(
+                  provider.request({ method: "eth_chainId", params: [] }),
+                  4000,
+                  "claim eth_chainId"
+              );
+              if (chainIdMatchesBase(cid)) return;
+          } catch (e) {
+              console.warn("[ptg-claim] eth_chainId", e);
+          }
+          throw new Error(
+              "Set wallet to Base network, then try Claim again. (If you use Base app, close and reopen the game.)"
+          );
+      }
+      await ensureBaseMainnet(provider);
   }
 
   /**
@@ -4573,13 +5806,17 @@
   "super-creator.eth",
   "supercreatoreth",
   "fiutek",
+  "kosto133"
 
   ];
   let __ptgReferralInviteTiers = PTG_REF_TIER_PCT_NORMAL.slice();
   let __ptgReferralEliteSet = new Set();
   let referralSummaryUnsubscribe = null;
-  let referralClaimHistoryUnsubscribe = null;
+  let referralClaimHistoryUnsubscribes = [];
   let referralInviteEntriesUnsubscribe = null;
+  let __ptgClaimHistoryAliasVals = {};
+let __ptgRemoteIdentityAliases = new Set();
+let __ptgIdentityAliasRefreshPromise = null;
 
   function ptgUnsubscribeReferralListeners() {
       if (typeof referralSummaryUnsubscribe === "function") {
@@ -4588,12 +5825,17 @@
           } catch (_) {}
       }
       referralSummaryUnsubscribe = null;
-      if (typeof referralClaimHistoryUnsubscribe === "function") {
-          try {
-              referralClaimHistoryUnsubscribe();
-          } catch (_) {}
+      if (Array.isArray(referralClaimHistoryUnsubscribes)) {
+          for (let i = 0; i < referralClaimHistoryUnsubscribes.length; i++) {
+              if (typeof referralClaimHistoryUnsubscribes[i] === "function") {
+                  try {
+                      referralClaimHistoryUnsubscribes[i]();
+                  } catch (_) {}
+              }
+          }
       }
-      referralClaimHistoryUnsubscribe = null;
+      referralClaimHistoryUnsubscribes = [];
+      __ptgClaimHistoryAliasVals = {};
       if (typeof referralInviteEntriesUnsubscribe === "function") {
           try {
               referralInviteEntriesUnsubscribe();
@@ -4661,11 +5903,21 @@
       return elite ? PTG_REF_TIER_PCT_ELITE : PTG_REF_TIER_PCT_NORMAL;
   }
 
+  function ptgIsEliteViewer() {
+      if (ptgIsEliteUser(myUserId, myUsername)) return true;
+      const chipText = (document.getElementById("playerDisplayText")?.textContent || "").trim();
+      if (chipText && ptgIsEliteUser(myUserId, chipText)) return true;
+      return false;
+  }
+
   function ptgRefreshTierModeBadge() {
       const badge = document.getElementById("referralTierModeBadge");
-      if (!badge) return;
-      const elite = ptgIsEliteUser(myUserId, myUsername);
-      badge.textContent = elite ? "Elite tiers active" : "Normal tiers";
+      const elite = ptgIsEliteViewer();
+      if (badge) badge.textContent = elite ? "Elite tiers active" : "Normal tiers";
+      const inviteBtn = document.getElementById("referralOpenBtn");
+      if (inviteBtn) inviteBtn.classList.toggle("cal-icon-btn--elite", !!elite);
+      const chip = document.getElementById("playerDisplay");
+      if (chip) chip.classList.toggle("user-chip--elite", !!elite);
   }
 
   function ptgReferralDetailIsOpen() {
@@ -4675,13 +5927,34 @@
 
   function ptgClaimHistoryWhen(ts) {
       try {
-          return new Date(ts).toLocaleString(undefined, {
+          return new Date(ts).toLocaleString("en-US", {
               dateStyle: "medium",
               timeStyle: "medium",
           });
       } catch (_) {
           return "—";
       }
+  }
+
+  function ptgMergeClaimHistoryByAliases(aliasVals) {
+      const src = aliasVals && typeof aliasVals === "object" ? aliasVals : {};
+      const out = {};
+      const aliasKeys = Object.keys(src);
+      for (let ai = 0; ai < aliasKeys.length; ai++) {
+          const v = src[aliasKeys[ai]];
+          if (!v || typeof v !== "object") continue;
+          const rows = Object.entries(v);
+          for (let i = 0; i < rows.length; i++) {
+              const nonce = rows[i][0];
+              const rec = rows[i][1];
+              if (!nonce || !rec || typeof rec !== "object") continue;
+              if (typeof rec.ts !== "number") continue;
+              if (!out[nonce] || Number(rec.ts) > Number(out[nonce].ts || 0)) {
+                  out[nonce] = rec;
+              }
+          }
+      }
+      return Object.keys(out).length ? out : null;
   }
 
   function ptgPaintReferralHistoryList(val) {
@@ -4703,6 +5976,28 @@
       host.innerHTML = rows
           .map((r) => {
               const amt = ptgFormatReferralCents(typeof r.v.amount === "number" ? r.v.amount : 0);
+              /* Link do BaseScan dodajemy tylko gdy naprawdę mamy poprawny hash
+               * (64 hex chars). Starsze wpisy sprzed EIP-3009 flow go nie mają
+               * i pokazujemy je bez linku — tak żeby nic się nie sypało. */
+              const txHashRaw = typeof r.v.txHash === "string" ? r.v.txHash.trim() : "";
+              const isValidTxHash = /^0x[0-9a-fA-F]{64}$/.test(txHashRaw);
+              let txHtml = "";
+              if (isValidTxHash) {
+                  const short = txHashRaw.slice(0, 10) + "…" + txHashRaw.slice(-6);
+                  const explorer = "https://basescan.org/tx/" + txHashRaw;
+                  txHtml =
+                      '<a class="referral-claim-history-tx" href="' +
+                      ptgEscapeReferralHtml(explorer) +
+                      '" target="_blank" rel="noopener noreferrer" title="View on BaseScan">' +
+                      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                      '<path d="M14 4h6v6"></path>' +
+                      '<path d="M10 14L20 4"></path>' +
+                      '<path d="M20 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5"></path>' +
+                      "</svg>" +
+                      "<span>" +
+                      ptgEscapeReferralHtml(short) +
+                      "</span></a>";
+              }
               return (
                   '<div class="referral-claim-history-item">' +
                   '<div class="referral-claim-history-label">Claim amount</div>' +
@@ -4712,7 +6007,9 @@
                   '<div class="referral-claim-history-label">Date &amp; time</div>' +
                   '<div class="referral-claim-history-when">' +
                   ptgEscapeReferralHtml(ptgClaimHistoryWhen(r.v.ts)) +
-                  "</div></div>"
+                  "</div>" +
+                  txHtml +
+                  "</div>"
               );
           })
           .join("");
@@ -4740,6 +6037,18 @@
       return formatLeaderboardDisplayName(id, {});
   }
 
+  function ptgIsHexAddressInvitee(value) {
+      return /^0x[a-fA-F0-9]{40}$/.test(String(value || "").trim());
+  }
+
+  /** Produktowo: w sekcji Invite nie pokazujemy surowych 0x-adresów.
+   *  Dotyczy zarówno top-level, jak i rozwijanych poziomów nested. */
+  function ptgShouldHideInviteeRow(inviteeId, inviteeName) {
+      if (ptgIsHexAddressInvitee(inviteeId)) return true;
+      if (ptgIsHexAddressInvitee(inviteeName)) return true;
+      return false;
+  }
+
   /**
    * Wcześniej: fcFID + podłączony portfel → spłaszczanie wpisów z `invite_entries/{0x}`
    * pod jeden widok Farcaster (wyglądało jak „Base name zaprasza osobno”).
@@ -4758,6 +6067,7 @@
       const rows = Object.entries(val)
           .map(([k, v]) => ({ k, v: v && typeof v === "object" ? v : {} }))
           .filter((r) => r.v.invitee)
+          .filter((r) => !ptgShouldHideInviteeRow(r.v.invitee, r.v.inviteeName))
           .sort((a, b) => (b.v.ts || 0) - (a.v.ts || 0))
           .slice(0, 80);
       for (let i = 0; i < rows.length; i++) {
@@ -4903,11 +6213,14 @@
 
   function ptgInviteRowHtml(inviteeId, depth, edgeKey, mergedFromLinkedWallet, inviteeName, ancestorsLc) {
       const inv = String(inviteeId || "").trim();
+      if (ptgShouldHideInviteeRow(inv, inviteeName)) return "";
       const maxDepth = __ptgReferralInviteTiers.length - 1;
       const showExpand = depth < maxDepth;
       const nameDisp = ptgFormatInviteeIdForRow(inv, inviteeName);
+      const eliteInvitee = ptgIsEliteUser(inv, inviteeName || nameDisp);
       const safeName = ptgEscapeReferralHtml(nameDisp);
       const safeInv = ptgEscapeReferralHtml(inv);
+      const eliteNameCls = eliteInvitee ? " referral-inv-name--elite" : "";
       const mergedCls = mergedFromLinkedWallet ? " referral-inv-row--merged-flat" : "";
       const mergedTitle = mergedFromLinkedWallet
           ? " title=\"Same account: invite logged under your wallet is shown as your direct L1\""
@@ -4941,7 +6254,9 @@
           ">" +
           btn +
           '<div class="referral-inv-main">' +
-          '<div class="referral-inv-name" data-wallet="' +
+          '<div class="referral-inv-name' +
+          eliteNameCls +
+          '" data-wallet="' +
           safeInv +
           '">' +
           safeName +
@@ -5038,8 +6353,10 @@
               const playerName = playerNameById[w] || "";
               if (playerName) {
                   el.textContent = playerName;
+                  el.classList.toggle("referral-inv-name--elite", ptgIsEliteUser(w, playerName));
               } else {
                   el.textContent = ptgFormatInviteeIdForRow(w);
+                  el.classList.toggle("referral-inv-name--elite", ptgIsEliteUser(w, w));
               }
               continue;
           }
@@ -5048,6 +6365,7 @@
           let label = map[k] && String(map[k]).trim() ? String(map[k]).trim() : "";
           if (!label) label = ptgFormatInviteeIdForRow(w);
           el.textContent = label;
+          el.classList.toggle("referral-inv-name--elite", ptgIsEliteUser(w, label));
           if (isBetterDisplayName(label)) void persistPlayerDisplayNameToRtdb(w, label);
       }
   }
@@ -5085,6 +6403,7 @@
           const childRows = !raw || typeof raw !== "object" ? [] : Object.entries(raw)
               .map(([k, v]) => ({ k, v: v && typeof v === "object" ? v : {} }))
               .filter((r) => r.v.invitee)
+              .filter((r) => !ptgShouldHideInviteeRow(r.v.invitee, r.v.inviteeName))
               .filter((r) => !ancestorSet.has(String(r.v.invitee).toLowerCase()))
               .sort((a, b) => (b.v.ts || 0) - (a.v.ts || 0));
           if (!childRows.length) {
@@ -5207,6 +6526,7 @@
               const e = raw[keys[i]];
               const child = e && typeof e === "object" ? e.invitee : null;
               if (!child) continue;
+              if (ptgShouldHideInviteeRow(child, e && typeof e === "object" ? e.inviteeName : "")) continue;
               const cLc = String(child).toLowerCase();
               if (ancestorsLc.has(cLc)) continue;
               if (seen.has(cLc)) continue;
@@ -5245,6 +6565,7 @@
           for (let i = 0; i < rows.length; i++) {
               const inv = rows[i] && rows[i].v && rows[i].v.invitee ? String(rows[i].v.invitee) : "";
               if (!inv) continue;
+              if (ptgShouldHideInviteeRow(inv, rows[i] && rows[i].v ? rows[i].v.inviteeName : "")) continue;
               const iLc = inv.toLowerCase();
               if (seen.has(iLc)) continue;
               seen.add(iLc);
@@ -5383,8 +6704,22 @@
       }
       try {
           if (mode === "history") {
-              const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/claim_history/" + myUserId));
-              __ptgLastHistoryVal = snap.exists() ? snap.val() : null;
+            try { await ptgRefreshIdentityAliasesFromDb(); } catch (_) {}
+              const aliases = Array.from(ptgGetMyIdentityAliasesLc());
+              aliases.push(String(myUserId || "").toLowerCase());
+              const uniq = Array.from(new Set(aliases.filter(Boolean)));
+              const vals = {};
+              await Promise.all(
+                  uniq.map(async (id) => {
+                      try {
+                          const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/claim_history/" + id));
+                          vals[id] = snap.exists() ? snap.val() : null;
+                      } catch (_) {
+                          vals[id] = null;
+                      }
+                  })
+              );
+              __ptgLastHistoryVal = ptgMergeClaimHistoryByAliases(vals);
               ptgPaintReferralHistoryList(__ptgLastHistoryVal);
           } else {
               const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + myUserId));
@@ -5928,9 +7263,20 @@
       ptgClearPendingRefCapture();
   }
 
+  function ptgReadPendingRewardCents(d) {
+      if (!d || typeof d !== "object") return 0;
+      const raw = d.pendingReward;
+      if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+      if (typeof raw === "string" && raw.trim() !== "") {
+          const n = Number(raw);
+          if (Number.isFinite(n)) return n;
+      }
+      return 0;
+  }
+
   function ptgUpdateReferralUiFromSnapshot(d) {
       const bal = document.getElementById("referralBalanceDisplay");
-      const pr = d && typeof d.pendingReward === "number" ? d.pendingReward : 0;
+      const pr = ptgReadPendingRewardCents(d);
       if (bal) {
           const n = ptgFormatReferralCents(pr);
           bal.innerHTML = ptgEscapeReferralHtml(n) + '<span class="referral-balance-currency">$</span>';
@@ -5958,14 +7304,30 @@
           const d = snap.exists() ? snap.val() : null;
           ptgUpdateReferralUiFromSnapshot(d);
       });
-      const hRef = ref(db, ptgReferralsRtdbRoot() + "/claim_history/" + myUserId);
-      referralClaimHistoryUnsubscribe = onValue(hRef, (snap) => {
-          ptgRenderReferralHistoryList(snap.exists() ? snap.val() : null);
-      });
+      const aliasIds = Array.from(ptgGetMyIdentityAliasesLc());
+      aliasIds.push(String(myUserId || "").toLowerCase());
+      const uniqAliasIds = Array.from(new Set(aliasIds.filter(Boolean)));
+      __ptgClaimHistoryAliasVals = {};
+      referralClaimHistoryUnsubscribes = [];
+      for (let i = 0; i < uniqAliasIds.length; i++) {
+          const aliasId = uniqAliasIds[i];
+          const hRef = ref(db, ptgReferralsRtdbRoot() + "/claim_history/" + aliasId);
+          const unsub = onValue(hRef, (snap) => {
+              __ptgClaimHistoryAliasVals[aliasId] = snap.exists() ? snap.val() : null;
+              const merged = ptgMergeClaimHistoryByAliases(__ptgClaimHistoryAliasVals);
+              ptgRenderReferralHistoryList(merged);
+          });
+          referralClaimHistoryUnsubscribes.push(unsub);
+      }
       const iRef = ref(db, ptgReferralsRtdbRoot() + "/invite_entries/" + myUserId);
       referralInviteEntriesUnsubscribe = onValue(iRef, (snap) => {
           void ptgRenderReferralInvitesList(snap.exists() ? snap.val() : null);
       });
+    void ptgRefreshIdentityAliasesFromDb()
+        .then((changed) => {
+            if (changed) bindReferralSummaryListener();
+        })
+        .catch(() => {});
   }
 
   /**
@@ -6439,15 +7801,115 @@
               JSON.stringify(Array.from(set).slice(-24))
           );
       } catch (_) {}
+    const me = ptgNormalizeAliasId(myUserId);
+    if (db && me && me !== "guest" && me !== n) {
+        void ptgPersistIdentityAliasPair(me, n);
+    }
   }
 
   /** Wszystkie znane tożsamości gracza (aktywna + historyczne) w lowercase. */
   function ptgGetMyIdentityAliasesLc() {
       const set = ptgLoadIdentityAliasesSet();
+    if (__ptgRemoteIdentityAliases && typeof __ptgRemoteIdentityAliases.forEach === "function") {
+        __ptgRemoteIdentityAliases.forEach((a) => {
+            const n = ptgNormalizeAliasId(a);
+            if (n) set.add(n);
+        });
+    }
       const me = ptgNormalizeAliasId(myUserId);
       if (me && me !== "guest") set.add(me);
       return set;
   }
+
+async function ptgPersistIdentityAliasPair(a, b) {
+    if (!db) return false;
+    const aa = ptgNormalizeAliasId(a);
+    const bb = ptgNormalizeAliasId(b);
+    if (!aa || !bb || aa === bb) return false;
+    try {
+        const root = ptgReferralsRtdbRoot() + "/identity_aliases";
+        const ts = Date.now();
+        const patch = {};
+        patch[root + "/" + aa + "/" + bb] = ts;
+        patch[root + "/" + bb + "/" + aa] = ts;
+        await update(ref(db), patch);
+        return true;
+    } catch (e) {
+        console.warn("[ptg-alias] persist pair failed", { a: aa, b: bb, err: String(e && e.message || e) });
+        return false;
+    }
+}
+
+async function ptgRefreshIdentityAliasesFromDb() {
+    if (__ptgIdentityAliasRefreshPromise) return __ptgIdentityAliasRefreshPromise;
+    __ptgIdentityAliasRefreshPromise = (async () => {
+        if (!db || !isLoggedIn() || !myUserId || myUserId === "guest") {
+            const had = __ptgRemoteIdentityAliases.size > 0;
+            __ptgRemoteIdentityAliases = new Set();
+            return had;
+        }
+        const seed = ptgLoadIdentityAliasesSet();
+        const me = ptgNormalizeAliasId(myUserId);
+        if (me && me !== "guest") seed.add(me);
+        if (me && me !== "guest") {
+            for (const a of seed) {
+                if (a && a !== me) void ptgPersistIdentityAliasPair(me, a);
+            }
+        }
+        const visited = new Set(seed);
+        const nextSet = new Set(seed);
+        const queue = Array.from(seed);
+        const root = ptgReferralsRtdbRoot();
+        let reads = 0;
+        const maxReads = 20;
+        while (queue.length && reads < maxReads) {
+            const id = queue.shift();
+            if (!id) continue;
+            reads++;
+            let v = null;
+            try {
+                const snap = await get(ref(db, root + "/identity_aliases/" + id));
+                v = snap.exists() ? snap.val() : null;
+            } catch (_) {
+                v = null;
+            }
+            if (!v || typeof v !== "object") continue;
+            const keys = Object.keys(v);
+            for (let i = 0; i < keys.length; i++) {
+                const a = ptgNormalizeAliasId(keys[i]);
+                if (!a) continue;
+                nextSet.add(a);
+                if (!visited.has(a)) {
+                    visited.add(a);
+                    queue.push(a);
+                }
+            }
+        }
+        const prev = __ptgRemoteIdentityAliases || new Set();
+        let changed = prev.size !== nextSet.size;
+        if (!changed) {
+            for (const a of nextSet) {
+                if (!prev.has(a)) {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        __ptgRemoteIdentityAliases = nextSet;
+        try {
+            localStorage.setItem(
+                ptgIdentityAliasStorageKey(),
+                JSON.stringify(Array.from(new Set([...ptgLoadIdentityAliasesSet(), ...nextSet])).slice(-40))
+            );
+        } catch (_) {}
+        return changed;
+    })();
+    try {
+        return await __ptgIdentityAliasRefreshPromise;
+    } finally {
+        __ptgIdentityAliasRefreshPromise = null;
+    }
+}
 
   /**
    * Prawda jeśli `ownerId` to tak naprawdę ja (zapobiega zapraszaniu siebie).
@@ -7245,137 +8707,987 @@
   }
 
   /**
+   * Niektóre embedded providery (Base/Warpcast mini-app) rzucają po drodze
+   * błędem w stylu "Cannot read properties of undefined (reading 'error')",
+   * gdy host zwróci pustą odpowiedź RPC. Tłumaczymy to na czytelny komunikat.
+   */
+  function ptgHumanizeWalletError(err) {
+      const raw = err && err.message ? String(err.message) : String(err || "");
+      if (!raw) return "Wallet did not respond. Try again.";
+      if (/reading ['"]error['"]/i.test(raw) || /undefined.*error/i.test(raw)) {
+          return "Wallet did not respond. Reopen the app and try again.";
+      }
+      if (/user rejected|user denied|rejected by user/i.test(raw)) {
+          return "Signature rejected. Try again to claim.";
+      }
+      return raw;
+  }
+
+  function ptgClaimDebugSafe(val) {
+      if (val instanceof Error) {
+          return {
+              name: val.name,
+              message: val.message,
+              code: val.code,
+              data: val.data,
+              stack: val.stack,
+          };
+      }
+      return val;
+  }
+
+  function ptgClaimDebug(traceId, label, data) {
+      void traceId;
+      void label;
+      void data;
+  }
+
+  /**
    * Base/Farcaster embedded providery potrafią zwrócić niepełny obiekt błędu
    * dla `signer.signMessage()` (np. "Cannot read properties of undefined (reading 'error')").
    * Fallbackujemy więc na surowe RPC: `personal_sign` i `eth_sign`, żeby user
-   * zawsze dostał popup podpisu claimu.
+   * zawsze dostał popup podpisu claimu. Każda próba ma własny timeout 20 s —
+   * inaczej embedded wallet potrafi zawisnąć bez erroru i user widzi „Sign
+   * in wallet…" w nieskończoność.
    */
-  async function ptgSignReferralClaimMessageWithFallback(prov, signer, fromAddr, message) {
-      if (signer && typeof signer.signMessage === "function") {
-          try {
-              return await signer.signMessage(message);
-          } catch (eSign) {
-              try { console.warn("claim signMessage failed, trying provider.request fallback", eSign); } catch (_) {}
-          }
-      }
-      if (!prov || typeof prov.request !== "function") {
-          throw new Error("Wallet provider is unavailable for signing.");
-      }
+  async function ptgSignReferralClaimMessageWithFallback(prov, signer, fromAddr, message, traceId) {
       const from = String(fromAddr || "");
       const msgHex =
           "0x" +
           Array.from(new TextEncoder().encode(String(message || "")))
               .map((b) => b.toString(16).padStart(2, "0"))
               .join("");
-      const attempts = [
-          { method: "personal_sign", params: [msgHex, from] },
-          { method: "personal_sign", params: [String(message || ""), from] },
-          { method: "eth_sign", params: [from, msgHex] },
-      ];
       let lastErr = null;
-      for (let i = 0; i < attempts.length; i++) {
-          try {
-              const out = await prov.request(attempts[i]);
-              if (typeof out === "string" && out.startsWith("0x") && out.length > 20) return out;
-          } catch (e) {
-              lastErr = e;
+      if (prov && typeof prov.request === "function") {
+          const plainMsg = String(message || "");
+          const attempts = [
+              { method: "personal_sign", params: [msgHex, from] },
+              { method: "personal_sign", params: [plainMsg, from] },
+              { method: "personal_sign", params: [from, msgHex] },
+              { method: "personal_sign", params: [from, plainMsg] },
+              { method: "eth_sign", params: [from, msgHex] },
+          ];
+          for (let i = 0; i < attempts.length; i++) {
+              try {
+                  if (traceId) {
+                      ptgClaimDebug(traceId, "claim.sign.attempt.start", {
+                          idx: i,
+                          method: attempts[i].method,
+                      });
+                  }
+                  const out = await walletRequestWithTimeout(
+                      prov,
+                      attempts[i].method,
+                      attempts[i].params,
+                      70000
+                  );
+                  if (typeof out === "string" && out.startsWith("0x") && out.length > 20) {
+                      if (traceId) {
+                          ptgClaimDebug(traceId, "claim.sign.attempt.ok", {
+                              idx: i,
+                              method: attempts[i].method,
+                          });
+                      }
+                      return out;
+                  }
+                  if (traceId) {
+                      ptgClaimDebug(traceId, "claim.sign.attempt.bad_result", {
+                          idx: i,
+                          method: attempts[i].method,
+                          result: typeof out,
+                      });
+                  }
+              } catch (e) {
+                  lastErr = e;
+                  if (traceId) {
+                      ptgClaimDebug(traceId, "claim.sign.attempt.err", {
+                          idx: i,
+                          method: attempts[i].method,
+                          rawErr: ptgClaimDebugSafe(e),
+                          isRejected: isUserRejectedWalletRequest(e),
+                      });
+                  }
+                  if (isUserRejectedWalletRequest(e)) {
+                      throw new Error("Signature rejected. Try again to claim.");
+                  }
+              }
           }
       }
-      const m = lastErr && lastErr.message ? String(lastErr.message) : "Could not sign claim message.";
-      throw new Error(m);
+      if (signer && typeof signer.signMessage === "function") {
+          try {
+              if (traceId) ptgClaimDebug(traceId, "claim.sign.signer.start");
+              const out = await withTimeout(signer.signMessage(message), 70000, "signer.signMessage");
+              if (traceId) ptgClaimDebug(traceId, "claim.sign.signer.ok");
+              return out;
+          } catch (eSign) {
+              lastErr = eSign;
+              if (traceId) {
+                  ptgClaimDebug(traceId, "claim.sign.signer.err", {
+                      rawErr: ptgClaimDebugSafe(eSign),
+                      isRejected: isUserRejectedWalletRequest(eSign),
+                  });
+              }
+              if (isUserRejectedWalletRequest(eSign)) {
+                  throw new Error("Signature rejected. Try again to claim.");
+              }
+          }
+      }
+      throw new Error(ptgHumanizeWalletError(lastErr));
+  }
+
+  /** Wywołuje RESTORE i interpretuje odpowiedź (resume / restore / claimed). */
+  async function ptgReferralFetchRestoreState(userIdOverride) {
+      const uid = String(userIdOverride || myUserId || "").trim();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(uid)) return null;
+      const origin =
+          typeof location !== "undefined" && location.origin ? location.origin : "";
+      try {
+          const r = await fetchWithTimeout(
+              origin + "/api/ptg-referral-payout",
+              {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId: uid, op: "restore" }),
+              },
+              15000
+          );
+          const j = await r.json().catch(() => null);
+          if (!r.ok || !j || j.ok !== true) return null;
+          return j;
+      } catch (e) {
+          console.warn("ptgReferralFetchRestoreState", e);
+          return null;
+      }
+  }
+
+  /** Wysyła EIP-3009 tx z danym auth — używane zarówno w świeżym claimie,
+   *  jak i przy resume po „zombie" outstandingu. Idempotentne względem nonce. */
+  async function ptgReferralSubmitAuthorizationTx(prov, addr, auth, msgEl, traceId) {
+      if (!auth || !auth.contract || !auth.from || !auth.to || !auth.nonce) {
+          throw new Error("Missing payout authorization.");
+      }
+      const iface = new ethers.utils.Interface([
+          "function transferWithAuthorization(address from, address to, uint256 value, uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)",
+      ]);
+      const data = iface.encodeFunctionData("transferWithAuthorization", [
+          auth.from,
+          auth.to,
+          auth.value,
+          auth.validAfter,
+          auth.validBefore,
+          auth.nonce,
+          auth.v,
+          auth.r,
+          auth.s,
+      ]);
+
+      /* Base mini-app: tylko lekka weryfikacja łańcucha (bez wieszającego switch). */
+      try {
+          await ensureBaseMainnetForClaimSend(prov);
+      } catch (eChain) {
+          console.warn("[ptg-claim] ensureBaseMainnetForClaimSend", eChain);
+          if (eChain && eChain.message) throw eChain;
+          if (isUserRejectedWalletRequest(eChain)) {
+              throw new Error("Switch wallet network to Base and try Claim again.");
+          }
+      }
+
+      const embeddedLegacy = getEmbeddedEthProvider();
+      const injected = getInjectedProvider();
+      const isEmbeddedWallet =
+          !!(
+              prov &&
+              typeof prov.request === "function" &&
+              (
+                  (embeddedLegacy && prov === embeddedLegacy) ||
+                  (sdk && typeof sdk === "object" && sdk.wallet && prov !== injected)
+              )
+          );
+      const toContract = ethers.utils.getAddress(auth.contract);
+      const fromChk = ethers.utils.getAddress(addr);
+      ptgClaimDebug(traceId, "tx.prepare", {
+          from: String(fromChk || "").toLowerCase(),
+          to: String(toContract || "").toLowerCase(),
+          nonce: auth && auth.nonce ? String(auth.nonce) : null,
+      });
+
+      /* Payload z gas + EIP-1559 (jak mint). Gdy estimate padnie, używamy mądrego
+       * fallbacku zamiast gołej tx, bo SCW w Base app inaczej nie odpala UI. */
+      async function buildClaimUsdcSendPayload() {
+          if (msgEl) msgEl.textContent = "Preparing network fees…";
+          let gasFields = null;
+          try {
+              gasFields = await prepareMintTxGasFields(fromChk, toContract, data, "0x0");
+              ptgClaimDebug(traceId, "tx.gas.estimate.ok", gasFields);
+          } catch (eG) {
+              console.warn("[ptg-claim] prepareMintTxGasFields", eG);
+              ptgClaimDebug(traceId, "tx.gas.estimate.err", eG);
+          }
+          if (!gasFields || !gasFields.gas) {
+              try {
+                  const fees = await eip1559HexForBaseMint(null, null);
+                  gasFields = { gas: ethers.utils.hexValue(280000), ...fees };
+                  ptgClaimDebug(traceId, "tx.gas.fallback.fees", gasFields);
+              } catch (e2) {
+                  console.warn("[ptg-claim] eip1559 gas fallback", e2);
+                  gasFields = { gas: ethers.utils.hexValue(280000) };
+                  ptgClaimDebug(traceId, "tx.gas.fallback.minimal", e2);
+              }
+          }
+          return {
+              from: fromChk,
+              to: toContract,
+              data,
+              value: "0x0",
+              ...gasFields,
+              type: "0x2",
+              chainId: BASE_CHAIN_ID_HEX,
+          };
+      }
+
+      let rawSend = null;
+
+      if (isEmbeddedWallet) {
+          /* Ten sam wzorzec co `attemptMintPipeline(..., preferRelayFirst)` dla NFT:
+           * w Base / SCW **najpierw** `eth_signTransaction` + broadcast (user widzi jasny
+           * ekran podpisu, tak jak mint), a dopiero potem surowe `eth_sendTransaction`. */
+          if (msgEl) msgEl.textContent = "Sign to claim USDC (same as mint)…";
+          try {
+              ptgClaimDebug(traceId, "tx.relay.first.start");
+              const relayHash = await signMintTxAndBroadcastViaSite(
+                  prov,
+                  fromChk,
+                  toContract,
+                  data,
+                  "0x0"
+              );
+              const h0 = normalizeEthSendTxHash(relayHash) || relayHash;
+              if (h0 && /^0x[0-9a-fA-F]{64}$/.test(String(h0))) {
+                  ptgClaimDebug(traceId, "tx.relay.first.ok", { txHash: String(h0).toLowerCase() });
+                  return String(h0).toLowerCase();
+              }
+          } catch (eRelay) {
+              if (isUserRejectedWalletRequest(eRelay)) {
+                  throw new Error("Transaction rejected in wallet. Try Claim again.");
+              }
+              console.warn("[ptg-claim] embedded relay-first failed", eRelay);
+              ptgClaimDebug(traceId, "tx.relay.first.err", eRelay);
+          }
+
+          const sendPayload = await buildClaimUsdcSendPayload();
+          if (msgEl) msgEl.textContent = "Confirm USDC in wallet…";
+          try {
+              ptgClaimDebug(traceId, "tx.send.direct.start", sendPayload);
+              rawSend = await prov.request({
+                  method: "eth_sendTransaction",
+                  params: [sendPayload],
+              });
+              const t1 = normalizeEthSendTxHash(rawSend);
+              if (t1) {
+                  ptgClaimDebug(traceId, "tx.send.direct.ok", { txHash: t1 });
+                  return t1;
+              }
+              console.warn("[ptg-claim] embedded send returned no hash after payload");
+              ptgClaimDebug(traceId, "tx.send.direct.nohash", rawSend);
+          } catch (eDirect) {
+              if (isUserRejectedWalletRequest(eDirect)) {
+                  throw new Error("Transaction rejected in wallet. Try Claim again.");
+              }
+              console.warn("[ptg-claim] embedded direct send failed", eDirect);
+              ptgClaimDebug(traceId, "tx.send.direct.err", eDirect);
+          }
+
+          try {
+              ptgClaimDebug(traceId, "tx.send.timeout.start");
+              rawSend = await walletRequestWithTimeout(
+                  prov,
+                  "eth_sendTransaction",
+                  [sendPayload],
+                  120000
+              );
+              const t2 = normalizeEthSendTxHash(rawSend);
+              if (t2) {
+                  ptgClaimDebug(traceId, "tx.send.timeout.ok", { txHash: t2 });
+                  return t2;
+              }
+              ptgClaimDebug(traceId, "tx.send.timeout.nohash", rawSend);
+          } catch (eT) {
+              if (isUserRejectedWalletRequest(eT)) {
+                  throw new Error("Transaction rejected in wallet. Try Claim again.");
+              }
+              console.warn("[ptg-claim] embedded timed send failed", eT);
+              ptgClaimDebug(traceId, "tx.send.timeout.err", eT);
+          }
+
+          if (msgEl) msgEl.textContent = "Sign again — we broadcast the claim…";
+          try {
+              ptgClaimDebug(traceId, "tx.relay.final.start");
+              const relayHash2 = await signMintTxAndBroadcastViaSite(
+                  prov,
+                  fromChk,
+                  toContract,
+                  data,
+                  "0x0"
+              );
+              const h2 = normalizeEthSendTxHash(relayHash2) || relayHash2;
+              if (h2 && /^0x[0-9a-fA-F]{64}$/.test(String(h2))) {
+                  ptgClaimDebug(traceId, "tx.relay.final.ok", { txHash: String(h2).toLowerCase() });
+                  return String(h2).toLowerCase();
+              }
+          } catch (e3) {
+              if (isUserRejectedWalletRequest(e3)) {
+                  throw new Error("Transaction rejected in wallet. Try Claim again.");
+              }
+              console.warn("[ptg-claim] embedded final relay failed", e3);
+              ptgClaimDebug(traceId, "tx.relay.final.err", e3);
+          }
+          throw new Error(
+              "USDC claim did not get a transaction from the wallet. Try again, or open in a normal browser with MetaMask."
+          );
+      }
+
+      const sendPayload = await buildClaimUsdcSendPayload();
+      if (msgEl) msgEl.textContent = "Confirm USDC in wallet…";
+      try {
+          ptgClaimDebug(traceId, "tx.send.default.start", sendPayload);
+          rawSend = await walletRequestWithTimeout(
+              prov,
+              "eth_sendTransaction",
+              [sendPayload],
+              120000
+          );
+      } catch (eTx) {
+          ptgClaimDebug(traceId, "tx.send.default.err", eTx);
+          if (isUserRejectedWalletRequest(eTx)) {
+              throw new Error("Transaction rejected in wallet. Try Claim again.");
+          }
+          try {
+              ptgClaimDebug(traceId, "tx.relay.fallback.start");
+              const relayHash2 = await signMintTxAndBroadcastViaSite(
+                  prov,
+                  fromChk,
+                  toContract,
+                  data,
+                  "0x0"
+              );
+              const hx = normalizeEthSendTxHash(relayHash2) || relayHash2;
+              if (hx && /^0x[0-9a-fA-F]{64}$/.test(String(hx))) {
+                  ptgClaimDebug(traceId, "tx.relay.fallback.ok", { txHash: String(hx).toLowerCase() });
+                  return String(hx).toLowerCase();
+              }
+          } catch (e4) {
+              console.warn("[ptg-claim] non-embedded relay fallback", e4);
+              ptgClaimDebug(traceId, "tx.relay.fallback.err", e4);
+          }
+          const humanized = ptgHumanizeWalletError(eTx);
+          throw new Error(humanized || "Wallet did not send the transaction.");
+      }
+      const txHash = normalizeEthSendTxHash(rawSend);
+      if (!txHash) {
+          ptgClaimDebug(traceId, "tx.send.default.nohash", rawSend);
+          throw new Error("Wallet did not return a transaction hash.");
+      }
+      ptgClaimDebug(traceId, "tx.send.default.ok", { txHash: String(txHash).toLowerCase() });
+      return txHash;
+  }
+
+  /** Wysłanie settle + retry aż tx będzie mined (żeby claim_history zawsze dostało txHash). */
+  function ptgReferralFireSettle(userId, txHash, nonce) {
+      const uid = String(userId || "").trim();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(uid)) return;
+      const origin =
+          typeof location !== "undefined" && location.origin ? location.origin : "";
+      const maxAttempts = 10;
+      const delaysMs = [1200, 2200, 3500, 5000, 7000, 10000, 14000, 18000, 24000, 30000];
+      const run = async (attempt) => {
+          try {
+              const r = await fetchWithTimeout(
+                  origin + "/api/ptg-referral-payout",
+                  {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                          userId: uid,
+                          txHash,
+                          nonce,
+                      }),
+                  },
+                  15000
+              );
+              const j = await r.json().catch(() => null);
+              if (r.ok && j && j.ok) {
+                  console.info("[ptg-claim] settle ok", { txHash, attempt });
+                  return;
+              }
+              const code = j && j.error ? String(j.error) : "";
+              const retryable =
+                  code === "tx_not_mined_yet" ||
+                  code === "rpc_receipt_failed" ||
+                  code === "authorization_not_used";
+              if (retryable && attempt + 1 < maxAttempts) {
+                  const wait = delaysMs[Math.min(attempt, delaysMs.length - 1)];
+                  setTimeout(() => void run(attempt + 1), wait);
+                  return;
+              }
+              console.warn("[ptg-claim] settle stop", { txHash, attempt, code, body: j });
+          } catch (e) {
+              if (attempt + 1 < maxAttempts) {
+                  const wait = delaysMs[Math.min(attempt, delaysMs.length - 1)];
+                  setTimeout(() => void run(attempt + 1), wait);
+                  return;
+              }
+              console.warn("[ptg-claim] settle failed", { txHash, attempt, error: String(e && e.message || e) });
+          }
+      };
+      void run(0);
+  }
+
+  /** Farcaster claim: przenieś pending z FC-id -> wallet 0x (atomowo po źródle). */
+  async function ptgBridgeReferralPendingToWallet(sourceUserId, walletUserId) {
+      const src = String(sourceUserId || "").trim();
+      const dst = String(walletUserId || "").trim().toLowerCase();
+      if (!src || !/^0x[a-fA-F0-9]{40}$/.test(dst) || src.toLowerCase() === dst) {
+          return { moved: 0 };
+      }
+      const root = ptgReferralsRtdbRoot();
+      const srcRef = ref(db, root + "/summary/" + src);
+      const dstRef = ref(db, root + "/summary/" + dst);
+      let moved = 0;
+      await runTransaction(srcRef, (cur) => {
+          const o = cur && typeof cur === "object" ? cur : {};
+          const pr = ptgReadPendingRewardCents(o);
+          moved = pr > 0 ? pr : 0;
+          return { ...o, pendingReward: 0 };
+      });
+      if (!(moved > 0)) return { moved: 0 };
+      try {
+          await runTransaction(dstRef, (cur) => {
+              const o = cur && typeof cur === "object" ? cur : {};
+              const pr = ptgReadPendingRewardCents(o);
+              return { ...o, pendingReward: pr + moved };
+          });
+          return { moved };
+      } catch (e) {
+          /* rollback best-effort */
+          try {
+              await runTransaction(srcRef, (cur) => {
+                  const o = cur && typeof cur === "object" ? cur : {};
+                  const pr = ptgReadPendingRewardCents(o);
+                  return { ...o, pendingReward: pr + moved };
+              });
+          } catch (_) {}
+          throw e;
+      }
+  }
+
+  /** Cofnięcie bridge (FC -> wallet) gdy claim nie doszedł do wysłania tx. */
+  async function ptgRollbackBridgedReferralPending(sourceUserId, walletUserId, amountCents) {
+      const src = String(sourceUserId || "").trim();
+      const dst = String(walletUserId || "").trim().toLowerCase();
+      const want = Number(amountCents);
+      if (!src || !/^0x[a-fA-F0-9]{40}$/.test(dst) || !(want > 0) || src.toLowerCase() === dst) {
+          return 0;
+      }
+      const root = ptgReferralsRtdbRoot();
+      const srcRef = ref(db, root + "/summary/" + src);
+      const dstRef = ref(db, root + "/summary/" + dst);
+      let movedBack = 0;
+      await runTransaction(dstRef, (cur) => {
+          const o = cur && typeof cur === "object" ? cur : {};
+          const pr = ptgReadPendingRewardCents(o);
+          const take = Math.min(pr, want);
+          movedBack = take > 0 ? take : 0;
+          return { ...o, pendingReward: Math.max(0, pr - movedBack) };
+      });
+      if (!(movedBack > 0)) return 0;
+      try {
+          await runTransaction(srcRef, (cur) => {
+              const o = cur && typeof cur === "object" ? cur : {};
+              const pr = ptgReadPendingRewardCents(o);
+              return { ...o, pendingReward: pr + movedBack };
+          });
+      } catch (e) {
+          /* rollback rollbacku: oddaj z powrotem na wallet, żeby nie zgubić środków */
+          try {
+              await runTransaction(dstRef, (cur) => {
+                  const o = cur && typeof cur === "object" ? cur : {};
+                  const pr = ptgReadPendingRewardCents(o);
+                  return { ...o, pendingReward: pr + movedBack };
+              });
+          } catch (_) {}
+          throw e;
+      }
+      return movedBack;
   }
 
   async function claimReferralRewardsFromUi() {
       const btn = document.getElementById("referralClaimBtn");
       const msg = document.getElementById("referralClaimMsg");
+      const claimTraceId = "claim-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+      console.info("[ptg-claim] click", { host: ptgHost, userId: myUserId });
+      ptgClaimDebug(claimTraceId, "claim.click", { host: ptgHost, userId: myUserId });
       if (!db || !isLoggedIn() || myUserId === "guest") {
           if (msg) msg.textContent = "Connect to claim.";
+          ptgClaimDebug(claimTraceId, "claim.guard.not_logged");
           return;
       }
-      if (!/^0x[a-fA-F0-9]{40}$/.test(myUserId)) {
-          if (msg) {
-              msg.textContent =
-                  "USDC payout requires a wallet login (0x address). Connect with your Base wallet.";
-          }
-          return;
+      const sourceUserId = String(myUserId || "");
+      let claimUserId = sourceUserId;
+      let uiSummaryUserId = sourceUserId;
+      let bridgedSourceUserId = "";
+      let bridgedWalletUserId = "";
+      let bridgedAmountCents = 0;
+      let txSubmitted = false;
+      /* Auto-przełączenie tożsamości na 0x robimy WYŁĄCZNIE poza Farcaster.
+       * W Warpcast/Farcaster profile-first jest celowe; wcześniej ten blok
+       * nadpisywał poprawny profil FC na losowy custody 0x i user widział
+       * „Nothing to claim" pod innym kontem. */
+      if (ptgHost !== "farcaster" && !/^0x[a-fA-F0-9]{40}$/.test(myUserId)) {
+          try {
+              const fallbackProviders = [];
+              const embeddedAsync = await getEmbeddedEthProviderAsync().catch(() => null);
+              const embeddedLegacy = getEmbeddedEthProvider();
+              const injected = getInjectedProvider();
+              if (embeddedAsync && typeof embeddedAsync.request === "function") {
+                  fallbackProviders.push(embeddedAsync);
+              }
+              if (
+                  embeddedLegacy &&
+                  typeof embeddedLegacy.request === "function" &&
+                  embeddedLegacy !== embeddedAsync
+              ) {
+                  fallbackProviders.push(embeddedLegacy);
+              }
+              if (
+                  injected &&
+                  typeof injected.request === "function" &&
+                  !fallbackProviders.includes(injected)
+              ) {
+                  fallbackProviders.push(injected);
+              }
+              for (let i = 0; i < fallbackProviders.length; i++) {
+                  const acc = await getWalletAccountsFast(fallbackProviders[i]).catch(() => []);
+                  const a0 = acc && acc[0] ? String(acc[0]) : "";
+                  if (/^0x[a-fA-F0-9]{40}$/.test(a0)) {
+                      const hostKind = ptgHost === "base" ? "base" : ptgHost === "farcaster" ? "farcaster" : "browser";
+                      if (applyWalletIdentity(a0, hostKind)) {
+                          claimUserId = String(a0).toLowerCase();
+                          uiSummaryUserId = claimUserId;
+                          try { await syncUserProfile(); } catch (_) {}
+                          try {
+                              const s = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + claimUserId));
+                              ptgUpdateReferralUiFromSnapshot(s.exists() ? s.val() : null);
+                          } catch (_) {}
+                      }
+                      break;
+                  }
+              }
+          } catch (_) {}
       }
-      let claimAmount = 0;
-      try {
-          const pre = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId));
-          if (pre.exists() && typeof pre.val().pendingReward === "number") {
-              claimAmount = pre.val().pendingReward;
-          }
-      } catch (_) {}
-      if (claimAmount <= 0) {
-          if (msg) msg.textContent = "Nothing to claim.";
-          return;
-      }
-      const prov = getEmbeddedEthProvider();
-      if (!prov || typeof prov.request !== "function") {
-          if (msg) msg.textContent = "Open in Base / Warpcast and connect wallet to sign the payout.";
-          return;
-      }
-      if (btn) btn.disabled = true;
-      if (msg) msg.textContent = "Sign in wallet, then USDC on Base…";
-      try {
-          const web3 = new ethers.providers.Web3Provider(prov);
-          const signer = web3.getSigner();
-          const addr = await signer.getAddress();
-          if (ethers.utils.getAddress(addr) !== ethers.utils.getAddress(myUserId)) {
-              if (msg) msg.textContent = "Switch to the same wallet as in the game.";
+      if (!/^0x[a-fA-F0-9]{40}$/.test(claimUserId)) {
+          if (ptgHost === "farcaster") {
+              const candidateProviders = [];
+              const embeddedAsync = await getEmbeddedEthProviderAsync().catch(() => null);
+              const embeddedLegacy = getEmbeddedEthProvider();
+              const injected = getInjectedProvider();
+              if (embeddedAsync && typeof embeddedAsync.request === "function") candidateProviders.push(embeddedAsync);
+              if (
+                  embeddedLegacy &&
+                  typeof embeddedLegacy.request === "function" &&
+                  embeddedLegacy !== embeddedAsync
+              ) {
+                  candidateProviders.push(embeddedLegacy);
+              }
+              if (injected && typeof injected.request === "function" && !candidateProviders.includes(injected)) {
+                  candidateProviders.push(injected);
+              }
+              let walletForClaim = "";
+              for (let i = 0; i < candidateProviders.length; i++) {
+                  const acc = await getWalletAccountsFast(candidateProviders[i]).catch(() => []);
+                  const a0 = acc && acc[0] ? String(acc[0]).trim() : "";
+                  if (/^0x[a-fA-F0-9]{40}$/.test(a0)) {
+                      walletForClaim = a0.toLowerCase();
+                      break;
+                  }
+              }
+              if (!walletForClaim) {
+                  if (msg) msg.textContent = "Connect wallet in Farcaster to claim USDC.";
+                  return;
+              }
+              try {
+                  if (msg) msg.textContent = "Preparing Farcaster claim…";
+                  const bridged = await ptgBridgeReferralPendingToWallet(sourceUserId, walletForClaim);
+                  console.info("[ptg-claim] bridged", bridged);
+                  if (bridged && Number(bridged.moved) > 0) {
+                      bridgedSourceUserId = sourceUserId;
+                      bridgedWalletUserId = walletForClaim;
+                      bridgedAmountCents = Number(bridged.moved) || 0;
+                  }
+              } catch (eBridge) {
+                  console.warn("[ptg-claim] bridge failed", eBridge);
+              }
+              claimUserId = walletForClaim;
+              uiSummaryUserId = sourceUserId;
+          } else {
+              if (msg) msg.textContent = "USDC payout requires a wallet login (0x address). Connect with your Base wallet.";
               return;
           }
-          const signMsg = ptgReferralPayoutSignMessage(myUserId, claimAmount);
-          const signature = await ptgSignReferralClaimMessageWithFallback(
-              prov,
-              signer,
-              addr,
-              signMsg
-          );
-          const origin =
-              typeof location !== "undefined" && location.origin ? location.origin : "";
-          const res = await fetch(origin + "/api/ptg-referral-payout", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                  userId: myUserId,
-                  claimAmountCents: claimAmount,
-                  signature,
-              }),
-          });
-          const j = await res.json().catch(() => ({}));
-          if (!res.ok) {
-              const hint =
-                  j && j.hint
-                      ? " " + j.hint
-                      : j && j.error === "payout_not_configured"
-                        ? " Server payout wallet not configured."
-                        : "";
+      }
+      /* RESUME-FIRST: server może mieć ciągle ważny `claim_outstanding` po
+       * wcześniejszej, niedokończonej próbie (wallet nie potwierdził tx,
+       * appka wyleciała w połowie, fetch padł). Wtedy pending = 0 w RTDB,
+       * ale kasa NIE zginęła — mamy podpisany treasury-auth do wysłania.
+       * Zamiast pytać usera o kolejny podpis, wznawiamy od razu z tym
+       * samym auth. Jeżeli auth został już użyty on-chain / wygasł,
+       * RESTORE sam to posprząta i zwróci aktualny `pendingReward`. */
+      if (btn) btn.disabled = true;
+      if (msg) msg.textContent = "Checking claim state…";
+      const restoreState = await ptgReferralFetchRestoreState(claimUserId);
+      console.info("[ptg-claim] restore", restoreState);
+      ptgClaimDebug(claimTraceId, "claim.restore", restoreState);
+
+      let claimAmount = 0;
+      let resumeAuth = null;
+      if (restoreState && restoreState.outstanding && restoreState.outstanding.auth) {
+          resumeAuth = restoreState.outstanding.auth;
+          claimAmount = Number(restoreState.outstanding.amountCents) || 0;
+      } else {
+          const pendingFromServer = restoreState && Number.isFinite(Number(restoreState.pendingReward))
+              ? Number(restoreState.pendingReward)
+              : null;
+          if (pendingFromServer != null && pendingFromServer > 0) {
+              claimAmount = pendingFromServer;
+          } else if (pendingFromServer === 0 && (restoreState && restoreState.restored > 0)) {
+              /* Self-heal właśnie przywrócił pending — oświeżmy RTDB read. */
+              try {
+                  const pre = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + claimUserId));
+                  if (pre.exists()) claimAmount = ptgReadPendingRewardCents(pre.val());
+              } catch (_) {}
+          } else {
+              try {
+                  const pre = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + claimUserId));
+                  if (pre.exists()) claimAmount = ptgReadPendingRewardCents(pre.val());
+              } catch (_) {}
+          }
+      }
+
+      if (claimAmount <= 0 && !resumeAuth) {
+          if (msg) msg.textContent = "Nothing to claim.";
+          if (btn) btn.disabled = true;
+          return;
+      }
+      /* Base / Coinbase webview: najpierw SDK (ethProvider / getEthereumProvider),
+       * potem window.ethereum — w praktyce to SAMO konto co na desktopie, gdy
+       * SDK nie pokazuje UI; strict match na claimUserId eliminuje „zły” portfel.
+       * Inne hosty: embedded + MetaMask/injected jak dotąd. */
+      const isBaseClaimUi = ptgHost === "base" || ptgNotifDetectBaseSurface();
+      ptgClaimDebug(claimTraceId, "claim.host", {
+          ptgHost,
+          isBaseClaimUi,
+          baseSurface: (typeof ptgNotifDetectBaseSurface === "function" ? !!ptgNotifDetectBaseSurface() : null),
+          hasSdk: !!sdk,
+          hasSdkWallet: !!(sdk && sdk.wallet),
+          hasInjected: !!(typeof window !== "undefined" && window.ethereum),
+      });
+      const providers = [];
+      ptgClaimDebug(claimTraceId, "claim.providers.resolve.start");
+      const embeddedAsync = await getEmbeddedEthProviderAsync().catch((e) => {
+          ptgClaimDebug(claimTraceId, "claim.providers.async.err", e);
+          return null;
+      });
+      ptgClaimDebug(claimTraceId, "claim.providers.resolve.done", {
+        hasEmbeddedAsync: !!embeddedAsync,
+      });
+      const embeddedLegacy = getEmbeddedEthProvider();
+      const injected = getInjectedProvider();
+      /* Kolejność ma znaczenie — provider, który zawisa, blokuje cały loop
+       * (każdy ma do 22s na odpowiedź). W Base app jako zwykłej webview
+       * (ptgHost === "browser", `isBaseClaimUi === false`) SDK zwykle jest
+       * "martwy", a injected to właściwy Base wallet — stawiamy injected
+       * pierwszy, a SDK zostawiamy jako fallback. */
+      const preferInjectedFirst = !isBaseClaimUi && ptgHost !== "farcaster";
+      if (preferInjectedFirst && injected && typeof injected.request === "function") {
+          providers.push(injected);
+      }
+      if (embeddedAsync && typeof embeddedAsync.request === "function" && !providers.includes(embeddedAsync)) {
+          providers.push(embeddedAsync);
+      }
+      if (
+          embeddedLegacy &&
+          typeof embeddedLegacy.request === "function" &&
+          !providers.includes(embeddedLegacy)
+      ) {
+          providers.push(embeddedLegacy);
+      }
+      if (injected && typeof injected.request === "function" && !providers.includes(injected)) {
+          providers.push(injected);
+      }
+      console.info("[ptg-claim] providers", providers.length, {
+          host: ptgHost,
+          isBaseClaimUi,
+          resume: !!resumeAuth,
+          amount: claimAmount,
+      });
+      ptgClaimDebug(claimTraceId, "claim.providers", {
+          count: providers.length,
+          isBaseClaimUi,
+          resume: !!resumeAuth,
+          amount: claimAmount,
+      });
+      if (!providers.length) {
+          if (msg) {
+              msg.textContent =
+                  isBaseClaimUi
+                      ? "Base wallet (SDK) not available. Update the app or reopen Phrase to Guess, then try Claim again."
+                      : "Open in Base / Warpcast and connect wallet to sign the payout.";
+          }
+          if (btn) btn.disabled = false;
+          return;
+      }
+      if (msg) msg.textContent = resumeAuth ? "Resuming claim — confirm in wallet…" : "Sign in wallet, then USDC on Base…";
+      try {
+          let prov = null;
+          let addr = "";
+          let firstProv = null;
+          let firstAddr = "";
+          let sawAnyAccount = false;
+          let lastAccountErr = null;
+          for (let i = 0; i < providers.length; i++) {
+              const p = providers[i];
+              let accounts = [];
+              try {
+                  accounts = await getWalletAccountsForClaimProvider(p, claimTraceId, i);
+                  ptgClaimDebug(claimTraceId, "claim.accounts.ok", {
+                      providerIdx: i,
+                      account0: accounts && accounts[0] ? String(accounts[0]).toLowerCase() : null,
+                  });
+              } catch (e) {
+                  lastAccountErr = e;
+                  ptgClaimDebug(claimTraceId, "claim.accounts.err", { providerIdx: i, err: ptgClaimDebugSafe(e) });
+                  continue;
+              }
+              const a0 = accounts && accounts[0] ? String(accounts[0]) : "";
+              if (!a0) continue;
+              sawAnyAccount = true;
+              if (!firstAddr && /^0x[a-fA-F0-9]{40}$/.test(a0)) {
+                  firstProv = p;
+                  firstAddr = a0;
+              }
+              let sameAddr = false;
+              try {
+                  sameAddr = ethers.utils.getAddress(a0) === ethers.utils.getAddress(claimUserId);
+              } catch (_) {
+                  sameAddr = a0.toLowerCase() === String(claimUserId).toLowerCase();
+              }
+              if (sameAddr) {
+                  prov = p;
+                  addr = a0;
+                  break;
+              }
+          }
+          /* RESUME path: transferWithAuthorization może zostać wysłane przez DOWOLNY adres.
+           * Jeśli mamy już gotowy `resumeAuth`, nie blokujemy claimu na twardym
+           * matchu `claimUserId === current wallet account` — to w Base app często
+           * powodowało brak tx po wcześniejszym, niedokończonym claimie. */
+          if ((!prov || !addr) && !!resumeAuth && firstProv && firstAddr) {
+              prov = firstProv;
+              addr = firstAddr;
+              console.info("[ptg-claim] resume using first available wallet account", {
+                  claimUserId,
+                  sender: String(addr || "").toLowerCase(),
+              });
+          }
+          if ((!prov || !addr) && isBaseClaimUi && !resumeAuth && firstProv && firstAddr) {
+              const fallbackAddr = String(firstAddr).toLowerCase();
+              const prevClaimUserId = String(claimUserId || "").toLowerCase();
+              prov = firstProv;
+              addr = firstAddr;
+              if (prevClaimUserId && prevClaimUserId !== fallbackAddr) {
+                  try {
+                      if (msg) msg.textContent = "Syncing claim balance with Base wallet…";
+                      const bridged = await ptgBridgeReferralPendingToWallet(prevClaimUserId, fallbackAddr);
+                      console.info("[ptg-claim] base bridge fallback", { from: prevClaimUserId, to: fallbackAddr, bridged });
+                      const moved = bridged && Number(bridged.moved) > 0 ? Number(bridged.moved) : 0;
+                      if (moved > 0) {
+                          bridgedSourceUserId = prevClaimUserId;
+                          bridgedWalletUserId = fallbackAddr;
+                          bridgedAmountCents = moved;
+                          claimAmount = moved;
+                      }
+                  } catch (eBridgeBase) {
+                      console.warn("[ptg-claim] base bridge fallback failed", eBridgeBase);
+                  }
+                  claimUserId = fallbackAddr;
+                  if (!(claimAmount > 0)) {
+                      try {
+                          const pre = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + claimUserId));
+                          if (pre.exists()) claimAmount = ptgReadPendingRewardCents(pre.val());
+                      } catch (_) {}
+                  }
+              }
+              console.info("[ptg-claim] provider fallback selected", {
+                  claimUserId,
+                  addr,
+                  claimAmount,
+              });
+          }
+          if (!prov || !addr) {
+              if (!sawAnyAccount && lastAccountErr) {
+                  if (msg) msg.textContent = ptgHumanizeWalletError(lastAccountErr);
+                  return;
+              }
+              if (msg) msg.textContent = sawAnyAccount ? "Switch to the same wallet as in the game." : "Connect wallet to claim.";
+              return;
+          }
+          console.info("[ptg-claim] provider matched", { addr });
+          ptgClaimDebug(claimTraceId, "claim.provider.matched", { addr: String(addr || "").toLowerCase() });
+
+          let auth = resumeAuth;
+          if (!auth) {
+              let signer = null;
+              try {
+                  const web3 = new ethers.providers.Web3Provider(prov);
+                  signer = web3.getSigner();
+              } catch (_) {
+                  signer = null;
+              }
+              const signMsg = ptgReferralPayoutSignMessage(claimUserId, claimAmount);
+              let signature;
+              try {
+                  signature = await ptgSignReferralClaimMessageWithFallback(
+                      prov,
+                      signer,
+                      addr,
+                      signMsg,
+                      claimTraceId
+                  );
+              } catch (eSig) {
+                  console.warn("[ptg-claim] sign failed", eSig);
+                  ptgClaimDebug(claimTraceId, "claim.sign.err", eSig);
+                  if (msg) {
+                      msg.textContent =
+                          (eSig && eSig.message ? String(eSig.message) : null) ||
+                          "Wallet did not respond to the sign prompt. Reopen the app and try again.";
+                  }
+                  return;
+              }
+              console.info("[ptg-claim] signed");
+              ptgClaimDebug(claimTraceId, "claim.sign.ok");
+              const origin =
+                  typeof location !== "undefined" && location.origin ? location.origin : "";
+              if (msg) msg.textContent = "Preparing payout…";
+              let res, j;
+              try {
+                  res = await fetchWithTimeout(
+                      origin + "/api/ptg-referral-payout",
+                      {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                              userId: claimUserId,
+                              claimAmountCents: claimAmount,
+                              signature,
+                          }),
+                      },
+                      22000
+                  );
+                  j = await res.json().catch(() => null);
+              } catch (eFetch) {
+                  console.warn("[ptg-claim] quote fetch failed", eFetch);
+                  ptgClaimDebug(claimTraceId, "claim.quote.fetch.err", eFetch);
+                  if (msg) msg.textContent = "Network error talking to payout server. Try again.";
+                  return;
+              }
+              if (!res || !res.ok) {
+                  const errCode = j && j.error ? String(j.error) : "claim_failed";
+                  const extraHint =
+                      j && j.hint
+                          ? " " + j.hint
+                          : errCode === "payout_not_configured"
+                            ? " Server payout wallet not configured."
+                            : "";
+                  console.warn("[ptg-claim] quote rejected", errCode, j);
+                  ptgClaimDebug(claimTraceId, "claim.quote.rejected", { errCode, body: j || null });
+                  if (msg) {
+                      msg.textContent =
+                          errCode +
+                          extraHint +
+                          (j && j.pendingReward != null ? " (pending: " + j.pendingReward + ")" : "");
+                  }
+                  return;
+              }
+              auth = j && j.auth;
+              ptgClaimDebug(claimTraceId, "claim.quote.ok", {
+                  hasAuth: !!auth,
+                  contract: auth && auth.contract ? String(auth.contract).toLowerCase() : null,
+              });
+              if (!auth || !auth.contract || !auth.from || !auth.to) {
+                  if (msg) msg.textContent = "Server did not return payout authorization.";
+                  return;
+              }
+          }
+
+          /* EIP-3009: wallet usera wysyła realną tx do kontraktu USDC — wallet
+           * pokaże „+X USDC" na zielono, z siecią i fee. */
+          let txHash;
+          try {
+              txHash = await ptgReferralSubmitAuthorizationTx(prov, addr, auth, msg, claimTraceId);
+          } catch (eTx) {
+              console.warn("[ptg-claim] sendTransaction failed", eTx);
+              ptgClaimDebug(claimTraceId, "claim.tx.err", eTx);
               if (msg) {
                   msg.textContent =
-                      (j && j.error ? j.error : "claim_failed") +
-                      hint +
-                      (j && j.pendingReward != null ? " (pending: " + j.pendingReward + ")" : "");
+                      (eTx && eTx.message ? String(eTx.message) : null) ||
+                      "Wallet did not send the transaction.";
               }
               return;
           }
+          const explorerUrl = "https://basescan.org/tx/" + txHash;
           if (msg) {
-              const txh = j && j.txHash ? j.txHash : "";
-              const ex = j && j.explorer ? j.explorer : "";
-              msg.textContent = txh
-                  ? "USDC sent. Tx: " + txh.slice(0, 10) + "…" + (ex ? " " + ex : "")
-                  : "Claimed.";
+              msg.textContent =
+                  "USDC claim sent. Tx: " + txHash.slice(0, 10) + "… " + explorerUrl;
           }
+          txSubmitted = true;
+          console.info("[ptg-claim] tx sent", { txHash });
+          ptgClaimDebug(claimTraceId, "claim.tx.sent", { txHash: String(txHash || "").toLowerCase() });
+          ptgReferralFireSettle(claimUserId, txHash, auth.nonce);
       } catch (e) {
-          console.warn("claim referral", e);
-          if (msg) msg.textContent = e && e.message ? String(e.message) : "Could not claim. Try again.";
+          console.warn("[ptg-claim] fatal", e);
+          ptgClaimDebug(claimTraceId, "claim.fatal", e);
+          if (msg) msg.textContent = ptgHumanizeWalletError(e);
       } finally {
+          ptgClaimDebug(claimTraceId, "claim.finally", {
+              txSubmitted,
+              bridgedAmountCents,
+              bridgedSourceUserId: bridgedSourceUserId || null,
+              bridgedWalletUserId: bridgedWalletUserId || null,
+          });
+          if (
+              bridgedAmountCents > 0 &&
+              !txSubmitted &&
+              bridgedSourceUserId &&
+              bridgedWalletUserId
+          ) {
+              try {
+                  const restored = await ptgRollbackBridgedReferralPending(
+                      bridgedSourceUserId,
+                      bridgedWalletUserId,
+                      bridgedAmountCents
+                  );
+                  if (restored > 0 && msg) {
+                      msg.textContent = "Claim cancelled. Balance restored.";
+                  }
+                  console.info("[ptg-claim] bridge rollback", { restored });
+              } catch (eRb) {
+                  console.warn("[ptg-claim] bridge rollback failed", eRb);
+              }
+          }
           if (btn) {
-              const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId);
+              const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + uiSummaryUserId);
               get(sRef)
                   .then((snap) => {
                       const d = snap.exists() ? snap.val() : null;
-                      const pr = d && typeof d.pendingReward === "number" ? d.pendingReward : 0;
+                      const pr = ptgReadPendingRewardCents(d);
                       btn.disabled = pr <= 0;
                   })
                   .catch(() => {
@@ -7823,6 +10135,42 @@
       }
   }
 
+  /**
+   * Self-heal „zombie" claim_outstanding: gdy user kliknął Claim, ale wallet
+   * odrzucił tx / appka została zamknięta w połowie, server wcześniej zerował
+   * pendingReward i user widział nagle 0 bez tx. Teraz backend utrzymuje
+   * outstanding przed dotknięciem summary, a ten helper przy każdym otwarciu
+   * modalu woła RESTORE — jeżeli autoryzacja wygasła bez wykorzystania,
+   * pendingReward wraca na konto; jeżeli została użyta on-chain bez SETTLE,
+   * rekord ląduje w claim_history. Bezstanowy po stronie klienta i bez
+   * podpisu — bezpiecznie wywoływany wielokrotnie.
+   */
+  async function ptgReferralSelfHealOutstanding() {
+      if (!isLoggedIn() || myUserId === "guest") return null;
+      if (!/^0x[a-fA-F0-9]{40}$/.test(String(myUserId || ""))) return null;
+      try {
+          const origin =
+              typeof location !== "undefined" && location.origin ? location.origin : "";
+          const r = await fetch(origin + "/api/ptg-referral-payout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: myUserId, op: "restore" }),
+          });
+          const j = await r.json().catch(() => null);
+          if (r.ok && j && (j.restored || j.claimed)) {
+              console.info("[ptg-referral] self-heal", {
+                  restored: j.restored,
+                  claimed: j.claimed,
+                  pending: j.pendingReward,
+              });
+          }
+          return j;
+      } catch (e) {
+          console.warn("ptgReferralSelfHealOutstanding", e);
+          return null;
+      }
+  }
+
   async function showReferralModal() {
       const el = document.getElementById("referralOverlay");
       if (!el) return;
@@ -7832,7 +10180,17 @@
       if (msg) msg.textContent = "";
       ptgRebuildEliteSetFromCode();
       ptgRefreshTierModeBadge();
+      /* Odpalamy self-heal równolegle do renderu UI. Gdy odkryje, że pending
+       * został przywrócony, i tak za chwilę `refreshReferralModalContent`
+       * przeczyta świeże summary, więc user od razu zobaczy poprawną kwotę. */
+      const healPromise = ptgReferralSelfHealOutstanding();
       await refreshReferralModalContent();
+      try {
+          const healed = await healPromise;
+          if (healed && (healed.restored || healed.claimed)) {
+              await refreshReferralModalContent();
+          }
+      } catch (_) {}
   }
 
   function closeReferralModal() {
@@ -8035,6 +10393,35 @@
       return null;
   }
 
+  /**
+   * Asynchronicznie pobiera ethProvider z SDK — nowsze wersje Farcaster/Base
+   * Mini App SDK (>=0.1) udostępniają `sdk.wallet.getEthereumProvider()` zamiast
+   * (lub obok) starego `sdk.wallet.ethProvider`. Niektóre hosty zwracają świeży
+   * provider dopiero po tym asynchronicznym wywołaniu — bez niego `request()`
+   * rzuca niepełnym błędem w rodzaju "Cannot read properties of undefined
+   * (reading 'error')". Zawsze wolimy wariant async jeśli istnieje.
+   */
+  async function getEmbeddedEthProviderAsync() {
+      try {
+          const w = sdk && typeof sdk === "object" ? sdk.wallet : null;
+          if (w && typeof w.getEthereumProvider === "function") {
+              try {
+                  /* Regularna Base App (nie preview) potrafi zwrócić promise, który
+                   * NIGDY się nie resolve'uje z `sdk.wallet.getEthereumProvider()`.
+                   * Bez timeoutu cały claim wisi na „Checking claim state…"
+                   * (patrz #debug-log: brak `claim.providers` po `claim.restore`). */
+                  const p = await withTimeout(
+                      Promise.resolve(w.getEthereumProvider()),
+                      3500,
+                      "sdk.wallet.getEthereumProvider"
+                  );
+                  if (p && typeof p.request === "function") return p;
+              } catch (_) {}
+          }
+      } catch (_) {}
+      return getEmbeddedEthProvider();
+  }
+
   async function withTimeout(promise, ms, label) {
       let timer = null;
       try {
@@ -8115,6 +10502,7 @@
       if (variant === "base") chip.classList.add("user-chip--base");
       else if (variant === "farcaster") chip.classList.add("user-chip--farcaster");
       else if (variant === "browser") chip.classList.add("user-chip--browser");
+      chip.classList.toggle("user-chip--elite", !!ptgIsEliteViewer());
       const logoutBtn = document.getElementById("playerLogoutBtn");
       if (logoutBtn) logoutBtn.style.display = isLoggedIn() ? "inline-flex" : "none";
   }
@@ -8142,7 +10530,7 @@
               else chip.textContent = "";
               chip.title = "";
               chip.style.display = "none";
-              chip.classList.remove("user-chip--base", "user-chip--farcaster", "user-chip--browser");
+              chip.classList.remove("user-chip--base", "user-chip--farcaster", "user-chip--browser", "user-chip--elite");
           }
           ptgUnsubscribeReferralListeners();
           if (typeof userProfileUnsubscribe === "function") {
@@ -8265,12 +10653,28 @@
 
           if (isBaseApp) {
               ptgHost = "base";
-              try {
-                  if (ctx.user && (ctx.user.username || ctx.user.fid != null)) {
-                      if (applyFarcasterProfileUser(ctx.user, true)) return;
-                  }
-              } catch (e) {
-                  console.warn("Base Farcaster profile", e);
+              /* WAŻNE: w Base App preferujemy wallet 0x tak jak na webie.
+               * Dzięki temu user ma ten sam `myUserId` wszędzie — pendingReward /
+               * invite_entries / claim history siedzą pod jednym kluczem, zamiast
+               * rozsypywać się pomiędzy `@username` (Base App) a `0x…` (web/mint).
+               * Farcaster profile działa jako fallback, gdy embedded wallet nie
+               * jest od razu gotowy — i dodatkowo zawsze ZAPAMIĘTUJEMY FC
+               * tożsamość jako alias identity (do wykrywania cross-platform
+               * atrybucji i zgodności ze starymi danymi). */
+              if (ctx.user && ctx.user.username) {
+                  try {
+                      const fcAlias = String(ctx.user.username)
+                          .replace(/^@/, "")
+                          .replace(/[^a-zA-Z0-9]/g, "")
+                          .toLowerCase();
+                      if (fcAlias) ptgRememberIdentityAlias(fcAlias);
+                  } catch (_) {}
+              }
+              if (ctx.user && ctx.user.fid != null && String(ctx.user.fid).length > 0) {
+                  try {
+                      const fidAlias = "fcfid" + String(ctx.user.fid).replace(/\D/g, "");
+                      if (fidAlias.length > "fcfid".length) ptgRememberIdentityAlias(fidAlias);
+                  } catch (_) {}
               }
               try {
                   const fe = getEmbeddedEthProvider();
@@ -8285,29 +10689,48 @@
               } catch (e) {
                   console.warn("Base eth_accounts", e);
               }
+              /* Wallet niedostępny — fallback do profilu Farcaster (tak jak dawniej). */
+              try {
+                  if (ctx.user && (ctx.user.username || ctx.user.fid != null)) {
+                      if (applyFarcasterProfileUser(ctx.user, true)) return;
+                  }
+              } catch (e) {
+                  console.warn("Base Farcaster profile", e);
+              }
               return;
           }
 
-          if (ctx.user && (ctx.user.username || ctx.user.fid != null)) {
-              ptgHost = "farcaster";
-              if (applyFarcasterProfileUser(ctx.user, false)) return;
-          }
-
+          /* Farcaster (Warpcast / PC Farcaster / Mini App): PROFILE-FIRST.
+           * Tożsamość = Farcaster username/FID, NIE embedded wallet. Powód:
+           * SDK `sdk.wallet.ethProvider` w Warpcaście potrafi oddać custody
+           * wallet, który user kojarzy z „jakimś dziwnym adresem" (albo z
+           * Base), a user oczekuje logowania po FC koncie. Wallet zapisujemy
+           * tylko jako alias identity (do atrybucji referrali cross-surface
+           * i do późniejszego USDC claimu, który i tak wymaga 0x). */
+          ptgHost = "farcaster";
+          let fcWalletAlias = null;
           try {
               const fe = getEmbeddedEthProvider();
               if (fe) {
-                  ptgHost = "farcaster";
                   const acc = await withTimeout(
                       fe.request({ method: "eth_accounts" }),
                       1200,
                       "miniapp eth_accounts"
-                  );
-                  if (acc && acc[0] && applyWalletIdentity(acc[0], "farcaster")) return;
-                  return;
+                  ).catch(() => null);
+                  if (Array.isArray(acc) && acc[0] && /^0x[a-fA-F0-9]{40}$/.test(String(acc[0]))) {
+                      fcWalletAlias = String(acc[0]).toLowerCase();
+                      ptgRememberIdentityAlias(fcWalletAlias);
+                  }
               }
           } catch (e) {
               console.warn("Mini app eth_accounts", e);
           }
+          if (ctx.user && (ctx.user.username || ctx.user.fid != null)) {
+              if (applyFarcasterProfileUser(ctx.user, false)) return;
+          }
+          /* Brak profilu FC w kontekście — jako ostatnią deskę ratunku używamy
+           * walletu z embedded providera (np. headless Farcaster client). */
+          if (fcWalletAlias && applyWalletIdentity(fcWalletAlias, "farcaster")) return;
 
           ptgHost = "browser";
       } finally {
@@ -8333,6 +10756,13 @@
           checkGameStateAndRender();
       }
       void ptgMaybeShowInviteAcceptOverlay();
+      /* Self-heal referral outstanding: jeżeli poprzednia sesja zostawiła
+       * zombie wpis (kasa zeszła z summary, bo wallet nie dobił tx), server
+       * to teraz posprząta i przywróci pendingReward jeszcze zanim user
+       * otworzy modal. */
+      setTimeout(function () {
+          void ptgReferralSelfHealOutstanding();
+      }, 600);
       /* Retry overlay po świeżym loginie — w Base/FC Mini App pierwsza próba zdarza się
        * zanim `db` / pending_ref / URL-capture dobiegną do stanu „ready", przez co modal
        * nigdy nie wyskakuje. Ponowne odpalenie po chwili łapie ten przypadek bez dodatkowych
@@ -8604,11 +11034,11 @@
           if (!unlocked) {
               el.title = "Unlock at " + need + " points, then mint on Base";
           } else if (held) {
-              el.title = need + " win badge — minted";
+              el.title = need + " points badge — minted";
           } else if (!badgeWalletProbed) {
-              el.title = "Tap to connect wallet and mint your " + need + " win badge on Base";
+              el.title = "Tap to connect wallet and mint your " + need + " points badge on Base";
           } else {
-              el.title = "Tap to mint " + need + " win badge (price on contract)";
+              el.title = "Tap to mint " + need + " points badge (price on contract)";
           }
       });
   }
@@ -10799,7 +13229,10 @@
       } catch (e) {
           tip = ethers.BigNumber.from("3000000");
       }
-      let maxFee = baseFee.mul(12).div(10).add(tip);
+      /* Base docs: maxFeePerGas ≈ 2 * baseFee + maxPriorityFeePerGas — większy
+       * headroom niż 1.2× baseFee, inaczej tx potrafi „nie wejść” do mempoolu
+       * (szczególnie w Base app / SCW przy skoku base fee). */
+      let maxFee = baseFee.mul(2).add(tip);
       const maxFeeCeil = ethers.BigNumber.from("1200000000");
       if (maxFee.gt(maxFeeCeil)) maxFee = maxFeeCeil;
       const minMax = baseFee.add(tip);
@@ -10812,6 +13245,13 @@
 
   const PTG_MINT_WITH_SIG_SELECTOR = "0x01810030";
 
+  /** USDC (Base) — `transferWithAuthorization` z referral claimu; większy gas cap niż zwykły mint. */
+  const PTG_USDC_BASE_ADDR_LC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+  const PTG_USDC_TWA_SELECTOR = ethers.utils
+      .id("transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,uint8,bytes32,bytes32)")
+      .slice(0, 10)
+      .toLowerCase();
+
   /**
    * Gas + EIP-1559 z /api/base-jsonrpc — niskie maxFee (Base).
    * `mintWithSig` (smart wallet / AA): wyższy cap — 290k potrafi odrzucić symulację zanim pojawi się UI portfela.
@@ -10820,15 +13260,29 @@
       const out = {};
       const dHex = typeof data === "string" ? data.toLowerCase() : "";
       const isMintWithSig = dHex.startsWith(PTG_MINT_WITH_SIG_SELECTOR);
+      let toLc = "";
+      try {
+          if (to && typeof to === "string") toLc = ethers.utils.getAddress(to).toLowerCase();
+      } catch (_) {
+          toLc = String(to || "").toLowerCase();
+      }
+      const isUsdcTwa =
+          dHex.startsWith(PTG_USDC_TWA_SELECTOR) || toLc === PTG_USDC_BASE_ADDR_LC;
       const gasCap = isMintWithSig
           ? ethers.BigNumber.from(880000)
-          : ethers.BigNumber.from(290000);
+          : isUsdcTwa
+            ? ethers.BigNumber.from(420000)
+            : ethers.BigNumber.from(290000);
       const floor = isMintWithSig
           ? ethers.BigNumber.from(200000)
-          : ethers.BigNumber.from(110000);
+          : isUsdcTwa
+            ? ethers.BigNumber.from(140000)
+            : ethers.BigNumber.from(110000);
       let est = isMintWithSig
           ? ethers.BigNumber.from(480000)
-          : ethers.BigNumber.from(240000);
+          : isUsdcTwa
+            ? ethers.BigNumber.from(300000)
+            : ethers.BigNumber.from(240000);
 
       const estReq = {
           jsonrpc: "2.0",
@@ -10851,11 +13305,8 @@
 
       const [estHex, block, tipHex] = await Promise.all([
           baseJsonRpc(estReq).catch((e) => {
-              console.warn(
-                  "prepareMintTxGasFields: eth_estimateGas fallback",
-                  isMintWithSig ? "480k" : "240k",
-                  e
-              );
+              const fb = isMintWithSig ? "480k" : isUsdcTwa ? "300k" : "240k";
+              console.warn("prepareMintTxGasFields: eth_estimateGas fallback", fb, e);
               return null;
           }),
           baseJsonRpc(blockReq).catch((e) => {
@@ -10993,6 +13444,70 @@
       return walletRequestWithTimeout(provider, "eth_requestAccounts", [], 12000);
   }
 
+  /**
+   * Referral claim w Base / mini-app: SCW bywa wolne na `eth_accounts`; 12s na
+   * `eth_requestAccounts` to za mało, a główny `window.ethereum` w webview
+   * nie powinien być pierwszym wyborem (patrz: claim tylko przez embedded list).
+   * Regularna Base App: `eth_requestAccounts` potrafi wisieć w nieskończoność
+   * (user nie widzi żadnego popupu), więc bez rozsądnego timeoutu cały loop
+   * po providerach blokuje się na długie minuty. 18s per provider wystarczy,
+   * żeby wallet zdążył zareagować, a jak nie — szybko przechodzimy do
+   * kolejnego providera (np. injected Coinbase Wallet).
+   */
+  async function getWalletAccountsForClaimProvider(provider, traceId, providerIdx) {
+      if (!provider || typeof provider.request !== "function") return [];
+      try {
+          if (traceId) ptgClaimDebug(traceId, "claim.accounts.quick.start", { providerIdx });
+          const quick = await withTimeout(
+              provider.request({ method: "eth_accounts", params: [] }),
+              4000,
+              "claim eth_accounts"
+          );
+          if (Array.isArray(quick) && quick[0]) {
+              if (traceId) {
+                  ptgClaimDebug(traceId, "claim.accounts.quick.ok", {
+                      providerIdx,
+                      account0: String(quick[0] || "").toLowerCase(),
+                  });
+              }
+              return quick;
+          }
+          if (traceId) ptgClaimDebug(traceId, "claim.accounts.quick.empty", { providerIdx });
+      } catch (eQuick) {
+          if (traceId) {
+              ptgClaimDebug(traceId, "claim.accounts.quick.err", {
+                  providerIdx,
+                  err: ptgClaimDebugSafe(eQuick),
+              });
+          }
+      }
+      if (traceId) ptgClaimDebug(traceId, "claim.accounts.request.start", { providerIdx });
+      try {
+          const out = await walletRequestWithTimeout(
+              provider,
+              "eth_requestAccounts",
+              [],
+              18000
+          );
+          if (traceId) {
+              ptgClaimDebug(traceId, "claim.accounts.request.ok", {
+                  providerIdx,
+                  account0:
+                      Array.isArray(out) && out[0] ? String(out[0]).toLowerCase() : null,
+              });
+          }
+          return out;
+      } catch (eReq) {
+          if (traceId) {
+              ptgClaimDebug(traceId, "claim.accounts.request.err", {
+                  providerIdx,
+                  err: ptgClaimDebugSafe(eReq),
+              });
+          }
+          throw eReq;
+      }
+  }
+
   function mintPriceCacheKey(contractAddr) {
       try {
           return "ptg_v1_mintPriceWei_" + ethers.utils.getAddress(contractAddr).toLowerCase();
@@ -11107,7 +13622,7 @@
   }
 
   /**
-   * PTGBadgeSigned721 na Base: mintPriceWei jest private na niektórych deploy'ach (10/100/1000 wins).
+   * PTGBadgeSigned721 na Base: mintPriceWei jest private na niektórych deploy'ach (10/100/1000 points).
    * Storage slot 6 zawiera tę cenę — odczytujemy ją przez eth_getStorageAt jako fallback.
    */
   const PTG_BADGE_PRICE_STORAGE_SLOT = "0x6";
@@ -12324,6 +14839,10 @@
       return true;
   }
 
+  function leaderboardTierHoverText(isElite) {
+      return isElite ? "Elite tier (gold nickname)" : "Normal tier (white nickname)";
+  }
+
   async function enrichLeaderboardNameCells(rows) {
       const tbody = document.getElementById("leaderboardBody");
       if (!tbody) return;
@@ -12354,7 +14873,13 @@
           const tr = tbody.children[i];
           if (tr) {
               const cell = tr.querySelector(".lb-name-cell");
-              if (cell) cell.textContent = label;
+              if (cell) {
+                  cell.textContent = label;
+                  const isEliteCell = ptgIsEliteUser(row.id, label);
+                  cell.classList.toggle("lb-name-cell--elite", isEliteCell);
+                  cell.title = leaderboardTierHoverText(isEliteCell);
+                  cell.setAttribute("aria-label", cell.textContent + " - " + leaderboardTierHoverText(isEliteCell));
+              }
           }
           if (isBetterDisplayName(label)) void persistPlayerDisplayNameToRtdb(row.id, label);
       }
@@ -12404,19 +14929,34 @@
               else if (rank === 3) rankClass = "rank-badge rank-3";
               const label = formatLeaderboardDisplayName(row.id, row.p);
               const isMe = row.id === myUserId;
-              const nameStyle = isMe ? "color: #3c8aff; font-weight: 700;" : "color: #fff;";
+              const isEliteRow = ptgIsEliteUser(row.id, row.p && row.p.name ? String(row.p.name) : "");
+              let nameClass = "lb-name-cell";
+              if (isEliteRow) nameClass += " lb-name-cell--elite";
+              if (isMe) nameClass += " lb-name-cell--me";
               const esc = String(label)
                   .replace(/&/g, "&amp;")
                   .replace(/</g, "&lt;")
                   .replace(/>/g, "&gt;")
+                  .replace(/"/g, "&quot;");
+              const escAttr = String(label)
+                  .replace(/&/g, "&amp;")
+                  .replace(/"/g, "&quot;");
+              const tierAttr = leaderboardTierHoverText(isEliteRow)
+                  .replace(/&/g, "&amp;")
                   .replace(/"/g, "&quot;");
               return (
                   "<tr><td><div class=\"" +
                   rankClass +
                   "\">" +
                   rank +
-                  "</div></td><td class=\"lb-name-cell\" style=\"" +
-                  nameStyle +
+                  "</div></td><td class=\"" +
+                  nameClass +
+                  "\" title=\"" +
+                  tierAttr +
+                  "\" aria-label=\"" +
+                  escAttr +
+                  " - " +
+                  tierAttr +
                   "\">" +
                   esc +
                   "</td><td style=\"text-align:right; font-weight:700;\">" +
@@ -12462,6 +15002,83 @@
   document.getElementById('connectWalletBtn')?.addEventListener('click', () => connectWalletForPlay());
   document.getElementById('leaderboardBtn').onclick = showLeaderboard;
   document.getElementById('closeLeaderboard').onclick = () => document.getElementById('leaderboardOverlay').classList.remove('show');
+
+  /* ===== PTG Docs — open/close + in-modal navigation ===== */
+  (function () {
+      var overlay = document.getElementById("docsOverlay");
+      var openBtn = document.getElementById("openDocsBtn");
+      var closeBtn = document.getElementById("docsModalCloseBtn");
+      var ctaClose = document.getElementById("docsCtaCloseBtn");
+      var body = document.getElementById("docsModalBody");
+      var nav = document.getElementById("docsNav");
+      if (!overlay) return;
+
+      function openDocs() {
+          overlay.classList.add("show");
+          overlay.setAttribute("aria-hidden", "false");
+          document.body.style.overflow = "hidden";
+          if (body) body.scrollTop = 0;
+          var first = nav && nav.querySelector(".docs-nav__chip");
+          if (first) {
+              Array.prototype.forEach.call(nav.querySelectorAll(".docs-nav__chip"), function (c) { c.classList.remove("is-active"); });
+              first.classList.add("is-active");
+          }
+      }
+      function closeDocs() {
+          overlay.classList.remove("show");
+          overlay.setAttribute("aria-hidden", "true");
+          document.body.style.overflow = "";
+      }
+
+      if (openBtn) openBtn.addEventListener("click", openDocs);
+      if (closeBtn) closeBtn.addEventListener("click", closeDocs);
+      if (ctaClose) ctaClose.addEventListener("click", closeDocs);
+
+      overlay.addEventListener("click", function (ev) {
+          if (ev.target === overlay) closeDocs();
+      });
+      document.addEventListener("keydown", function (ev) {
+          if (ev.key === "Escape" && overlay.classList.contains("show")) closeDocs();
+      });
+
+      if (nav) {
+          nav.addEventListener("click", function (ev) {
+              var chip = ev.target.closest(".docs-nav__chip");
+              if (!chip) return;
+              var target = chip.getAttribute("data-docs-target");
+              var section = target ? document.getElementById(target) : null;
+              Array.prototype.forEach.call(nav.querySelectorAll(".docs-nav__chip"), function (c) { c.classList.remove("is-active"); });
+              chip.classList.add("is-active");
+              if (section && body) {
+                  body.scrollTo({ top: Math.max(0, section.offsetTop - 8), behavior: "smooth" });
+              }
+          });
+      }
+
+      if (body && nav) {
+          var sections = Array.prototype.slice.call(body.querySelectorAll(".docs-section"));
+          var syncing = false;
+          body.addEventListener("scroll", function () {
+              if (syncing) return;
+              syncing = true;
+              requestAnimationFrame(function () {
+                  var top = body.scrollTop + 40;
+                  var current = sections[0];
+                  for (var i = 0; i < sections.length; i++) {
+                      if (sections[i].offsetTop <= top) current = sections[i];
+                  }
+                  if (current) {
+                      var id = current.id;
+                      Array.prototype.forEach.call(nav.querySelectorAll(".docs-nav__chip"), function (c) {
+                          c.classList.toggle("is-active", c.getAttribute("data-docs-target") === id);
+                      });
+                  }
+                  syncing = false;
+              });
+          }, { passive: true });
+      }
+  })();
+
   document.getElementById("referralOpenBtn")?.addEventListener("click", function () {
       void showReferralModal();
   });
@@ -12517,9 +15134,24 @@
       }
       if (ev.target === ev.currentTarget) ptgCloseReferralDetailPanel();
   });
-  document.getElementById("referralClaimBtn")?.addEventListener("click", function () {
+  let __ptgClaimTapLockUntil = 0;
+  function ptgTriggerClaimFromUiTap(ev) {
+      try {
+          if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+      } catch (_) {}
+      const now = Date.now();
+      if (now < __ptgClaimTapLockUntil) return;
+      /* Mobile webview bywa kapryśny i potrafi puścić zarówno touchend,
+       * jak i synthetic click. Krótki lock zapobiega podwójnemu triggerowi. */
+      __ptgClaimTapLockUntil = now + 450;
       void claimReferralRewardsFromUi();
-  });
+  }
+  document.getElementById("referralClaimBtn")?.addEventListener("click", ptgTriggerClaimFromUiTap);
+  document.getElementById("referralClaimBtn")?.addEventListener(
+      "touchend",
+      ptgTriggerClaimFromUiTap,
+      { passive: false }
+  );
   document.getElementById("referralOverlay")?.addEventListener("click", function (ev) {
       if (ev.target === ev.currentTarget) closeReferralModal();
   });
@@ -12697,6 +15329,510 @@
   } else {
       setTimeout(bootStartAppOnce, 0);
   }
+</script>
+
+<script>
+/* =========================================================================
+   Onboarding tour (first-visit walkthrough)
+   -------------------------------------------------------------------------
+   - Highlights key UI pieces in sequence with a spotlight + tooltip
+   - Controls: Next / Back / Skip tour + keyboard (→ ← Enter Esc)
+   - Persists "seen" flag in localStorage so it appears only on first visit
+   - TESTING: set FORCE_ALWAYS = true below to show it every reload.
+             Set to false for production behaviour.
+   ========================================================================= */
+(function ptgTourInit() {
+    "use strict";
+
+    var STORAGE_KEY = "ptg_tour_v2_seen";
+    var FORCE_ALWAYS = false;
+    var VIEWPORT_MARGIN = 12;
+
+    if (!FORCE_ALWAYS) {
+        try {
+            if (localStorage.getItem(STORAGE_KEY)) return;
+        } catch (_) {}
+    }
+
+    var steps = [
+        {
+            id: "word",
+            target: "#wordDisplay",
+            title: "The phrase",
+            body: "This is today's phrase. Underscores are hidden letters you still need to reveal."
+        },
+        {
+            id: "kbd",
+            target: "#keyboard",
+            title: "Pick letters",
+            body: "Tap (or type) any letter. Correct guesses light up, wrong ones add to your mistakes."
+        },
+        {
+            id: "chart",
+            target: "#chart",
+            title: "The mistake chart",
+            body: "Your mistake meter climbs with every wrong letter. Five mistakes end the round."
+        },
+        {
+            id: "category",
+            target: "#categoryDisplay",
+            title: "Category",
+            body: "The theme of the current phrase — use it as a clue while guessing."
+        },
+        {
+            id: "mistakes",
+            target: "#mistakesPill",
+            title: "Mistakes",
+            body: "Tracks how many wrong letters you've used this round (max 5)."
+        },
+        {
+            id: "daily",
+            target: "#dailyInfo",
+            title: "Daily games",
+            body: "You get 3 rounds per day. A countdown appears once you've used them all."
+        },
+        {
+            id: "score",
+            target: ".header-stats-cluster",
+            title: "Score & leaderboard",
+            body: "Win rounds to earn points. Tap the trophy to open the global leaderboard."
+        },
+        {
+            id: "badges",
+            target: ".hero-badge-row",
+            title: "NFT badges",
+            body: "Collect on-chain badges: OG, 10, 100, and 1000 points. Tap an unlocked badge to mint it to your wallet."
+        },
+        {
+            id: "rewards",
+            target: ".rewards-strip",
+            title: "Points rewards",
+            body: "Win a round to earn +1 point. Mint the trophy NFT afterwards for an extra +2. Points fuel your rank and badge unlocks."
+        },
+        {
+            id: "hint",
+            target: "#hintBtn",
+            title: "Need a hint?",
+            body: "Stuck? Buy a hint to reveal one random letter in the current phrase."
+        },
+        {
+            id: "invite",
+            target: "#referralOpenBtn",
+            title: "Invite & earn",
+            body: "Open your referral panel: copy your invite link, share it, and claim rewards from friends you bring in."
+        },
+        {
+            id: "categories",
+            target: "#categoryFilterToggle",
+            title: "Category pool",
+            body: "Pick which themes you want to see. Tap this to choose your favourite categories (minimum 4)."
+        },
+        {
+            id: "calendar",
+            target: "#calendarToggle",
+            title: "Mint calendar",
+            body: "See which past days you've already minted and which ones are still waiting for your trophy."
+        },
+        {
+            id: "x",
+            target: 'a.social-btn[href*="x.com"]',
+            title: "Follow on X",
+            body: "Follow @Super_Guess_ on X for news, contests, and daily phrase drops."
+        },
+        {
+            id: "discord",
+            target: 'a.social-btn[href*="discord"]',
+            title: "Join Discord",
+            body: "Hop into the community on Discord — chat with players, share guesses, and get early news."
+        },
+        {
+            id: "contracts",
+            target: ".contract-links-row",
+            title: "Smart contracts on Base",
+            body: "Every badge and mint is fully on-chain. Tap any icon to inspect the contract on BaseScan."
+        },
+        {
+            id: "docs",
+            target: "#openDocsBtn",
+            title: "Full player guide",
+            body: "That's the quick tour! Open PTG Docs any time for the complete, in-depth player guide.",
+            primary: "Open docs",
+            onPrimary: function () {
+                var btn = document.getElementById("openDocsBtn");
+                if (btn) {
+                    try { btn.click(); } catch (_) {}
+                }
+            }
+        }
+    ];
+
+    var idx = 0;
+    var root = null;
+    var cutout = null;
+    var tooltip = null;
+    var backdrop = null;
+    var resizeHandler = null;
+    var scrollHandler = null;
+    var rafPending = false;
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+            return ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            })[c];
+        });
+    }
+
+    function isShown(id) {
+        var el = document.getElementById(id);
+        return !!(el && el.classList.contains("show"));
+    }
+
+    function appReady() {
+        var ls = document.getElementById("loadingScreen");
+        if (ls) {
+            var hiddenByStyle = false;
+            try { hiddenByStyle = (ls.style.display === "none"); } catch (_) {}
+            if (!hiddenByStyle && ls.classList.contains("show")) return false;
+        }
+        var blockers = [
+            "authGateOverlay",
+            "victoryModal",
+            "lossModal",
+            "inviteAcceptOverlay",
+            "ptgBaseSaveSheet",
+            "referralOverlay",
+            "referralDetailOverlay",
+            "docsOverlay"
+        ];
+        for (var i = 0; i < blockers.length; i++) {
+            if (isShown(blockers[i])) return false;
+        }
+        return true;
+    }
+
+    function waitReadyThenStart(attempts) {
+        attempts = attempts || 0;
+        if (appReady()) { start(); return; }
+        if (attempts > 300) return; // ~60s safety bail
+        setTimeout(function () { waitReadyThenStart(attempts + 1); }, 200);
+    }
+
+    function findTarget(step) {
+        if (!step || !step.target) return null;
+        var el = null;
+        try { el = document.querySelector(step.target); } catch (_) { return null; }
+        if (!el) return null;
+        var rect = el.getBoundingClientRect();
+        if (rect.width < 2 && rect.height < 2) return null;
+        var cs;
+        try { cs = getComputedStyle(el); } catch (_) { cs = null; }
+        if (cs) {
+            if (cs.display === "none") return null;
+            if (cs.visibility === "hidden") return null;
+            if (parseFloat(cs.opacity || "1") < 0.05) return null;
+        }
+        return el;
+    }
+
+    function build() {
+        root = document.createElement("div");
+        root.className = "ptg-tour-root ptg-tour-root--active";
+        root.setAttribute("role", "dialog");
+        root.setAttribute("aria-modal", "true");
+        root.setAttribute("aria-label", "App tour");
+
+        backdrop = document.createElement("div");
+        backdrop.className = "ptg-tour-backdrop";
+        backdrop.addEventListener("click", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+        });
+        backdrop.addEventListener("wheel", function (e) {
+            // allow scroll-through on backdrop so user can't get stuck;
+            // we reposition via scroll handler.
+        }, { passive: true });
+
+        cutout = document.createElement("div");
+        cutout.className = "ptg-tour-cutout ptg-tour-cutout--hidden";
+
+        tooltip = document.createElement("div");
+        tooltip.className = "ptg-tour-tooltip";
+
+        root.appendChild(backdrop);
+        root.appendChild(cutout);
+        root.appendChild(tooltip);
+        document.body.appendChild(root);
+
+        resizeHandler = function () { schedulePositionRefresh(); };
+        scrollHandler = function () { schedulePositionRefresh(); };
+        window.addEventListener("resize", resizeHandler);
+        window.addEventListener("scroll", scrollHandler, true);
+        document.addEventListener("keydown", onKey, true);
+    }
+
+    function schedulePositionRefresh() {
+        if (rafPending || !root) return;
+        rafPending = true;
+        requestAnimationFrame(function () {
+            rafPending = false;
+            renderCurrent(true);
+        });
+    }
+
+    function destroy(markSeen) {
+        if (markSeen) {
+            try { localStorage.setItem(STORAGE_KEY, "1"); } catch (_) {}
+        }
+        if (!root) return;
+        window.removeEventListener("resize", resizeHandler);
+        window.removeEventListener("scroll", scrollHandler, true);
+        document.removeEventListener("keydown", onKey, true);
+        root.classList.add("ptg-tour-root--fade-out");
+        var el = root;
+        root = null;
+        setTimeout(function () {
+            try { el.remove(); } catch (_) {}
+        }, 260);
+    }
+
+    function onKey(e) {
+        if (!root) return;
+        if (e.key === "Escape") { e.preventDefault(); finish(true); return; }
+        if (e.key === "ArrowRight" || e.key === "Enter") {
+            e.preventDefault();
+            handlePrimary();
+            return;
+        }
+        if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            prev();
+        }
+    }
+
+    function renderCurrent(positionOnly) {
+        if (!root) return;
+        var step = steps[idx];
+        var target = findTarget(step);
+
+        if (!positionOnly) {
+            // build tooltip content
+            var total = steps.length;
+            var dotsHtml = "";
+            for (var i = 0; i < total; i++) {
+                var cls = "ptg-tour-tooltip__progress-dot";
+                if (i < idx) cls += " ptg-tour-tooltip__progress-dot--done";
+                if (i === idx) cls += " ptg-tour-tooltip__progress-dot--active";
+                dotsHtml += '<span class="' + cls + '"></span>';
+            }
+            var isLast = idx === steps.length - 1;
+            var primaryLabel = step.primary || (isLast ? "Got it" : "Next");
+            var hasBack = idx > 0;
+            tooltip.innerHTML =
+                '<div class="ptg-tour-tooltip__progress">' +
+                    '<span>Tour ' + (idx + 1) + " / " + total + "</span>" +
+                    '<span class="ptg-tour-tooltip__progress-dots">' + dotsHtml + "</span>" +
+                "</div>" +
+                '<h3 class="ptg-tour-tooltip__title">' + escapeHtml(step.title) + "</h3>" +
+                '<p class="ptg-tour-tooltip__body">' + escapeHtml(step.body) + "</p>" +
+                '<div class="ptg-tour-tooltip__actions">' +
+                    '<button type="button" class="ptg-tour-btn ptg-tour-btn--skip" data-ptg-tour-action="skip">Skip tour</button>' +
+                    '<div class="ptg-tour-tooltip__actions-right">' +
+                        (hasBack
+                            ? '<button type="button" class="ptg-tour-btn" data-ptg-tour-action="back">Back</button>'
+                            : "") +
+                        '<button type="button" class="ptg-tour-btn ptg-tour-btn--primary" data-ptg-tour-action="next">' +
+                            escapeHtml(primaryLabel) + "</button>" +
+                    "</div>" +
+                "</div>";
+
+            var btns = tooltip.querySelectorAll("[data-ptg-tour-action]");
+            for (var b = 0; b < btns.length; b++) {
+                btns[b].addEventListener("click", function (ev) {
+                    var a = ev.currentTarget.getAttribute("data-ptg-tour-action");
+                    if (a === "skip") finish(true);
+                    else if (a === "back") prev();
+                    else handlePrimary();
+                });
+            }
+
+            // replay entry animation
+            tooltip.style.animation = "none";
+            // force reflow
+            void tooltip.offsetWidth;
+            tooltip.style.animation = "";
+        }
+
+        if (!target) {
+            cutout.classList.add("ptg-tour-cutout--hidden");
+            cutout.classList.remove("ptg-tour-cutout--pulse");
+            placeTooltipCenter();
+            return;
+        }
+
+        cutout.classList.remove("ptg-tour-cutout--hidden");
+        cutout.classList.add("ptg-tour-cutout--pulse");
+
+        if (!positionOnly) {
+            var r0;
+            try { r0 = target.getBoundingClientRect(); } catch (_) { r0 = null; }
+            var needsScroll = !r0 || r0.top < 60 || r0.bottom > (window.innerHeight - 60);
+            if (needsScroll) {
+                try {
+                    target.scrollIntoView({ block: "center", behavior: "smooth" });
+                } catch (_) {
+                    try { target.scrollIntoView(); } catch (__) {}
+                }
+                setTimeout(function () { positionFor(target); }, 360);
+                return;
+            }
+        }
+        positionFor(target);
+    }
+
+    function handlePrimary() {
+        var step = steps[idx];
+        if (step && typeof step.onPrimary === "function") {
+            try { step.onPrimary(); } catch (_) {}
+            finish(true);
+            return;
+        }
+        next();
+    }
+
+    function positionFor(target) {
+        if (!target || !cutout || !tooltip) return;
+        var rect;
+        try { rect = target.getBoundingClientRect(); } catch (_) { return; }
+
+        var pad = 8;
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+
+        var x = Math.max(4, rect.left - pad);
+        var y = Math.max(4, rect.top - pad);
+        var w = Math.min(vw - 8, rect.width + pad * 2);
+        var h = Math.min(vh - 8, rect.height + pad * 2);
+
+        cutout.style.left = x + "px";
+        cutout.style.top = y + "px";
+        cutout.style.width = w + "px";
+        cutout.style.height = h + "px";
+
+        // borderRadius mimic
+        var radius = 14;
+        try {
+            var cs = getComputedStyle(target);
+            var br = parseFloat(cs.borderRadius || "0");
+            if (!isNaN(br) && br > 0) radius = Math.min(28, Math.max(8, br + 2));
+        } catch (_) {}
+        cutout.style.borderRadius = radius + "px";
+
+        // tooltip placement
+        var tipRect = tooltip.getBoundingClientRect();
+        var tipW = tipRect.width || Math.min(360, vw - 24);
+        var tipH = tipRect.height || 160;
+        var gap = 14;
+
+        var spaceBelow = vh - (rect.bottom + pad);
+        var spaceAbove = rect.top - pad;
+
+        var top;
+        if (spaceBelow >= tipH + gap + 4) {
+            top = rect.bottom + pad + gap;
+        } else if (spaceAbove >= tipH + gap + 4) {
+            top = rect.top - pad - gap - tipH;
+        } else {
+            // not enough vertical space: stick to bottom of viewport
+            top = Math.max(VIEWPORT_MARGIN, vh - tipH - VIEWPORT_MARGIN);
+        }
+
+        var left = rect.left + rect.width / 2 - tipW / 2;
+        left = Math.max(VIEWPORT_MARGIN, Math.min(left, vw - tipW - VIEWPORT_MARGIN));
+
+        tooltip.style.left = left + "px";
+        tooltip.style.top = top + "px";
+        tooltip.style.transform = "none";
+    }
+
+    function placeTooltipCenter() {
+        if (!tooltip) return;
+        var tipRect = tooltip.getBoundingClientRect();
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        var tipW = tipRect.width || Math.min(360, vw - 24);
+        var tipH = tipRect.height || 180;
+        var left = Math.max(VIEWPORT_MARGIN, (vw - tipW) / 2);
+        var top = Math.max(VIEWPORT_MARGIN, (vh - tipH) / 2);
+        tooltip.style.left = left + "px";
+        tooltip.style.top = top + "px";
+        tooltip.style.transform = "none";
+
+        if (cutout) {
+            cutout.style.left = "-9999px";
+            cutout.style.top = "-9999px";
+            cutout.style.width = "0";
+            cutout.style.height = "0";
+        }
+    }
+
+    function next() {
+        var attempt = idx + 1;
+        while (attempt < steps.length) {
+            var s = steps[attempt];
+            if (!s.target || findTarget(s)) {
+                idx = attempt;
+                renderCurrent(false);
+                return;
+            }
+            attempt++;
+        }
+        finish(true);
+    }
+
+    function prev() {
+        var attempt = idx - 1;
+        while (attempt >= 0) {
+            var s = steps[attempt];
+            if (!s.target || findTarget(s)) {
+                idx = attempt;
+                renderCurrent(false);
+                return;
+            }
+            attempt--;
+        }
+    }
+
+    function finish(markSeen) {
+        destroy(markSeen !== false);
+    }
+
+    function start() {
+        build();
+        idx = 0;
+        while (idx < steps.length) {
+            var s = steps[idx];
+            if (!s.target || findTarget(s)) break;
+            idx++;
+        }
+        if (idx >= steps.length) { destroy(true); return; }
+        renderCurrent(false);
+    }
+
+    function kickoff() {
+        setTimeout(function () { waitReadyThenStart(0); }, 900);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", kickoff, { once: true });
+    } else {
+        kickoff();
+    }
+})();
 </script>
 </body>
 </html>

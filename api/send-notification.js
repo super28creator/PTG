@@ -9,7 +9,7 @@ const {
   fetchOptInWalletAddresses,
   sendToWallets,
 } = require("../lib/base-dashboard-notifications.js");
-const { hasServiceAccount } = require("../lib/fc-notif-store.js");
+const { hasServiceAccount, listAllTokenFids } = require("../lib/fc-notif-store.js");
 const dailyCopy = require("../lib/daily-notification-copy.js");
 
 function makeUuid() {
@@ -122,7 +122,22 @@ module.exports = async (req, res) => {
 
       let directMeta = null;
       let neynarTargetFids = target_fids;
-      if (hasServiceAccount() && target_fids.length > 0) {
+      /* daily + brak target_fids → wyślij do wszystkich zapisanych tokenów RTDB
+       * (spójne zachowanie z cron-daily-notification.js — manualny test = to samo co auto). */
+      if (hasServiceAccount() && target_fids.length === 0 && mode === "daily") {
+        try {
+          const { sendDirectToFids } = require("../lib/fc-send-direct.js");
+          const storedFids = await listAllTokenFids();
+          if (storedFids.length > 0) {
+            const { results, okFids } = await sendDirectToFids(storedFids, notification);
+            directMeta = { mode: "all_stored", recipient_fids: storedFids.length, delivered: okFids.length, results };
+          } else {
+            directMeta = { mode: "all_stored", skipped: true, reason: "no_stored_tokens_in_rtdb" };
+          }
+        } catch (e) {
+          directMeta = { mode: "all_stored", ok: false, error: String(e && e.message || e) };
+        }
+      } else if (hasServiceAccount() && target_fids.length > 0) {
         const { sendDirectToFids } = require("../lib/fc-send-direct.js");
         const { results, okFids } = await sendDirectToFids(target_fids, notification);
         directMeta = { results, okFids };
