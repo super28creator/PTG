@@ -9855,17 +9855,16 @@ async function ptgRefreshIdentityAliasesFromDb() {
   }
 
   /**
-   * Deep-link do Mini App w Warpcast (`farcaster.xyz/~/mini-apps/launch`).
-   * Używany w polu „Farcaster” — otwiera aplikację Warpcast / Farcaster
-   * na urządzeniu, a gdy jej brak, strona farcaster.xyz przekierowuje
-   * do instalacji (App Store / Google Play).
+   * Link referralowy dla Farcaster: zawsze nasza domena, aby embed pokazywał
+   * kartę PTG (obrazek/metadata gry), a nie ogólną kartę farcaster.xyz.
+   * Ten sam URL działa również w web i Base App.
    */
   function ptgBuildFarcasterLaunchUrl(refCode, via) {
-      const domain = ptgReferralHostDomain();
-      let u = "https://farcaster.xyz/~/mini-apps/launch?domain=" + encodeURIComponent(domain);
-      if (refCode) u += "&ref=" + encodeURIComponent(refCode);
-      if (via === "farcaster" || via === "base") u += "&via=" + encodeURIComponent(via);
-      return u;
+      const origin = ptgReferralInviteOrigin();
+      const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
+      const refQs = refCode && /^[a-f0-9]{12}$/.test(String(refCode)) ? "ref=" + encodeURIComponent(refCode) + "&" : "";
+      const viaTag = via === "base" ? "base" : "farcaster";
+      return siteUrl + "?" + refQs + "via=" + encodeURIComponent(viaTag);
   }
 
   /**
@@ -10108,7 +10107,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       /* Przyciski Share są obsługiwane w JS (ptgShareReferral*FromUi); `href`
        * to fallback dla klienta bez JS — zawsze kanał-specyficzny. */
       if (fcCompose) {
-          fcCompose.href = ptgBuildWarpcastComposeUrl(PTG_REFERRAL_SHARE_TEXT, fcDeep);
+          fcCompose.href = ptgBuildWarpcastComposeUrl(PTG_REFERRAL_SHARE_TEXT, siteUrl + "?" + refQs + "via=farcaster");
           fcCompose.target = "_blank";
       }
       if (baseShare) {

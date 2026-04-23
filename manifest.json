@@ -37,7 +37,7 @@
     "iconUrl": "https://phrasetoguess.xyz/api/farcaster-asset?type=icon",
     "homeUrl": "https://phrasetoguess.xyz",
     "imageUrl": "https://phrasetoguess.xyz/api/farcaster-asset?type=feed",
-    "buttonTitle": "Play Phrase To Guess",
+    "buttonTitle": "Play",
     "splashImageUrl": "https://phrasetoguess.xyz/api/farcaster-asset?type=splash",
     "splashBackgroundColor": "#0a0b0d",
     "webhookUrl": "https://phrasetoguess.xyz/api/webhook",
