@@ -48,7 +48,7 @@ async function runBaseChannel(baseKey, appUrl) {
     const sendResults = await sendToWallets(baseKey, appUrl, wallets, {
       title: dailyCopy.dailyTitleBase(),
       message: dailyCopy.dailyMessageBase(),
-      target_path: dailyCopy.DAILY_TARGET_PATH,
+      target_path: dailyCopy.dailyTargetPathForCron(),
     });
     return { ok: true, recipient_count: wallets.length, sendResults };
   } catch (e) {

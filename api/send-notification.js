@@ -41,7 +41,7 @@ function defaultDailyBase() {
   return {
     title: dailyCopy.dailyTitleBase(),
     message: dailyCopy.dailyMessageBase(),
-    target_path: dailyCopy.DAILY_TARGET_PATH,
+    target_path: dailyCopy.dailyTargetPathForCron(),
   };
 }
 
@@ -238,7 +238,7 @@ module.exports = async (req, res) => {
             ? String(n.target_path)
             : mode === "test"
               ? "/?source=notif-test"
-              : "/?source=notif-daily";
+              : dailyCopy.dailyTargetPathForCron();
 
         let wallet_addresses = Array.isArray(body.wallet_addresses)
           ? body.wallet_addresses.map((a) => String(a).toLowerCase()).filter((a) => /^0x[a-f0-9]{40}$/.test(a))
