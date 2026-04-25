@@ -5,6 +5,9 @@
 
 const TARGET = process.env.BASE_RPC_URL || "https://mainnet.base.org";
 
+/** Oficjalny USDC (FiatToken) na Base — używany przy claimie (EIP-3009 TWA), nie tylko mint NFT. */
+const USDC_BASE_MAINNET = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+
 const DEFAULT_PTG_NFT_ADDRESS =
   "0x9f9343A6833190EE0c816f71D72CE450b1ee8530";
 
@@ -109,6 +112,15 @@ module.exports = async (req, res) => {
     }
 
     const selectors = MINT_METHODS.map((m) => ethers.id(m).slice(0, 10).toLowerCase());
+    /* Claim referral: user relayuje `transferWithAuthorization` do USDC — wcześniej ten endpoint
+     * odrzucał wszystko spoza listy NFT (`wrong_contract` / `not_mint_calldata`), więc w Base app
+     * claim mógł kończyć się bez hash tx mimo poprawnego podpisu. */
+    const TWA_SELECTOR = ethers
+      .id(
+        "transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,uint8,bytes32,bytes32)"
+      )
+      .slice(0, 10)
+      .toLowerCase();
 
     let tx;
     try {
@@ -136,16 +148,30 @@ module.exports = async (req, res) => {
       logMint400("invalid_to");
       return res.status(400).json({ error: "invalid_to" });
     }
-    if (!allowedTo.has(toAddr)) {
+    let usdcPayout = false;
+    try {
+      usdcPayout = toAddr === ethers.getAddress(USDC_BASE_MAINNET);
+    } catch {
+      usdcPayout = false;
+    }
+
+    if (!allowedTo.has(toAddr) && !usdcPayout) {
       logMint400("wrong_contract", toAddr);
       return res.status(400).json({ error: "wrong_contract" });
     }
 
     const dataHex = String(tx.data || "0x").toLowerCase();
-    const okSel = selectors.some((s) => dataHex.startsWith(s));
-    if (!okSel) {
-      logMint400("not_mint_calldata", dataHex.slice(0, 14));
-      return res.status(400).json({ error: "not_mint_calldata" });
+    if (usdcPayout) {
+      if (!dataHex.startsWith(TWA_SELECTOR)) {
+        logMint400("not_usdc_twa", dataHex.slice(0, 14));
+        return res.status(400).json({ error: "not_usdc_payout_calldata" });
+      }
+    } else {
+      const okSel = selectors.some((s) => dataHex.startsWith(s));
+      if (!okSel) {
+        logMint400("not_mint_calldata", dataHex.slice(0, 14));
+        return res.status(400).json({ error: "not_mint_calldata" });
+      }
     }
 
     let gl = tx.gasLimit;

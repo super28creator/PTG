@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bug Reports Admin</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; font-family: Inter, Arial, sans-serif; background: #070b14; color: #edf2ff; }
+    .wrap { max-width: 1020px; margin: 0 auto; padding: 22px 16px 40px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .sub { margin: 0 0 14px; color: #a8b6d7; font-size: 13px; }
+    .panel { border: 1px solid rgba(255,255,255,.14); border-radius: 12px; background: rgba(255,255,255,.03); padding: 12px; margin-bottom: 14px; }
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    @media (max-width: 860px) { .row { grid-template-columns: 1fr; } }
+    input { width: 100%; box-sizing: border-box; border: 1px solid rgba(255,255,255,.2); border-radius: 10px; background: rgba(255,255,255,.04); color: #fff; padding: 10px 12px; }
+    button { border: 0; border-radius: 10px; background: #1a56ff; color: #fff; padding: 10px 14px; font-weight: 700; cursor: pointer; }
+    .status { color: #9cb0dc; font-size: 13px; margin: 8px 0 12px; }
+    .list { display: grid; gap: 12px; }
+    .card { border: 1px solid rgba(255,255,255,.14); border-radius: 14px; background: rgba(255,255,255,.03); padding: 12px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .pill { padding: 6px 9px; border-radius: 999px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.03); font-size: 12px; }
+    .desc { margin: 0; color: #dce6ff; line-height: 1.45; white-space: pre-wrap; }
+    .img { margin-top: 10px; max-width: 100%; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .card-actions button { background: #7a1420; padding: 8px 10px; font-size: 12px; }
+    .card-actions .view-btn { background: #1a56ff; margin-right: 6px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Bug Reports Admin</h1>
+    <p class="sub">Standalone panel for PTG bug reports.</p>
+    <section class="panel">
+      <div class="row">
+        <input id="adminKeyInput" type="password" placeholder="Admin key" />
+        <button id="loadBtn" type="button">Load reports</button>
+      </div>
+    </section>
+    <p id="status" class="status">Enter admin key.</p>
+    <section id="list" class="list"></section>
+  </main>
+
+  <script>
+    (function () {
+      var adminKeyInput = document.getElementById("adminKeyInput");
+      var loadBtn = document.getElementById("loadBtn");
+      var statusEl = document.getElementById("status");
+      var listEl = document.getElementById("list");
+      var LS_KEY = "bug_admin_api_key";
+      var API_BASE = "https://phrasetoguess.xyz";
+
+      function esc(s) {
+        return String(s || "").replace(/[&<>"']/g, function (c) {
+          return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+        });
+      }
+
+      async function loadReports() {
+        var base = API_BASE;
+        var key = String(adminKeyInput.value || "").trim();
+        if (!key) {
+          statusEl.textContent = "Provide admin key.";
+          return;
+        }
+        try {
+          localStorage.setItem(LS_KEY, key);
+        } catch (_) {}
+        statusEl.textContent = "Loading reports...";
+        listEl.innerHTML = "";
+        try {
+          var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+          var to = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 12000) : 0;
+          var res = await fetch(base + "/api/ptg-resolve-names", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Admin-Key": key },
+            body: JSON.stringify({ op: "bug_report_list" }),
+            signal: ctrl ? ctrl.signal : undefined
+          });
+          if (to) clearTimeout(to);
+          if (!res.ok) throw new Error("api_" + String(res.status));
+          var data = await res.json();
+          var items = Array.isArray(data && data.items) ? data.items : [];
+          if (!items.length) {
+            statusEl.textContent = "No reports yet.";
+            return;
+          }
+          statusEl.textContent = "Reports: " + String(items.length);
+          listEl.innerHTML = items.map(function (r) {
+            var ts = r && r.createdAt ? new Date(r.createdAt).toLocaleString() : "-";
+            var img = r && r.screenshot && r.screenshot.dataUrl
+              ? '<img class="img" alt="report screenshot" src="' + esc(r.screenshot.dataUrl) + '"/>'
+              : "";
+            var reporterName = r && r.reporterName ? String(r.reporterName) : "";
+            var reporterId = r && r.reporterId ? String(r.reporterId) : "";
+            var hasImg = !!(r && r.screenshot && r.screenshot.hasData);
+            var imgMeta = hasImg
+              ? '<span class="pill">Image: ' + esc(String(Math.round((Number(r.screenshot.bytes || 0) / 1024))) + " KB") + "</span>"
+              : "";
+            var reporterNickPill = '<span class="pill">Nick: ' + esc(reporterName || "unknown") + "</span>";
+            var reporterAddrPill = '<span class="pill">Address: ' + esc(reporterId || "unknown") + "</span>";
+            return (
+              '<article class="card">' +
+                '<div class="card-top">' +
+                  '<div class="meta">' +
+                    '<span class="pill">' + esc(ts) + "</span>" +
+                    '<span class="pill">Area: ' + esc(r.category) + "</span>" +
+                    '<span class="pill">Freq: ' + esc(r.frequency) + "</span>" +
+                    '<span class="pill">Impact: ' + esc(r.severity) + "</span>" +
+                    reporterNickPill +
+                    reporterAddrPill +
+                    imgMeta +
+                  "</div>" +
+                  '<div class="card-actions">' +
+                    (hasImg ? '<button class="view-btn" type="button" data-img-id="' + esc(r.id || "") + '">View image</button>' : "") +
+                    '<button type="button" data-del-id="' + esc(r.id || "") + '">Delete</button>' +
+                  "</div>" +
+                "</div>" +
+                '<p class="desc">' + esc(r.description || "") + "</p>" +
+                '<div class="img-wrap" id="img-wrap-' + esc(r.id || "") + '">' + img + "</div>" +
+              "</article>"
+            );
+          }).join("");
+        } catch (e) {
+          statusEl.textContent = "Failed to load reports.";
+        }
+      }
+
+      async function deleteReport(id) {
+        var key = String(adminKeyInput.value || "").trim();
+        if (!id || !key) return;
+        statusEl.textContent = "Deleting report...";
+        try {
+          var res = await fetch(API_BASE + "/api/ptg-resolve-names", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Admin-Key": key },
+            body: JSON.stringify({ op: "bug_report_delete", id: id })
+          });
+          if (!res.ok) throw new Error("api_" + String(res.status));
+          await loadReports();
+        } catch (_) {
+          statusEl.textContent = "Failed to delete report.";
+        }
+      }
+
+      async function loadImage(id) {
+        var key = String(adminKeyInput.value || "").trim();
+        if (!id || !key) return;
+        var holder = document.getElementById("img-wrap-" + id);
+        if (!holder) return;
+        holder.innerHTML = "<p class='status'>Loading image...</p>";
+        try {
+          var res = await fetch(API_BASE + "/api/ptg-resolve-names", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Admin-Key": key },
+            body: JSON.stringify({ op: "bug_report_image", id: id })
+          });
+          if (!res.ok) throw new Error("api_" + String(res.status));
+          var data = await res.json();
+          var s = data && data.screenshot ? data.screenshot : null;
+          if (!s || !s.dataUrl) throw new Error("no_image");
+          holder.innerHTML = '<img class="img" alt="report screenshot" src="' + esc(s.dataUrl) + '"/>';
+        } catch (_) {
+          holder.innerHTML = "<p class='status'>Failed to load image.</p>";
+        }
+      }
+
+      try {
+        adminKeyInput.value = localStorage.getItem(LS_KEY) || "";
+      } catch (_) {}
+
+      loadBtn.addEventListener("click", loadReports);
+      listEl.addEventListener("click", function (ev) {
+        var imgBtn = ev.target && ev.target.closest && ev.target.closest("[data-img-id]");
+        if (imgBtn) {
+          var imgId = imgBtn.getAttribute("data-img-id");
+          if (imgId) void loadImage(imgId);
+          return;
+        }
+        var btn = ev.target && ev.target.closest && ev.target.closest("[data-del-id]");
+        if (!btn) return;
+        var id = btn.getAttribute("data-del-id");
+        if (!id) return;
+        void deleteReport(id);
+      });
+    })();
+  </script>
+</body>
+</html>
+

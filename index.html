@@ -2462,6 +2462,183 @@
         }
     }
     .modal-overlay.show { display: flex; }
+    .bug-report-card {
+        max-width: 640px;
+        width: 100%;
+        max-height: 86vh;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgba(60, 138, 255, 0.24);
+        box-shadow: 0 26px 70px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(60, 138, 255, 0.12) inset;
+    }
+    .bug-report-flow {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding-top: 2px;
+    }
+    .bug-report-panel {
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 16px;
+        padding: 16px;
+        background: radial-gradient(120% 120% at 0% 0%, rgba(60,138,255,0.08) 0%, rgba(255,255,255,0.02) 38%, rgba(255,255,255,0.01) 100%);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .bug-report-question-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        text-align: center;
+    }
+    .bug-report-q-counter {
+        font-size: 12px;
+        color: var(--gray-30);
+        font-weight: 700;
+        letter-spacing: .02em;
+    }
+    .bug-report-q-title {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.12;
+        color: #fff;
+        font-weight: 900;
+    }
+    @media (max-width: 620px) {
+        .bug-report-q-title { font-size: 24px; }
+    }
+    .bug-report-panel[hidden] { display: none; }
+    .bug-report-label {
+        font-size: 12px;
+        color: var(--gray-30);
+        font-weight: 700;
+        letter-spacing: .01em;
+        margin-bottom: 6px;
+    }
+    .bug-report-pills {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        width: 100%;
+        max-width: 520px;
+    }
+    @media (max-width: 560px) {
+        .bug-report-pills {
+            grid-template-columns: 1fr;
+            max-width: 100%;
+        }
+    }
+    .bug-report-pill {
+        border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(255,255,255,0.02);
+        color: #e6ecff;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        width: 100%;
+        text-align: center;
+    }
+    .bug-report-pill.is-selected {
+        border-color: rgba(60,138,255,0.68);
+        background: rgba(60,138,255,0.18);
+        color: #fff;
+        box-shadow: inset 0 0 0 1px rgba(60,138,255,0.24);
+    }
+    .bug-report-summary {
+        margin: 0;
+        color: var(--gray-15);
+        font-size: 13px;
+        line-height: 1.5;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 12px;
+        background: rgba(255,255,255,0.02);
+        padding: 10px;
+    }
+    .bug-report-actions {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+    .bug-report-actions .btn,
+    .bug-report-actions .ghost {
+        width: auto;
+        min-width: 132px;
+    }
+    .bug-report-actions .btn,
+    .bug-report-actions .ghost {
+        min-width: 160px;
+    }
+    .bug-report-actions .btn {
+        padding-left: 28px;
+        padding-right: 28px;
+        min-height: 46px;
+        letter-spacing: .02em;
+        font-size: 15px;
+    }
+    .bug-report-textarea {
+        width: 100%;
+        resize: vertical;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.16);
+        background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
+        color: #fff;
+        padding: 16px;
+        font-size: 15px;
+        min-height: 210px;
+        line-height: 1.4;
+        transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .bug-report-textarea::placeholder {
+        color: rgba(221, 230, 247, 0.52);
+    }
+    .bug-report-textarea:focus {
+        outline: none;
+        border-color: rgba(60,138,255,0.72);
+        box-shadow: 0 0 0 2px rgba(60,138,255,0.22), 0 10px 24px rgba(0, 0, 0, 0.26);
+        background: linear-gradient(180deg, rgba(255,255,255,0.065), rgba(255,255,255,0.035));
+    }
+    .bug-report-upload {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 10px;
+        border: 1px dashed rgba(255,255,255,0.2);
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: rgba(255,255,255,0.02);
+    }
+    .bug-report-upload__meta {
+        color: var(--gray-30);
+        font-size: 12px;
+        margin: 0;
+    }
+    .bug-report-upload__btn {
+        position: relative;
+        overflow: hidden;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 128px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(255,255,255,0.04);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .bug-report-upload__btn input {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
 
     /**
      * Base App: `sdk.actions.addMiniApp` jest zdeprecjonowany (docs.base.org/apps/quickstart/migrate-to-standard-web-app).
@@ -4375,12 +4552,12 @@
                   <span class="social-btn__text">X</span>
                 </span>
             </a>
-            <a href="https://discord.gg/7scpTxCrj" target="_blank" rel="noopener noreferrer" class="social-btn" title="PhraseToGuess on Discord">
+            <button type="button" id="openBugReportBtn" class="social-btn" title="Report a bug" aria-haspopup="dialog" aria-controls="bugReportOverlay">
                 <span class="social-btn__body">
-                  <span class="social-icon-sq" aria-hidden="true"><svg class="social-icon" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z"/></svg></span>
-                  <span class="social-btn__text">Discord</span>
+                  <span class="social-icon-sq" aria-hidden="true"><svg class="social-icon" viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 1 8 8c0 2.86-1.8 5.4-4.48 6.53l-1.1 4.47a1 1 0 0 1-1.9.04l-1.25-3.73c-.42.04-.84.04-1.27 0L8.75 21a1 1 0 0 1-1.9-.04l-1.1-4.47A8 8 0 1 1 12 2zm0 5.25a1.25 1.25 0 0 0-1.25 1.25v4.5a1.25 1.25 0 1 0 2.5 0V8.5A1.25 1.25 0 0 0 12 7.25zm0 9.5a1.35 1.35 0 1 0 0-2.7 1.35 1.35 0 0 0 0 2.7z"/></svg></span>
+                  <span class="social-btn__text">Report bug</span>
                 </span>
-            </a>
+            </button>
         </div>
         <div class="social-row">
             <a href="https://social-connect28.vercel.app/" target="_blank" rel="noopener noreferrer" class="social-btn" title="Super Creator — founder hub">
@@ -4930,6 +5107,40 @@
         </div>
       </section>
 
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="bugReportOverlay" aria-hidden="true" role="dialog" aria-labelledby="bugReportTitle" aria-modal="true">
+  <div class="mint-card referral-modal-card bug-report-card">
+    <div class="referral-modal-topbar">
+      <h2 id="bugReportTitle">Report bug</h2>
+      <button type="button" class="referral-modal-close" id="bugReportCloseBtn" aria-label="Close">×</button>
+    </div>
+    <div class="bug-report-flow">
+      <section id="bugStepSurvey" class="bug-report-panel">
+        <div class="bug-report-question-shell">
+          <div id="bugQuestionCounter" class="bug-report-q-counter">Question 1/3</div>
+          <h3 id="bugQuestionTitle" class="bug-report-q-title">Where is the issue?</h3>
+          <div id="bugQuestionPills" class="bug-report-pills" role="group" aria-label="Bug survey question"></div>
+        </div>
+      </section>
+
+      <section id="bugStepDescribe" class="bug-report-panel" hidden>
+        <textarea id="bugReportInput" class="bug-report-textarea" rows="5" maxlength="500" placeholder="Write a short description: what happened and what you expected."></textarea>
+        <div class="bug-report-upload">
+          <p id="bugReportFileMeta" class="bug-report-upload__meta">Optional: add one screenshot (PNG/JPG/WebP, max 10MB).</p>
+          <label class="bug-report-upload__btn">
+            Add image
+            <input id="bugReportFileInput" type="file" accept="image/png,image/jpeg,image/webp" />
+          </label>
+        </div>
+      </section>
+
+      <div class="bug-report-actions">
+        <button type="button" class="btn" id="bugReportSubmitBtn" style="display:none;">Send report</button>
+      </div>
+      <div id="bugReportStatus" role="status" aria-live="polite" style="min-height:18px; font-size:12px; color:var(--gray-30);"></div>
     </div>
   </div>
 </div>
@@ -7746,6 +7957,9 @@ let __ptgIdentityAliasRefreshPromise = null;
       if (!o) return;
       o.classList.remove("show");
       o.setAttribute("aria-hidden", "true");
+      try {
+          if (typeof window.__ptgTourKickoff === "function") window.__ptgTourKickoff();
+      } catch (_) {}
   }
 
   /**
@@ -7924,8 +8138,18 @@ async function ptgRefreshIdentityAliasesFromDb() {
   async function ptgIsSelfInviteCandidate(ownerId, refCode) {
       if (!ownerId || !myUserId || myUserId === "guest") return false;
       if (ownerId === myUserId) return true;
+      const ownerLc = ptgNormalizeAliasId(ownerId);
       try {
-          if (String(ownerId).toLowerCase() === String(myUserId).toLowerCase()) return true;
+          if (ownerLc === String(myUserId).toLowerCase()) return true;
+      } catch (_) {}
+      /* Najpierw dociągnij aliasy tożsamości z RTDB (graf identity_aliases),
+       * potem sprawdź ownerId przeciw pełnemu alias-setowi bieżącej sesji. */
+      try {
+          await ptgRefreshIdentityAliasesFromDb();
+      } catch (_) {}
+      try {
+          const aliases = ptgGetMyIdentityAliasesLc();
+          if (ownerLc && aliases.has(ownerLc)) return true;
       } catch (_) {}
       /* Dokładne dopasowanie refCode do mojego code (z sessionowego `myUserId`) — nie używamy
        * localStorage aliasów, bo to blokowało sytuacje „inny portfel, ten sam browser"
@@ -7933,6 +8157,22 @@ async function ptgRefreshIdentityAliasesFromDb() {
       try {
           const myCode = await ptgRefCodeFromUserId(myUserId);
           if (myCode && refCode && String(myCode).toLowerCase() === String(refCode).toLowerCase()) return true;
+      } catch (_) {}
+      /* Twardy match po kodach referral wszystkich moich aliasów:
+       * jeśli refCode odpowiada któremukolwiek aliasowi tożsamości, traktujemy
+       * to jako self-invite niezależnie od aktualnie aktywnego loginu. */
+      try {
+          if (refCode && /^[a-f0-9]{12}$/i.test(String(refCode))) {
+              const aliases = Array.from(ptgGetMyIdentityAliasesLc());
+              for (let i = 0; i < aliases.length; i++) {
+                  const a = String(aliases[i] || "").trim();
+                  if (!a || a === "guest") continue;
+                  const aCode = await ptgRefCodeFromUserId(a);
+                  if (aCode && String(aCode).toLowerCase() === String(refCode).toLowerCase()) {
+                      return true;
+                  }
+              }
+          }
       } catch (_) {}
       /* Szczególny przypadek: jestem aktualnie zalogowany FC-iem (fcfidN), a link należy
        * do portfela aktualnie wpiętego pod tę samą sesję (Warpcast signer wallet). */
@@ -8240,15 +8480,17 @@ async function ptgRefreshIdentityAliasesFromDb() {
           }
       } catch (_) {}
 
-      /* Policy "first invite wins" — obowiązuje TYLKO po świadomej zgodzie
-       * (`ptg_invite_accepted_once === "1"`). Bez tego `existingInviter` bazowałby na
-       * `parent_of/{me}`, które `tryProcessReferralAttribution` zapisuje automatycznie
-       * przy pierwszym wejściu — i wtedy kolejny zapraszający miałby modal ukryty,
-       * mimo że user nigdy jeszcze niczego nie zaakceptował. */
+      /* Po świadomym Accept nie pokazujemy już modala, jeśli user ma już invitera
+       * w drzewie (niezależnie czy to ten sam ownerId czy inny). */
       if (__ptgHasAcceptedAnyInvite) {
           const existingInviter = await ptgGetExistingInviterId();
-          if (existingInviter && existingInviter !== ownerId) {
-              __ptgInviteDiag("skip:first_invite_wins_block", { refCode, ownerId, existingInviter });
+          if (existingInviter) {
+              __ptgInviteDiag("skip:already_has_inviter_after_accept", {
+                  refCode,
+                  ownerId,
+                  existingInviter,
+                  sameInviter: existingInviter === ownerId,
+              });
               try {
                   localStorage.setItem(seenKey, String(Date.now()));
               } catch (_) {}
@@ -8256,16 +8498,25 @@ async function ptgRefreshIdentityAliasesFromDb() {
               return;
           }
       }
-      /* UWAGA: nie blokujemy tu, gdy `existingInviter === ownerId`.
-       * `tryProcessReferralAttribution` odpala się automatycznie po loginie
-       * i już zapisało `parent_of/{me} = ownerId` zanim modal dobiegł do tej linii.
-       * O tym, czy modal już był pokazany, decyduje wyłącznie `seenKey`
-       * (ustawiany przy Accept / Not now / klik-tło). */
       const overlay = document.getElementById("inviteAcceptOverlay");
       if (!overlay) {
           __ptgInviteDiag("skip:no_overlay_dom", { refCode, ownerId });
           return;
       }
+      /* Tour i modal invite nie mogą być jednocześnie na ekranie.
+       * Jeśli invite dogonił już startujący poradnik, chowamy tour BEZ markowania
+       * go jako widziany. Po zamknięciu invite `ptgHideInviteAcceptOverlay()`
+       * odpali poradnik ponownie normalną ścieżką readiness. */
+      try {
+          const activeTour = document.querySelector(".ptg-tour-root.ptg-tour-root--active");
+          if (activeTour) {
+              if (typeof window.__ptgTourCancelForModal === "function") {
+                  window.__ptgTourCancelForModal();
+              } else if (activeTour.parentNode) {
+                  activeTour.parentNode.removeChild(activeTour);
+              }
+          }
+      } catch (_) {}
       const nickEl = document.getElementById("inviteAcceptNick");
       const avEl = document.getElementById("inviteAcceptAvatar");
       const fallbackEl = document.getElementById("inviteAcceptAvatarFallback");
@@ -9855,30 +10106,56 @@ async function ptgRefreshIdentityAliasesFromDb() {
   }
 
   /**
-   * Link referralowy dla Farcaster: zawsze nasza domena, aby embed pokazywał
-   * kartę PTG (obrazek/metadata gry), a nie ogólną kartę farcaster.xyz.
-   * Ten sam URL działa również w web i Base App.
+   * Uniwersalny builder linków referralowych: zawsze nasza domena i zawsze
+   * `/api/ptg-invite?c=<channel>[&ref=<code>]`. Dzięki temu każdy klient
+   * (Warpcast / Farcaster / Base App / X / WhatsApp / DM) fetchuje nasz host
+   * i renderuje brandowaną kartę z kanałową grafiką (farcaster 50%.png dla
+   * Farcastera, base logo 50%.png dla Base i web), zamiast generycznej karty
+   * „Farcaster: a decentralized social network".
+   *
+   * Sam endpoint JS-redirectuje do właściwego deep-linka:
+   *   c=fc   → farcaster.xyz/~/mini-apps/launch (otwiera Farcaster / Warpcast)
+   *   c=base → go.cb-w.com/dapp (otwiera Base App / Coinbase Wallet)
+   *   c=web  → phrasetoguess.xyz (zwykły web)
    */
-  function ptgBuildFarcasterLaunchUrl(refCode, via) {
+  function ptgBuildReferralWrapperUrl(channel, refCode) {
       const origin = ptgReferralInviteOrigin();
-      const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
-      const refQs = refCode && /^[a-f0-9]{12}$/.test(String(refCode)) ? "ref=" + encodeURIComponent(refCode) + "&" : "";
-      const viaTag = via === "base" ? "base" : "farcaster";
-      return siteUrl + "?" + refQs + "via=" + encodeURIComponent(viaTag);
+      const base = origin + (origin.endsWith("/") ? "" : "/");
+      const ch = channel === "fc" || channel === "farcaster" ? "fc"
+          : channel === "base" ? "base"
+          : "web";
+      let q = "c=" + ch;
+      if (refCode && /^[a-f0-9]{12}$/.test(String(refCode))) {
+          q += "&ref=" + encodeURIComponent(refCode);
+      }
+      return base + "api/ptg-invite?" + q;
   }
 
   /**
-   * Uniwersalny link do Base App (Coinbase Wallet) — otwiera dApp
-   * w appce, a jeśli jej brak, strona go.cb-w.com zaprasza do instalacji.
+   * Link referralowy dla Farcaster: zawsze nasza domena, aby embed pokazywał
+   * kartę PTG (farcaster 50%.png + metadata gry), a nie ogólną kartę
+   * farcaster.xyz. Ten sam URL służy i jako „copy link", i jako cel share-a —
+   * prowadzi bezpośrednio do Farcaster Mini App.
+   */
+  function ptgBuildFarcasterLaunchUrl(refCode /*, via */) {
+      return ptgBuildReferralWrapperUrl("fc", refCode);
+  }
+
+  /**
+   * Uniwersalny link do Base App (Coinbase Wallet) — wrapper renderuje kartę
+   * z grafiką `base logo 50%.png`, a klik przekierowuje do `go.cb-w.com/dapp`,
+   * który otwiera Base App / Coinbase Wallet.
    */
   function ptgBuildBaseAppLaunchUrl(refCode) {
-      const origin = ptgReferralInviteOrigin();
-      const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
-      const target =
-          refCode && /^[a-f0-9]{12}$/.test(String(refCode))
-              ? siteUrl + "?ref=" + encodeURIComponent(refCode) + "&via=base"
-              : siteUrl + "?via=base";
-      return "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(target);
+      return ptgBuildReferralWrapperUrl("base", refCode);
+  }
+
+  /**
+   * Link referralowy „web" — wrapper z grafiką `base logo 50%.png`, po
+   * kliknięciu otwiera zwykłą stronę `phrasetoguess.xyz/?ref=X&via=web`.
+   */
+  function ptgBuildWebInviteUrl(refCode) {
+      return ptgBuildReferralWrapperUrl("web", refCode);
   }
 
   /** Tekst marketingowy w share-ach. */
@@ -9890,25 +10167,24 @@ async function ptgRefreshIdentityAliasesFromDb() {
   }
 
   async function ptgBuildReferralShareContext(channel) {
-      const origin = ptgReferralInviteOrigin();
-      const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
       let code = "";
       if (isLoggedIn() && myUserId && myUserId !== "guest") {
           try { code = await ptgRefCodeFromUserId(myUserId); } catch (_) {}
       }
-      const refQs = code && /^[a-f0-9]{12}$/.test(code) ? "ref=" + encodeURIComponent(code) + "&" : "";
-      const webUrl = siteUrl + "?" + refQs + "via=web";
-      const fcUrl = siteUrl + "?" + refQs + "via=farcaster";
-      const baseUrl = siteUrl + "?" + refQs + "via=base";
-      const fcDeep = ptgBuildFarcasterLaunchUrl(code, "farcaster");
+      /* Każdy kanał ma swój wrapper `/api/ptg-invite?c=…` — ten sam URL służy
+       * jednocześnie jako „copy link" i jako `embeds[]` w composeCast /
+       * navigator.share. Dzięki temu preview w Farcasterze pokazuje
+       * farcaster 50%.png, a w Base / na webie — base logo 50%.png. */
+      const webUrl = ptgBuildWebInviteUrl(code);
+      const fcDeep = ptgBuildFarcasterLaunchUrl(code);
       const baseDeep = ptgBuildBaseAppLaunchUrl(code);
       return {
           channel,
           code,
           text: PTG_REFERRAL_SHARE_TEXT,
           webUrl,
-          fcUrl,
-          baseUrl,
+          fcUrl: fcDeep,
+          baseUrl: baseDeep,
           fcDeep,
           baseDeep,
       };
@@ -9934,12 +10210,12 @@ async function ptgRefreshIdentityAliasesFromDb() {
    */
   async function ptgShareReferralFarcasterInviteFromUi() {
       const msg = ptgRefMsgEl();
-      await withTimeout(optionalSdkReadyPromise, 10000, "sdk for fc share").catch(function () {});
+      await withTimeout(optionalSdkReadyPromise, 4000, "sdk for fc share").catch(function () {});
       const ctx = await ptgBuildReferralShareContext("farcaster");
 
       if (ptgHost === "farcaster" && sdk && sdk.actions && typeof sdk.actions.composeCast === "function") {
           try {
-              const result = await sdk.actions.composeCast({ text: ctx.text, embeds: [ctx.fcUrl] });
+              const result = await sdk.actions.composeCast({ text: ctx.text, embeds: [ctx.fcDeep] });
               if (msg) {
                   msg.textContent = result && result.cast ? "Cast sent." : "Composer opened — edit and post.";
               }
@@ -9948,14 +10224,14 @@ async function ptgRefreshIdentityAliasesFromDb() {
               console.warn("composeCast referral farcaster", e);
           }
       }
-      const composeUrl = ptgBuildWarpcastComposeUrl(ctx.text, ctx.fcUrl);
+      const composeUrl = ptgBuildWarpcastComposeUrl(ctx.text, ctx.fcDeep);
       if (await ptgOpenExternalUrl(composeUrl)) {
           if (msg) msg.textContent = "Opening Farcaster composer…";
           return true;
       }
       try {
           if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-              await navigator.clipboard.writeText(ctx.text + " " + ctx.fcUrl);
+              await navigator.clipboard.writeText(ctx.text + " " + ctx.fcDeep);
               if (msg) msg.textContent = "Copied invite — paste in Farcaster.";
               return true;
           }
@@ -9975,12 +10251,12 @@ async function ptgRefreshIdentityAliasesFromDb() {
    */
   async function ptgShareReferralBaseInviteFromUi() {
       const msg = ptgRefMsgEl();
-      await withTimeout(optionalSdkReadyPromise, 10000, "sdk for base share").catch(function () {});
+      await withTimeout(optionalSdkReadyPromise, 4000, "sdk for base share").catch(function () {});
       const ctx = await ptgBuildReferralShareContext("base");
 
       if (ptgHost === "base" && sdk && sdk.actions && typeof sdk.actions.composeCast === "function") {
           try {
-              const result = await sdk.actions.composeCast({ text: ctx.text, embeds: [ctx.baseUrl] });
+              const result = await sdk.actions.composeCast({ text: ctx.text, embeds: [ctx.baseDeep] });
               if (msg) {
                   msg.textContent = result && result.cast ? "Posted on Base." : "Base composer opened.";
               }
@@ -10071,22 +10347,26 @@ async function ptgRefreshIdentityAliasesFromDb() {
       const fcCompose = document.getElementById("referralFarcasterCompose");
       const baseShare = document.getElementById("referralBaseAppShare");
       const webShare = document.getElementById("referralWebShare");
-      const origin = ptgReferralInviteOrigin();
-      const siteUrl = origin + (origin.endsWith("/") ? "" : "/");
 
       /**
-       * Pola link-ów: to jest to, co user skopiuje/wklei komuś. Każde pole prowadzi
-       * natywnie do właściwego hosta:
-       *   • Farcaster → `farcaster.xyz/~/mini-apps/launch` (otwiera Warpcasta)
-       *   • Base → `go.cb-w.com/dapp?cb_url=…` (otwiera Base App / Coinbase Wallet)
-       *   • Web → „czysty" https link (do wysyłki przez X, email, DM)
+       * Pola link-ów: to jest to, co user skopiuje/wklei komuś. Każde pole to
+       * wrapper `/api/ptg-invite?c=…` na naszej domenie, który renderuje
+       * brandowaną kartę PTG w każdym kliencie (Farcaster, Base, X, DM), a po
+       * kliknięciu przekierowuje do właściwego hosta:
+       *   • c=fc   → farcaster.xyz/~/mini-apps/launch (Farcaster / Warpcast)
+       *   • c=base → go.cb-w.com/dapp (Base App / Coinbase Wallet)
+       *   • c=web  → phrasetoguess.xyz (zwykły web)
        */
       const isGuest = !isLoggedIn() || myUserId === "guest";
       const code = isGuest ? "" : await ptgRefCodeFromUserId(myUserId);
-      const refQs = code && /^[a-f0-9]{12}$/.test(code) ? "ref=" + encodeURIComponent(code) + "&" : "";
-      const fcDeep = ptgBuildFarcasterLaunchUrl(code, "farcaster");
+      /* Wszystkie trzy pola „copy link" pokazują ten sam typ URL-a: wrapper
+       * `/api/ptg-invite?c=…` na naszej domenie. Skopiowany link renderuje
+       * brandową kartę PTG (farcaster 50%.png dla fc, base logo 50%.png dla
+       * base/web), a klik wewnątrz Farcastera / Base / przeglądarki odpala
+       * ten sam deep-link co wcześniej. */
+      const fcDeep = ptgBuildFarcasterLaunchUrl(code);
       const baseDeep = ptgBuildBaseAppLaunchUrl(code);
-      const webUrl = siteUrl + "?" + refQs + "via=web";
+      const webUrl = ptgBuildWebInviteUrl(code);
 
       if (urlFcEl) {
           urlFcEl.textContent = fcDeep;
@@ -10107,7 +10387,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       /* Przyciski Share są obsługiwane w JS (ptgShareReferral*FromUi); `href`
        * to fallback dla klienta bez JS — zawsze kanał-specyficzny. */
       if (fcCompose) {
-          fcCompose.href = ptgBuildWarpcastComposeUrl(PTG_REFERRAL_SHARE_TEXT, siteUrl + "?" + refQs + "via=farcaster");
+          fcCompose.href = ptgBuildWarpcastComposeUrl(PTG_REFERRAL_SHARE_TEXT, fcDeep);
           fcCompose.target = "_blank";
       }
       if (baseShare) {
@@ -11610,7 +11890,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
   async function startApp() {
       heroBadgeFxSuppressUntil = Date.now() + 1200;
-      await withTimeout(optionalSdkReadyPromise, 15000, "optional sdk boot").catch(function () {});
+      await withTimeout(optionalSdkReadyPromise, 4000, "optional sdk boot").catch(function () {});
       /* Farcaster Mini App: signals splash removal. Base App: no-op / safe to ignore. */
       if (sdk && sdk.actions) {
           try { sdk.actions.ready(); } catch (err) { console.warn(err); }
@@ -15078,6 +15358,343 @@ async function ptgRefreshIdentityAliasesFromDb() {
       }
   })();
 
+  /* ===== Local bug report modal (browser localStorage) ===== */
+  (function () {
+      var overlay = document.getElementById("bugReportOverlay");
+      var openBtn = document.getElementById("openBugReportBtn");
+      var closeBtn = document.getElementById("bugReportCloseBtn");
+      var stepSurvey = document.getElementById("bugStepSurvey");
+      var stepDescribe = document.getElementById("bugStepDescribe");
+      var questionCounter = document.getElementById("bugQuestionCounter");
+      var questionTitle = document.getElementById("bugQuestionTitle");
+      var questionPills = document.getElementById("bugQuestionPills");
+      var input = document.getElementById("bugReportInput");
+      var fileInput = document.getElementById("bugReportFileInput");
+      var fileMeta = document.getElementById("bugReportFileMeta");
+      var submitBtn = document.getElementById("bugReportSubmitBtn");
+      var status = document.getElementById("bugReportStatus");
+      var STORAGE_KEY = "ptg_bug_reports_v1";
+      var state = { step: 1, surveyIdx: 0, category: "", frequency: "", severity: "", screenshot: null };
+      var survey = [
+          {
+              group: "category",
+              title: "Where is the issue?",
+              options: [
+                  { value: "login", label: "Login" },
+                  { value: "gameplay", label: "Gameplay" },
+                  { value: "mint", label: "Mint" },
+                  { value: "invite", label: "Invite/Referral" },
+                  { value: "leaderboard", label: "Leaderboard" },
+                  { value: "ui", label: "UI/Mobile" },
+                  { value: "other", label: "Other" }
+              ]
+          },
+          {
+              group: "frequency",
+              title: "How often?",
+              options: [
+                  { value: "always", label: "Always" },
+                  { value: "sometimes", label: "Sometimes" },
+                  { value: "once", label: "Only once" }
+              ]
+          },
+          {
+              group: "severity",
+              title: "Impact",
+              options: [
+                  { value: "blocker", label: "Blocks game" },
+                  { value: "major", label: "Makes play hard" },
+                  { value: "minor", label: "Small issue" }
+              ]
+          }
+      ];
+      if (!overlay) return;
+
+      function esc(s) {
+          return String(s || "").replace(/[&<>"']/g, function (c) {
+              return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+          });
+      }
+
+      function loadReports() {
+          try {
+              var raw = localStorage.getItem(STORAGE_KEY);
+              if (!raw) return [];
+              var parsed = JSON.parse(raw);
+              return Array.isArray(parsed) ? parsed : [];
+          } catch (_) {
+              return [];
+          }
+      }
+
+      function saveReports(items) {
+          try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+          } catch (_) {}
+      }
+
+      function updateFileMeta() {
+          if (!fileMeta) return;
+          if (state.screenshot && state.screenshot.name) {
+              fileMeta.textContent =
+                  "Attached: " +
+                  String(state.screenshot.name) +
+                  " (" +
+                  String(Math.round((state.screenshot.size || 0) / 1024)) +
+                  " KB)";
+          } else {
+              fileMeta.textContent = "Optional: add one screenshot (PNG/JPG/WebP, max 10MB).";
+          }
+      }
+
+      function fileToDataUrl(file) {
+          return new Promise(function (resolve, reject) {
+              var fr = new FileReader();
+              fr.onload = function () { resolve(String(fr.result || "")); };
+              fr.onerror = function () { reject(new Error("file_read_failed")); };
+              fr.readAsDataURL(file);
+          });
+      }
+
+      function setStatus(msg, ok) {
+          if (!status) return;
+          status.textContent = msg || "";
+          status.style.color = ok ? "var(--cerulean)" : "#fca5a5";
+      }
+
+      function titleCaseLabel(v) {
+          if (!v) return "-";
+          return String(v)
+              .replace(/[_-]+/g, " ")
+              .replace(/\b\w/g, function (m) { return m.toUpperCase(); });
+      }
+
+      function renderSurveyQuestion() {
+          var q = survey[state.surveyIdx] || survey[0];
+          if (questionCounter) questionCounter.textContent = "Question " + String(state.surveyIdx + 1) + "/" + String(survey.length);
+          if (questionTitle) questionTitle.textContent = q.title;
+          if (questionPills) {
+              questionPills.setAttribute("aria-label", q.title);
+              questionPills.innerHTML = q.options.map(function (opt) {
+                  var selected = state[q.group] === opt.value ? " is-selected" : "";
+                  return "<button type=\"button\" class=\"bug-report-pill" + selected + "\" data-bug-group=\"" + esc(q.group) + "\" data-bug-value=\"" + esc(opt.value) + "\">" + esc(opt.label) + "</button>";
+              }).join("");
+          }
+      }
+
+      function renderStep() {
+          var second = state.step === 2;
+          if (stepSurvey) stepSurvey.hidden = second;
+          if (stepDescribe) stepDescribe.hidden = !second;
+          if (submitBtn) submitBtn.style.display = second ? "" : "none";
+          if (second) {
+              if (input) input.focus();
+          } else {
+              renderSurveyQuestion();
+          }
+      }
+
+      function resetState() {
+          state.step = 1;
+          state.surveyIdx = 0;
+          state.category = "";
+          state.frequency = "";
+          state.severity = "";
+          state.screenshot = null;
+          if (input) input.value = "";
+          if (fileInput) fileInput.value = "";
+          updateFileMeta();
+          setStatus("", true);
+          renderStep();
+      }
+
+      function setChoice(group, value) {
+          state[group] = value;
+          renderSurveyQuestion();
+      }
+
+      function surveyComplete() {
+          return !!(state.category && state.frequency && state.severity);
+      }
+
+      function openBugModal() {
+          overlay.classList.add("show");
+          overlay.setAttribute("aria-hidden", "false");
+          document.body.style.overflow = "hidden";
+          resetState();
+      }
+
+      function closeBugModal() {
+          overlay.classList.remove("show");
+          overlay.setAttribute("aria-hidden", "true");
+          document.body.style.overflow = "";
+      }
+
+      if (openBtn) openBtn.addEventListener("click", openBugModal);
+      if (closeBtn) closeBtn.addEventListener("click", closeBugModal);
+      overlay.addEventListener("click", function (ev) {
+          if (ev.target === overlay) closeBugModal();
+      });
+      document.addEventListener("keydown", function (ev) {
+          if (!overlay.classList.contains("show")) return;
+          if (ev.key === "Escape") {
+              closeBugModal();
+              return;
+          }
+          var t = ev.target;
+          var inOverlay = !!(t && overlay.contains(t));
+          var editable = !!(
+              inOverlay &&
+              (t.tagName === "TEXTAREA" || t.tagName === "INPUT" || t.isContentEditable)
+          );
+          if (editable) {
+              ev.stopPropagation();
+              return;
+          }
+          if (
+              ev.key.length === 1 ||
+              ev.key === "Backspace" ||
+              ev.key === "Delete" ||
+              ev.key === "Enter" ||
+              ev.key === " "
+          ) {
+              ev.preventDefault();
+              ev.stopPropagation();
+          }
+      }, true);
+
+      if (fileInput) {
+          fileInput.addEventListener("change", function () {
+              var f = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+              if (!f) {
+                  state.screenshot = null;
+                  updateFileMeta();
+                  return;
+              }
+              if (!/^image\/(png|jpeg|webp)$/i.test(String(f.type || ""))) {
+                  state.screenshot = null;
+                  fileInput.value = "";
+                  updateFileMeta();
+                  setStatus("Only PNG, JPG or WebP image is allowed.", false);
+                  return;
+              }
+              if (f.size > 10 * 1024 * 1024) {
+                  state.screenshot = null;
+                  fileInput.value = "";
+                  updateFileMeta();
+                  setStatus("Image is too large (max 10MB).", false);
+                  return;
+              }
+              state.screenshot = {
+                  name: f.name || "screenshot",
+                  type: f.type || "image/png",
+                  size: Number(f.size) || 0,
+                  file: f
+              };
+              updateFileMeta();
+              setStatus("", true);
+          });
+      }
+
+      overlay.addEventListener("click", function (ev) {
+          var pill = ev.target && ev.target.closest && ev.target.closest(".bug-report-pill");
+          if (!pill) return;
+          var g = pill.getAttribute("data-bug-group");
+          var v = pill.getAttribute("data-bug-value");
+          if (!g || !v) return;
+          setChoice(g, v);
+          if (state.surveyIdx < survey.length - 1) {
+              state.surveyIdx += 1;
+              renderSurveyQuestion();
+          } else if (surveyComplete()) {
+              state.step = 2;
+              setStatus("", true);
+              renderStep();
+          }
+      });
+
+      if (submitBtn) {
+          submitBtn.addEventListener("click", async function () {
+              if (submitBtn.disabled) return;
+              var text = input ? String(input.value || "").trim() : "";
+              if (!surveyComplete()) {
+                  state.step = 1;
+                  renderStep();
+                  setStatus("Complete step 1 first.", false);
+                  return;
+              }
+              if (!text) {
+                  setStatus("Add a short description before saving.", false);
+                  return;
+              }
+              var screenshot = null;
+              if (state.screenshot && state.screenshot.file) {
+                  try {
+                      var dataUrl = await fileToDataUrl(state.screenshot.file);
+                      screenshot = {
+                          name: state.screenshot.name,
+                          type: state.screenshot.type,
+                          size: state.screenshot.size,
+                          dataUrl: dataUrl
+                      };
+                  } catch (_) {
+                      setStatus("Could not read selected image. Try another file.", false);
+                      return;
+                  }
+              }
+
+              var payload = {
+                  op: "bug_report_submit",
+                  category: state.category,
+                  frequency: state.frequency,
+                  severity: state.severity,
+                  description: text,
+                  createdAt: Date.now(),
+                  source: "web_app",
+                  reporterId: (typeof myUserId !== "undefined" && myUserId) ? String(myUserId) : "",
+                  reporterName: (typeof myUsername !== "undefined" && myUsername) ? String(myUsername) : "",
+                  screenshot: screenshot
+              };
+
+              closeBugModal();
+              setStatus("", true);
+              submitBtn.disabled = true;
+              submitBtn.style.opacity = "0.7";
+              try {
+                  var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+                  var to = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 15000) : 0;
+                  var resp = await fetch("/api/ptg-resolve-names", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(payload),
+                      signal: ctrl ? ctrl.signal : undefined
+                  });
+                  if (to) clearTimeout(to);
+                  if (!resp.ok) {
+                      throw new Error("api_" + String(resp.status));
+                  }
+              } catch (_) {
+                  var itemsOffline = loadReports();
+                  itemsOffline.push(payload);
+                  saveReports(itemsOffline);
+                  resetState();
+                  submitBtn.disabled = false;
+                  submitBtn.style.opacity = "";
+                  return;
+              }
+              var items = loadReports();
+              items.push(payload);
+              saveReports(items);
+              state.step = 1;
+              resetState();
+              submitBtn.disabled = false;
+              submitBtn.style.opacity = "";
+          });
+      }
+
+      renderStep();
+  })();
+
   document.getElementById("referralOpenBtn")?.addEventListener("click", function () {
       void showReferralModal();
   });
@@ -15343,14 +15960,29 @@ async function ptgRefreshIdentityAliasesFromDb() {
 (function ptgTourInit() {
     "use strict";
 
-    var STORAGE_KEY = "ptg_tour_v2_seen";
+    var STORAGE_KEY_PREFIX = "ptg_tour_v4_seen_";
     var FORCE_ALWAYS = false;
     var VIEWPORT_MARGIN = 12;
 
-    if (!FORCE_ALWAYS) {
+    function resolveTourIdentity() {
         try {
-            if (localStorage.getItem(STORAGE_KEY)) return;
+            var uid = String((typeof myUserId !== "undefined" && myUserId) ? myUserId : "guest").trim().toLowerCase();
+            if (uid && uid !== "guest") return uid;
         } catch (_) {}
+        return "guest_device";
+    }
+
+    function seenStorageKey() {
+        return STORAGE_KEY_PREFIX + resolveTourIdentity();
+    }
+
+    function shouldShowTour() {
+        if (FORCE_ALWAYS) return true;
+        try {
+            return !localStorage.getItem(seenStorageKey());
+        } catch (_) {
+            return true;
+        }
     }
 
     var steps = [
@@ -15439,10 +16071,10 @@ async function ptgRefreshIdentityAliasesFromDb() {
             body: "Follow @Super_Guess_ on X for news, contests, and daily phrase drops."
         },
         {
-            id: "discord",
-            target: 'a.social-btn[href*="discord"]',
-            title: "Join Discord",
-            body: "Hop into the community on Discord — chat with players, share guesses, and get early news."
+            id: "bug-report",
+            target: "#openBugReportBtn",
+            title: "Report a bug",
+            body: "Found something broken? Open this button to write and save a local bug report directly in the app."
         },
         {
             id: "contracts",
@@ -15506,7 +16138,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
             "ptgBaseSaveSheet",
             "referralOverlay",
             "referralDetailOverlay",
-            "docsOverlay"
+            "docsOverlay",
+            "bugReportOverlay"
         ];
         for (var i = 0; i < blockers.length; i++) {
             if (isShown(blockers[i])) return false;
@@ -15516,7 +16149,11 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
     function waitReadyThenStart(attempts) {
         attempts = attempts || 0;
-        if (appReady()) { start(); return; }
+        if (appReady()) {
+            if (!shouldShowTour()) return;
+            start();
+            return;
+        }
         if (attempts > 300) return; // ~60s safety bail
         setTimeout(function () { waitReadyThenStart(attempts + 1); }, 200);
     }
@@ -15585,7 +16222,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
     function destroy(markSeen) {
         if (markSeen) {
-            try { localStorage.setItem(STORAGE_KEY, "1"); } catch (_) {}
+            try { localStorage.setItem(seenStorageKey(), "1"); } catch (_) {}
         }
         if (!root) return;
         window.removeEventListener("resize", resizeHandler);
@@ -15809,6 +16446,21 @@ async function ptgRefreshIdentityAliasesFromDb() {
     function finish(markSeen) {
         destroy(markSeen !== false);
     }
+
+    window.__ptgTourCancelForModal = function () {
+        if (!root) return;
+        window.removeEventListener("resize", resizeHandler);
+        window.removeEventListener("scroll", scrollHandler, true);
+        document.removeEventListener("keydown", onKey, true);
+        var el = root;
+        root = null;
+        try { el.remove(); } catch (_) {}
+    };
+
+    window.__ptgTourKickoff = function () {
+        if (root) return;
+        waitReadyThenStart(0);
+    };
 
     function start() {
         build();

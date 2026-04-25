@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PTG Admin Bug Reports</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      background: #080d18;
+      color: #eef3ff;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 24px 16px 40px; }
+    .top { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    .pill { padding: 7px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.04); font-size: 12px; }
+    .btn { border: 0; border-radius: 10px; background: #1956ff; color: #fff; padding: 10px 14px; font-weight: 700; cursor: pointer; }
+    .list { display: grid; gap: 12px; }
+    .card { border: 1px solid rgba(255,255,255,.14); border-radius: 14px; background: rgba(255,255,255,.03); padding: 12px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .desc { margin: 0; line-height: 1.45; color: #dbe5ff; white-space: pre-wrap; }
+    .img { margin-top: 10px; max-width: 100%; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }
+    .status { color: #9fb0d8; font-size: 13px; margin: 8px 0 14px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1 style="margin:0 0 8px;">PTG bug reports</h1>
+    <p class="status" id="status">Loading...</p>
+    <div class="top">
+      <button class="btn" id="refreshBtn" type="button">Refresh</button>
+    </div>
+    <section class="list" id="list"></section>
+  </main>
+
+  <script>
+    (function () {
+      var statusEl = document.getElementById("status");
+      var listEl = document.getElementById("list");
+      var refreshBtn = document.getElementById("refreshBtn");
+
+      function esc(s) {
+        return String(s || "").replace(/[&<>"']/g, function (c) {
+          return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+        });
+      }
+
+      function getAdminKey() {
+        try {
+          var u = new URL(window.location.href);
+          return (u.searchParams.get("key") || "").trim();
+        } catch (_) {
+          return "";
+        }
+      }
+
+      async function load() {
+        var key = getAdminKey();
+        if (!key) {
+          statusEl.textContent = "Missing admin key in URL (?key=YOUR_KEY).";
+          listEl.innerHTML = "";
+          return;
+        }
+        statusEl.textContent = "Loading reports...";
+        try {
+          var res = await fetch("/api/ptg-resolve-names", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Admin-Key": key },
+            body: JSON.stringify({ op: "bug_report_list" })
+          });
+          if (!res.ok) throw new Error("api_" + String(res.status));
+          var data = await res.json();
+          var items = Array.isArray(data && data.items) ? data.items : [];
+          if (!items.length) {
+            listEl.innerHTML = "";
+            statusEl.textContent = "No reports yet.";
+            return;
+          }
+          statusEl.textContent = "Reports: " + String(items.length);
+          listEl.innerHTML = items.map(function (r) {
+            var ts = r && r.createdAt ? new Date(r.createdAt).toLocaleString() : "-";
+            var img = r && r.screenshot && r.screenshot.dataUrl
+              ? '<img class="img" alt="report screenshot" src="' + esc(r.screenshot.dataUrl) + '"/>'
+              : "";
+            return (
+              '<article class="card">' +
+                '<div class="meta">' +
+                  '<span class="pill">' + esc(ts) + "</span>" +
+                  '<span class="pill">Area: ' + esc(r.category) + "</span>" +
+                  '<span class="pill">Freq: ' + esc(r.frequency) + "</span>" +
+                  '<span class="pill">Impact: ' + esc(r.severity) + "</span>" +
+                "</div>" +
+                '<p class="desc">' + esc(r.description || "") + "</p>" +
+                img +
+              "</article>"
+            );
+          }).join("");
+        } catch (e) {
+          listEl.innerHTML = "";
+          statusEl.textContent = "Failed to load reports.";
+        }
+      }
+
+      refreshBtn.addEventListener("click", load);
+      load();
+    })();
+  </script>
+</body>
+</html>
+

@@ -7,7 +7,7 @@
   ],
   "functions": {
     "api/nft-image.js": {
-      "includeFiles": "PTG-main.png"
+      "includeFiles": "{PTG-main.png,farcaster 50%.png,base logo 50%.png}"
     },
     "api/farcaster-asset.js": {
       "includeFiles": "PTG-main.png"
@@ -93,6 +93,10 @@
     {
       "source": "/api/mint-voucher",
       "destination": "/api/ptg-voucher"
+    },
+    {
+      "source": "/api/ptg-invite",
+      "destination": "/api/nft-image?html=1"
     }
   ],
   "redirects": [
