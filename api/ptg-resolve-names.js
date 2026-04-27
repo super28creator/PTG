@@ -117,7 +117,8 @@ async function isReporterOverDailyLimit(db, reporterKey) {
 }
 
 function isBugAdmin(req) {
-  const key = process.env.PTG_BUG_ADMIN_KEY || "123321123";
+  const key = String(process.env.PTG_BUG_ADMIN_KEY || "").trim();
+  if (!key) return false;
   const fromHeader = String(req.headers["x-admin-key"] || "").trim();
   return fromHeader === key;
 }
