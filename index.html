@@ -2484,6 +2484,28 @@
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
+    /* Nuke blur w całym drzewie — lokalne glass efekty też potrafią spalić
+     * compositing gdy Warpcast otwiera sheet TX/sign nad mini-appem. */
+    html[data-ptg-host="farcaster"] *,
+    html[data-ptg-host="base"] * {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    html[data-ptg-host="farcaster"] body,
+    html[data-ptg-host="base"] body {
+        background: #0a0e1b;
+        background-attachment: scroll;
+    }
+    /* Podczas sheetu portfela (Approve / Confirm) chowamy nasze full-screen
+     * overlaye — inaczej Farcaster PC maluje biały prostokąt z tyłu
+     * (to samo przy trophy mint i claim referral). */
+    html[data-ptg-wallet-sheet="1"] .modal-overlay {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
     .bug-report-card {
         max-width: 640px;
         width: 100%;
@@ -9061,7 +9083,63 @@ async function ptgRefreshIdentityAliasesFromDb() {
    * inaczej embedded wallet potrafi zawisnąć bez erroru i user widzi „Sign
    * in wallet…" w nieskończoność.
    */
+  /**
+   * Farcaster/Base PC: pełnoekranowy `.modal-overlay` (referral / victory)
+   * pod natywnym sheetem portfela maluje się na biało. Na czas RPC chowamy
+   * overlaye CSS-em (`data-ptg-wallet-sheet`) i przywracamy po powrocie.
+   */
+  async function ptgWhileWalletHostSheet(asyncFn) {
+      const root = document.documentElement;
+      const depth = (window.__ptgWalletSheetDepth || 0) + 1;
+      window.__ptgWalletSheetDepth = depth;
+      try {
+          try {
+              if (ptgHost === "farcaster" || ptgHost === "base") {
+                  root.setAttribute("data-ptg-host", ptgHost);
+              } else if (typeof ptgInMiniAppSurface !== "undefined" && ptgInMiniAppSurface) {
+                  root.setAttribute(
+                      "data-ptg-host",
+                      ptgHost === "base" ? "base" : "farcaster"
+                  );
+              }
+          } catch (_) {}
+          root.setAttribute("data-ptg-wallet-sheet", "1");
+          try {
+              void root.offsetHeight;
+          } catch (_) {}
+          await new Promise(function (resolve) {
+              try {
+                  requestAnimationFrame(function () {
+                      requestAnimationFrame(resolve);
+                  });
+              } catch (_) {
+                  setTimeout(resolve, 32);
+              }
+          });
+          return await asyncFn();
+      } finally {
+          window.__ptgWalletSheetDepth = Math.max(0, (window.__ptgWalletSheetDepth || 1) - 1);
+          if (!window.__ptgWalletSheetDepth) {
+              try {
+                  root.removeAttribute("data-ptg-wallet-sheet");
+              } catch (_) {}
+          }
+      }
+  }
+
   async function ptgSignReferralClaimMessageWithFallback(prov, signer, fromAddr, message, traceId) {
+      return ptgWhileWalletHostSheet(function () {
+          return ptgSignReferralClaimMessageWithFallbackInner(
+              prov,
+              signer,
+              fromAddr,
+              message,
+              traceId
+          );
+      });
+  }
+
+  async function ptgSignReferralClaimMessageWithFallbackInner(prov, signer, fromAddr, message, traceId) {
       const from = String(fromAddr || "");
       const msgHex =
           "0x" +
@@ -14289,11 +14367,26 @@ async function ptgRefreshIdentityAliasesFromDb() {
           throw new Error("Wallet provider unavailable");
       }
       const ms = Number(timeoutMs) > 0 ? Number(timeoutMs) : 20000;
-      return withTimeout(
-          provider.request({ method, params }),
-          ms,
-          "wallet " + method
-      );
+      const m = String(method || "");
+      const needsSheetSafe =
+          m === "personal_sign" ||
+          m === "eth_sign" ||
+          m === "eth_sendTransaction" ||
+          m === "eth_signTransaction" ||
+          m === "wallet_sendCalls" ||
+          m.indexOf("eth_signTypedData") === 0;
+      const run = function () {
+          return withTimeout(
+              provider.request({ method, params }),
+              ms,
+              "wallet " + method
+          );
+      };
+      /* Nested calls already inside ptgWhileWalletHostSheet are fine (depth). */
+      if (needsSheetSafe && typeof ptgWhileWalletHostSheet === "function") {
+          return ptgWhileWalletHostSheet(run);
+      }
+      return run();
   }
 
   async function getWalletAccountsFast(provider) {
