@@ -2567,45 +2567,60 @@
         color-scheme: dark;
         background: #0a0e1b !important;
     }
-    /* Na czas sheetu portfela NIE chowamy overlayów (display:none zostawiało
-     * pusty iframe → Farcaster PC malował jasnoszare tło). Zostawiamy UI
-     * widoczne, tylko solidne ciemne tło bez blur. */
+    /* Na czas sheetu portfela: NIE display:none na całym UI (pusty iframe =
+     * Farcaster PC maluje jasnoszare tło hosta). Zamiast tego pełnoekranowy
+     * ciemny raster (#ptgWalletSheetFill + canvas), żeby snapshot hosta
+     * był ciemny, nie szary placeholder. */
     html[data-ptg-wallet-sheet="1"],
     html[data-ptg-wallet-sheet="1"] body {
         background: #0a0e1b !important;
+        background-color: #0a0e1b !important;
         background-image: none !important;
-        color-scheme: dark;
+        background-attachment: scroll !important;
+        color-scheme: dark !important;
     }
+    html[data-ptg-wallet-sheet="1"] .wrap,
     html[data-ptg-wallet-sheet="1"] .modal-overlay {
-        display: flex !important;
-        background: #0a0e1b !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
-        opacity: 1 !important;
-        visibility: visible !important;
     }
-    html[data-ptg-wallet-sheet="1"] .modal-overlay:not(.show) {
-        display: none !important;
-    }
-    /* Widoczny „waiting” panel — hostowi zostaje co sfotografować (ciemne),
-     * zamiast pustego szarego placeholdera. */
     #ptgWalletSheetFill {
         display: none;
         position: fixed;
         inset: 0;
-        z-index: 100000;
-        background: #0a0e1b;
+        z-index: 2147483000;
+        background-color: #0a0e1b;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%230a0e1b'/%3E%3C/svg%3E");
+        background-size: cover;
         color: #94a3b8;
-        font: 600 14px/1.4 var(--font-main), system-ui, sans-serif;
+        font: 600 15px/1.45 var(--font-main), system-ui, sans-serif;
         align-items: center;
         justify-content: center;
         text-align: center;
         padding: 24px;
         pointer-events: none;
         letter-spacing: 0.02em;
+        overflow: hidden;
+    }
+    #ptgWalletSheetFill canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        pointer-events: none;
+    }
+    #ptgWalletSheetFill span {
+        position: relative;
+        z-index: 1;
     }
     html[data-ptg-wallet-sheet="1"] #ptgWalletSheetFill {
-        display: flex;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
     }
     .bug-report-card {
         max-width: 640px;
@@ -9188,10 +9203,47 @@ async function ptgRefreshIdentityAliasesFromDb() {
    * inaczej embedded wallet potrafi zawisnąć bez erroru i user widzi „Sign
    * in wallet…" w nieskończoność.
    */
+  function ptgPaintWalletSheetFill() {
+      let fill = document.getElementById("ptgWalletSheetFill");
+      if (!fill) {
+          fill = document.createElement("div");
+          fill.id = "ptgWalletSheetFill";
+          fill.setAttribute("aria-hidden", "true");
+          fill.innerHTML = "<canvas></canvas><span></span>";
+          document.body.appendChild(fill);
+      }
+      let label = fill.querySelector("span");
+      if (!label) {
+          label = document.createElement("span");
+          fill.appendChild(label);
+      }
+      label.textContent = "Confirm in wallet…";
+      try {
+          let canvas = fill.querySelector("canvas");
+          if (!canvas) {
+              canvas = document.createElement("canvas");
+              fill.insertBefore(canvas, fill.firstChild);
+          }
+          const w = Math.max(window.innerWidth || 360, 320);
+          const h = Math.max(window.innerHeight || 640, 480);
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          canvas.width = Math.floor(w * dpr);
+          canvas.height = Math.floor(h * dpr);
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+              ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+              ctx.fillStyle = "#0a0e1b";
+              ctx.fillRect(0, 0, w, h);
+          }
+      } catch (_) {}
+      return fill;
+  }
+
   /**
-   * Farcaster/Base PC: native Approve sheet. NIE chowamy overlayów
-   * (pusty iframe = jasnoszare tło hosta). Zamiast tego: solidne ciemne
-   * tło + widoczny fill „Confirm in wallet…”, żeby snapshot hosta był ciemny.
+   * Farcaster/Base PC: native Confirm sheet. Pusty iframe = jasnoszare tło
+   * hosta. Przed personal_sign malujemy pełnoekranowy ciemny raster (canvas
+   * + SVG), chowamy .wrap/overlaye visibility (nie display:none całego DOM),
+   * czekamy na paint — żeby snapshot hosta był ciemny.
    */
   async function ptgWhileWalletHostSheet(asyncFn) {
       const root = document.documentElement;
@@ -9218,42 +9270,30 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       document.body.style.background = "#0a0e1b";
                       document.body.style.backgroundColor = "#0a0e1b";
                       document.body.style.backgroundImage = "none";
-                  }
-                  const nodes = document.querySelectorAll(".modal-overlay.show");
-                  for (let i = 0; i < nodes.length; i++) {
-                      const el = nodes[i];
-                      if (!el) continue;
-                      el.style.background = "#0a0e1b";
-                      el.style.backdropFilter = "none";
-                      el.style.webkitBackdropFilter = "none";
+                      document.body.style.backgroundAttachment = "scroll";
                   }
               } catch (_) {}
               try {
-                  let fill = document.getElementById("ptgWalletSheetFill");
-                  if (!fill) {
-                      fill = document.createElement("div");
-                      fill.id = "ptgWalletSheetFill";
-                      fill.setAttribute("aria-hidden", "true");
-                      document.body.appendChild(fill);
-                  }
-                  fill.textContent = "Confirm in wallet…";
+                  ptgPaintWalletSheetFill();
               } catch (_) {}
           }
 
           root.setAttribute("data-ptg-wallet-sheet", "1");
           try {
               void root.offsetHeight;
+              ptgPaintWalletSheetFill();
           } catch (_) {}
-          /* Daj compositorowi czas na ciemny paint zanim host zrobi snapshot. */
+          /* Dłuższy paint — desktop Farcaster często robi snapshot zanim
+           * compositor zdąży po visibility:hidden na .wrap. */
           await new Promise(function (resolve) {
               try {
                   requestAnimationFrame(function () {
                       requestAnimationFrame(function () {
-                          setTimeout(resolve, 80);
+                          setTimeout(resolve, 320);
                       });
                   });
               } catch (_) {
-                  setTimeout(resolve, 120);
+                  setTimeout(resolve, 400);
               }
           });
           return await asyncFn();
@@ -9269,12 +9309,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       document.body.style.background = "";
                       document.body.style.backgroundColor = "";
                       document.body.style.backgroundImage = "";
+                      document.body.style.backgroundAttachment = "";
                   }
-                  document.querySelectorAll(".modal-overlay").forEach(function (el) {
-                      el.style.background = "";
-                      el.style.backdropFilter = "";
-                      el.style.webkitBackdropFilter = "";
-                  });
               } catch (_) {}
           }
       }

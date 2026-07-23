@@ -22,7 +22,7 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0a0b0d",
-  "theme_color": "#0000ff",
+  "theme_color": "#0a0e1b",
   "lang": "en",
   "dir": "ltr",
   "categories": ["games", "entertainment"],
