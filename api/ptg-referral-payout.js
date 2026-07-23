@@ -436,16 +436,9 @@ async function executeTransferWithAuthorization(auth, rpcUrl) {
     return { ok: false, error: "execute_no_hash" };
   }
 
-  /* Czekamy na mining, żeby SETTLE mógł od razu zamknąć outstanding. */
-  try {
-    const receipt = await txResponse.wait(1);
-    if (receipt && receipt.status === 0) {
-      return { ok: false, error: "tx_reverted", txHash };
-    }
-  } catch (e) {
-    console.warn("[claim-execute] wait failed (returning hash anyway)", String(e && e.message));
-  }
-
+  /* Nie czekamy na mining — Base ~2s/block, a wait(1) blokowało UI
+   * („Sending USDC…”) na kilka–kilkanaście sekund. Hash wystarczy do
+   * BaseScan + SETTLE; ewentualny revert jest rzadki przy TWA. */
   return { ok: true, txHash: txHash.toLowerCase() };
 }
 

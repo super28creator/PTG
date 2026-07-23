@@ -9486,15 +9486,25 @@ async function ptgRefreshIdentityAliasesFromDb() {
   }
 
   async function ptgSignReferralClaimMessageWithFallback(prov, signer, fromAddr, message, traceId) {
-      return ptgWhileWalletHostSheet(function () {
-          return ptgSignReferralClaimMessageWithFallbackInner(
-              prov,
-              signer,
-              fromAddr,
-              message,
-              traceId
-          );
-      });
+      /* Farcaster: ciemny sheet pod native Confirm. Base/MetaMask: bez wrapa. */
+      if (ptgHost === "farcaster" && typeof ptgWhileWalletHostSheet === "function") {
+          return ptgWhileWalletHostSheet(function () {
+              return ptgSignReferralClaimMessageWithFallbackInner(
+                  prov,
+                  signer,
+                  fromAddr,
+                  message,
+                  traceId
+              );
+          });
+      }
+      return ptgSignReferralClaimMessageWithFallbackInner(
+          prov,
+          signer,
+          fromAddr,
+          message,
+          traceId
+      );
   }
 
   async function ptgSignReferralClaimMessageWithFallbackInner(prov, signer, fromAddr, message, traceId) {
@@ -9508,7 +9518,9 @@ async function ptgRefreshIdentityAliasesFromDb() {
       if (prov && typeof prov.request === "function") {
           const plainMsg = String(message || "");
           const attempts = [
+              /* MetaMask / większość injected: hex message + from. */
               { method: "personal_sign", params: [msgHex, from] },
+              /* Base / Coinbase SCW często woli plain string. */
               { method: "personal_sign", params: [plainMsg, from] },
               { method: "personal_sign", params: [from, msgHex] },
               { method: "personal_sign", params: [from, plainMsg] },
@@ -9526,7 +9538,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       prov,
                       attempts[i].method,
                       attempts[i].params,
-                      70000
+                      45000
                   );
                   if (typeof out === "string" && out.startsWith("0x") && out.length > 20) {
                       if (traceId) {
@@ -9596,7 +9608,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ userId: uid, op: "restore" }),
               },
-              15000
+              8000
           );
           const j = await r.json().catch(() => null);
           if (!r.ok || !j || j.ok !== true) return null;
@@ -10200,7 +10212,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
        * samym auth. Jeżeli auth został już użyty on-chain / wygasł,
        * RESTORE sam to posprząta i zwróci aktualny `pendingReward`. */
       if (btn) btn.disabled = true;
-      if (msg) msg.textContent = "Checking claim state…";
+      if (msg) msg.textContent = "Preparing claim…";
       const restoreState = await ptgReferralFetchRestoreState(claimUserId);
       console.info("[ptg-claim] restore", restoreState);
       ptgClaimDebug(claimTraceId, "claim.restore", restoreState);
@@ -10580,7 +10592,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               }
               const origin =
                   typeof location !== "undefined" && location.origin ? location.origin : "";
-              if (msg) msg.textContent = "Sending USDC payout…";
+              if (msg) msg.textContent = "Sending USDC…";
               let res, j;
               async function ptgPostClaimAuth(authPayload) {
                   const r = await fetchWithTimeout(
@@ -10599,7 +10611,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                               )
                           ),
                       },
-                      60000
+                      25000
                   );
                   const bodyJson = await r.json().catch(() => null);
                   return { res: r, j: bodyJson };
@@ -15134,8 +15146,13 @@ async function ptgRefreshIdentityAliasesFromDb() {
               "wallet " + method
           );
       };
-      /* Nested calls already inside ptgWhileWalletHostSheet are fine (depth). */
-      if (needsSheetSafe && typeof ptgWhileWalletHostSheet === "function") {
+      /* Sheet/paint delay tylko na Farcaster PC (szare tło).
+       * Base App + MetaMask: od razu RPC — bez +200–400 ms „martwego” czekania. */
+      if (
+          needsSheetSafe &&
+          ptgHost === "farcaster" &&
+          typeof ptgWhileWalletHostSheet === "function"
+      ) {
           return ptgWhileWalletHostSheet(run);
       }
       return run();
@@ -15170,7 +15187,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
           if (traceId) ptgClaimDebug(traceId, "claim.accounts.quick.start", { providerIdx });
           const quick = await withTimeout(
               provider.request({ method: "eth_accounts", params: [] }),
-              4000,
+              1200,
               "claim eth_accounts"
           );
           if (Array.isArray(quick) && quick[0]) {
