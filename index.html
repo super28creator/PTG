@@ -11934,7 +11934,6 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   ).catch(() => null);
                   if (Array.isArray(acc) && acc[0] && /^0x[a-fA-F0-9]{40}$/.test(String(acc[0]))) {
                       fcWalletAlias = String(acc[0]).toLowerCase();
-                      ptgRememberIdentityAlias(fcWalletAlias);
                   }
               }
           } catch (e) {
