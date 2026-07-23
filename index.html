@@ -13964,10 +13964,10 @@ async function ptgRefreshIdentityAliasesFromDb() {
       const add = (u) => {
           if (u && urls.indexOf(u) === -1) urls.push(u);
       };
-      add(origin + "/api/ptg-trophy-mint");
-      add(PTG_PUBLIC_SITE_ORIGIN + "/api/ptg-trophy-mint");
+      add(origin + "/api/ptg-broadcast-mint");
+      add(PTG_PUBLIC_SITE_ORIGIN + "/api/ptg-broadcast-mint");
       if (typeof addPtgVercelApiUrls === "function") {
-          addPtgVercelApiUrls(urls, add, "/api/ptg-trophy-mint");
+          addPtgVercelApiUrls(urls, add, "/api/ptg-broadcast-mint");
       }
 
       let lastErr = null;
@@ -13979,6 +13979,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
+                          op: "sponsored_trophy",
                           minter: from,
                           signature,
                           metadataUri: uri,

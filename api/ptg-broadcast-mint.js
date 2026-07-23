@@ -5,6 +5,11 @@
 
 const TARGET = process.env.BASE_RPC_URL || "https://mainnet.base.org";
 
+const {
+  handleSponsoredTrophyMint,
+  isSponsoredTrophyBody,
+} = require("../lib/ptg-sponsored-trophy-mint.js");
+
 /** Oficjalny USDC (FiatToken) na Base — używany przy claimie (EIP-3009 TWA), nie tylko mint NFT. */
 const USDC_BASE_MAINNET = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
@@ -96,6 +101,12 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: "invalid_json" });
       }
     }
+
+    /* Farcaster sponsored trophy: personal_sign + treasury mint (Hobby: same fn). */
+    if (isSponsoredTrophyBody(body)) {
+      return handleSponsoredTrophyMint(res, body);
+    }
+
     const raw =
       body && typeof body === "object" && typeof body.rawTransaction === "string"
         ? body.rawTransaction.trim()

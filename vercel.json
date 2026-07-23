@@ -30,7 +30,8 @@
       "includeFiles": "lib/**",
       "maxDuration": 60
     },
-    "api/ptg-trophy-mint.js": {
+    "api/ptg-broadcast-mint.js": {
+      "includeFiles": "lib/**",
       "maxDuration": 60
     }
   },
