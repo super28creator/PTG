@@ -14533,7 +14533,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
       let accounts;
       let ethProvider = null;
       try {
-          const fe = getEmbeddedEthProvider();
+          /* Farcaster / nowsze SDK: sync ethProvider bywa „martwy” — bierz async. */
+          const feAsync = await getEmbeddedEthProviderAsync().catch(() => null);
+          const feSync = getEmbeddedEthProvider();
+          const fe =
+              feAsync && typeof feAsync.request === "function"
+                  ? feAsync
+                  : feSync && typeof feSync.request === "function"
+                    ? feSync
+                    : null;
           if (fe) {
               const [, embAcc] = await Promise.all([
                   ensureBaseMainnet(fe),
@@ -14700,13 +14708,27 @@ async function ptgRefreshIdentityAliasesFromDb() {
           };
 
           async function runMintSendAttempts(provider, preferRelayFirst) {
-              const embedded = getEmbeddedEthProvider();
+              const embeddedSync = getEmbeddedEthProvider();
               const isEmbeddedWallet =
-                  embedded && provider === embedded && typeof provider.request === "function";
+                  !!(
+                      provider &&
+                      typeof provider.request === "function" &&
+                      (
+                          provider === ethProvider ||
+                          provider === embeddedSync ||
+                          ptgHost === "farcaster" ||
+                          ptgHost === "base" ||
+                          !!ptgInMiniAppSurface
+                      )
+                  );
               const singlePromptWalletMode = strictSingleTxPrompt || !isEmbeddedWallet;
+              /* Farcaster: NIE eth_signTransaction/relay — host mapuje błędy na
+               * „Unknown provider RPC error”. Od razu eth_sendTransaction. */
+              const allowRelay =
+                  preferRelayFirst && isEmbeddedWallet && ptgHost !== "farcaster";
 
               /* Base App SCW: najpierw wallet_sendCalls (natywny UI). Nie na Farcaster. */
-              if (preferRelayFirst && isEmbeddedWallet && accounts[0] && ptgShouldPreferWalletSendCalls()) {
+              if (allowRelay && accounts[0] && ptgShouldPreferWalletSendCalls()) {
                   try {
                       setStatus("Confirm in Base wallet…", "#94a3b8");
                       if (didSendMintTxRequest) {
@@ -14732,8 +14754,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   }
               }
 
-              /* Embedded: podpis + relay — omija często wolny pierwszy eth_sendTransaction. */
-              if (preferRelayFirst && isEmbeddedWallet && accounts[0] && !didSendMintTxRequest) {
+              /* Embedded (nie Farcaster): podpis + relay. */
+              if (allowRelay && accounts[0] && !didSendMintTxRequest && !ptgShouldPreferWalletSendCalls()) {
                   try {
                       setStatus("Sign — submitting via PhraseToGuess…", "#94a3b8");
                       return await signMintTxAndBroadcastViaSite(
@@ -14793,18 +14815,13 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       throw new Error("Mint transaction already requested in this flow.");
                   }
                   didSendMintTxRequest = true;
-                  if (singlePromptWalletMode) {
-                      rawSend = await provider.request({
-                          method: "eth_sendTransaction",
-                          params: [firstPayload],
-                      });
-                  } else {
-                      rawSend = await trySendTransaction(provider, { ...txBase });
-                  }
+                  /* Zawsze firstPayload (z gas/EIP-1559 gdy udało się wyliczyć) —
+                   * wcześniej embedded path wysyłał goły txBase i FC padał. */
+                  rawSend = await trySendTransaction(provider, firstPayload);
               } catch (err) {
                   firstSendErr = err;
                   passLastErr = err;
-                  console.warn("mint eth_sendTransaction " + passLabel + "_instant_minimal", err);
+                  console.warn("mint eth_sendTransaction " + passLabel + "_instant", err);
               }
               const h0 = normalizeEthSendTxHash(rawSend);
               if (h0) return h0;
@@ -14829,19 +14846,47 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   throw firstSendErr;
               }
 
-              /* 2) Podpis + wysyłka przez PhraseToGuess (gdy pierwsza próba rzuciła błąd albo nie było relay-first). */
-              try {
-                  setStatus("Sign — submitting via PhraseToGuess…", "#94a3b8");
-                  return await signMintTxAndBroadcastViaSite(
-                      provider,
-                      accounts[0],
-                      toNft,
-                      dHex,
-                      valueHex
-                  );
-              } catch (relayErr) {
-                  passLastErr = relayErr;
-                  console.warn("mint sign+broadcast relay", relayErr);
+              /* 2) Podpis + wysyłka przez PhraseToGuess — nie na Farcaster. */
+              if (ptgHost !== "farcaster") {
+                  try {
+                      setStatus("Sign — submitting via PhraseToGuess…", "#94a3b8");
+                      return await signMintTxAndBroadcastViaSite(
+                          provider,
+                          accounts[0],
+                          toNft,
+                          dHex,
+                          valueHex
+                      );
+                  } catch (relayErr) {
+                      passLastErr = relayErr;
+                      console.warn("mint sign+broadcast relay", relayErr);
+                  }
+              } else {
+                  /* Farcaster: druga próba eth_sendTransaction z pełnym EIP-1559. */
+                  try {
+                      let gasFields2 = null;
+                      try {
+                          gasFields2 = await prepareMintTxGasFields(fromChk, toNft, dHex, valueHex);
+                      } catch (_) {}
+                      const payload2 = {
+                          ...txBase,
+                          ...(gasFields2 || {}),
+                          type: "0x2",
+                          chainId: BASE_CHAIN_ID_HEX,
+                          gas:
+                              (gasFields2 && gasFields2.gas) ||
+                              ethers.utils.hexValue(260000),
+                      };
+                      setStatus("Confirm mint in wallet…", "#94a3b8");
+                      const raw2 = await trySendTransaction(provider, payload2);
+                      const h2 = normalizeEthSendTxHash(raw2);
+                      if (h2) return h2;
+                  } catch (e2) {
+                      passLastErr = e2;
+                      console.warn("mint farcaster eth_sendTransaction retry", e2);
+                  }
+                  /* Bez dalszych promptów — unikamy serii okienek w Warpcast. */
+                  return null;
               }
 
               let gasFields;
@@ -14892,29 +14937,36 @@ async function ptgRefreshIdentityAliasesFromDb() {
           }
 
           let h = null;
-          const feMint = getEmbeddedEthProvider();
+          /* Farcaster: bez relay-first. Base App: sendCalls-first (w runMintSendAttempts). */
           const preferRelayFirst =
+              ptgHost !== "farcaster" &&
               !!(
-                  feMint &&
-                  ethProvider === feMint &&
-                  typeof feMint.request === "function"
+                  ethProvider &&
+                  typeof ethProvider.request === "function" &&
+                  (ptgHost === "base" ||
+                      (typeof ptgNotifDetectBaseSurface === "function" &&
+                          ptgNotifDetectBaseSurface()) ||
+                      !!ptgInMiniAppSurface)
               );
-          if (
-              feMint &&
-              ethProvider === feMint &&
-              typeof feMint.request === "function" &&
-              accounts[0]
-          ) {
-              h = await runMintSendAttempts(feMint, preferRelayFirst);
-          } else if (ethProvider && typeof ethProvider.request === "function") {
-              h = await runMintSendAttempts(ethProvider, false);
+          if (ethProvider && typeof ethProvider.request === "function" && accounts[0]) {
+              h = await runMintSendAttempts(ethProvider, preferRelayFirst);
           }
 
           return { hash: h, lastErr: passLastErr };
       }
 
       const isBadgeMintFlow = isPtgBadgeContract(toNft);
-      if (!isBadgeMintFlow && ethProvider && typeof ethProvider.request === "function") {
+      /* MetaMask desktop: twardy one-shot (bez multi-prompt).
+       * Farcaster / Base mini-app: pełny pipeline (eth_sendTransaction + gas) —
+       * hard single-shot dawał „Unknown provider RPC error”. */
+      const useMetaMaskTrophyOneShot =
+          !isBadgeMintFlow &&
+          !!strictSingleTxPrompt &&
+          ptgHost === "browser" &&
+          ethProvider &&
+          typeof ethProvider.request === "function";
+
+      if (useMetaMaskTrophyOneShot) {
           try {
               const chainIdNow = await ethProvider.request({ method: "eth_chainId", params: [] });
               if (String(chainIdNow || "").toLowerCase() !== BASE_CHAIN_ID_HEX) {
@@ -14923,71 +14975,38 @@ async function ptgRefreshIdentityAliasesFromDb() {
           } catch (chainErr) {
               throw new Error("Switch wallet network to Base and try again.");
           }
-          /* Trofeum: na Base App najpierw wallet_sendCalls; na Farcaster
-           * od razu eth_sendTransaction (FC host nie umie EIP-5792). */
           if (__ptgWalletTxRequestInFlight) {
               throw new Error("Wallet request already in progress.");
           }
           __ptgWalletTxRequestInFlight = true;
-          let rawOne = null;
-          if (ptgShouldPreferWalletSendCalls()) {
-              try {
-                  setStatus("Confirm mint in Base wallet…", "#94a3b8");
-                  txHash = await ptgWalletSendCallsAndWaitHash(
-                      ethProvider,
-                      fromChk,
-                      toNft,
-                      dataHexPlain,
-                      valueHex
-                  );
-              } catch (eSendCalls) {
-                  if (isUserRejectedWalletRequest(eSendCalls)) throw eSendCalls;
-                  console.warn(
-                      "mint wallet_sendCalls failed, falling back to eth_sendTransaction",
-                      eSendCalls
-                  );
+          try {
+              setStatus("Confirm in your wallet…", "#94a3b8");
+              const rawOne = await ethProvider.request({
+                  method: "eth_sendTransaction",
+                  params: [{ from: fromChk, to: toNft, data: dataHexPlain, value: valueHex }],
+              });
+              txHash = normalizeEthSendTxHash(rawOne);
+              if (!txHash) {
+                  throw new Error("Wallet did not return transaction hash.");
               }
-          }
-          if (!txHash) {
-              try {
-                  setStatus("Confirm in your wallet…", "#94a3b8");
-                  rawOne = await ethProvider.request({
-                      method: "eth_sendTransaction",
-                      params: [{ from: fromChk, to: toNft, data: dataHexPlain, value: valueHex }],
-                  });
-                  txHash = normalizeEthSendTxHash(rawOne);
-              } catch (eSend) {
-                  if (isUserRejectedWalletRequest(eSend)) throw eSend;
-                  /* Relay-only fallback dla Farcaster, gdy eth_sendTransaction pada. */
-                  try {
-                      setStatus("Sign — submitting via PhraseToGuess…", "#94a3b8");
-                      txHash = await signMintTxAndBroadcastViaSite(
-                          ethProvider,
-                          fromChk,
-                          toNft,
-                          dataHexPlain,
-                          valueHex
-                      );
-                  } catch (eRelay) {
-                      if (isUserRejectedWalletRequest(eRelay)) throw eRelay;
-                      const detail =
-                          (eSend && eSend.message ? String(eSend.message) : "") ||
-                          (eRelay && eRelay.message ? String(eRelay.message) : "") ||
-                          "Wallet send failed";
-                      throw new Error(
-                          ptgIsUnsupportedWalletMethod(eSend)
-                              ? "Wallet could not send the mint transaction. Try again or reopen the mini app."
-                              : detail.slice(0, 180)
-                      );
-                  }
-              }
-          }
-          if (!txHash) {
-              throw new Error("Wallet did not return transaction hash.");
+          } catch (eSend) {
+              if (isUserRejectedWalletRequest(eSend)) throw eSend;
+              throw eSend;
           }
       } else {
-          /* Odznaki: ścieżka mintWithSig. */
-          let p = await attemptMintPipeline(dataHexPlain, isBadgeMintFlow ? "badge_sig" : "plain");
+          /* Trofeum (FC/Base) + odznaki: wspólny pipeline. */
+          if (!valueHex || valueHex === "0x" || valueHex === "0x0") {
+              try {
+                  valueHex = await readMintPriceWeiHex(toNft, ethProvider);
+              } catch (_) {}
+          }
+          if ((!valueHex || valueHex === "0x" || valueHex === "0x0") && !isBadgeMintFlow) {
+              throw new Error("Could not read mint price from contract. Check network and try again.");
+          }
+          let p = await attemptMintPipeline(
+              dataHexPlain,
+              isBadgeMintFlow ? "badge_sig" : "plain"
+          );
           txHash = p.hash;
           lastSendErr = p.lastErr;
           if (!txHash && dataHexWithBuilder && dataHexWithBuilder !== dataHexPlain) {
@@ -15073,8 +15092,14 @@ async function ptgRefreshIdentityAliasesFromDb() {
       if (err == null) return "Failed.";
       const m = typeof err.message === "string" ? err.message.trim() : "";
       if (!m || /^failed\.?$/i.test(m)) return "Failed.";
+      if (/insufficient funds|insufficient balance/i.test(m)) {
+          return "Not enough ETH on Base for mint + gas.";
+      }
+      if (/user rejected|denied|4001/i.test(m)) {
+          return "Mint cancelled in wallet.";
+      }
       if (ptgIsUnsupportedWalletMethod(err) || /unknown provider rpc/i.test(m)) {
-          return "Wallet could not send the mint. Reopen the mini app and try again.";
+          return "Farcaster wallet rejected the mint request. Check ETH on Base, then reopen the mini app and try again.";
       }
       if (m.length > 140) return m.slice(0, 137) + "…";
       return m;
