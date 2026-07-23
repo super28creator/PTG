@@ -1285,6 +1285,72 @@
         color: var(--text-muted);
         text-align: center;
     }
+    /* Sukces claimu: karta z hashem TX, linkiem BaseScan i kopiowaniem. */
+    .referral-claim-tx {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        margin: 4px auto 0;
+        padding: 10px 12px;
+        max-width: 100%;
+        border-radius: 12px;
+        background: rgba(102, 200, 0, 0.08);
+        border: 1px solid rgba(102, 200, 0, 0.28);
+    }
+    .referral-claim-tx__title {
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--green-base, #66c800);
+    }
+    .referral-claim-tx__row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        max-width: 100%;
+        min-width: 0;
+    }
+    .referral-claim-tx__link {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--cerulean);
+        text-decoration: none;
+        border-bottom: 1px dotted var(--cerulean);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
+    .referral-claim-tx__link:hover { color: #fff; border-bottom-style: solid; }
+    .referral-claim-tx__copy {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
+        border-radius: 9px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.05);
+        color: #cbd5e1;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        padding: 0;
+    }
+    .referral-claim-tx__copy:hover {
+        background: rgba(60, 138, 255, 0.18);
+        border-color: rgba(60, 138, 255, 0.5);
+        color: #fff;
+    }
+    .referral-claim-tx__copy svg { width: 15px; height: 15px; display: block; }
+    .referral-claim-tx__copy--copied {
+        background: rgba(102, 200, 0, 0.2);
+        border-color: rgba(102, 200, 0, 0.55);
+        color: var(--green-base, #66c800);
+    }
     .referral-section-label {
         font-size: 10px;
         font-weight: 800;
@@ -9576,6 +9642,40 @@ async function ptgRefreshIdentityAliasesFromDb() {
       }
   }
 
+  /**
+   * Konsolidacja przed wypłatą: UI sumuje pending ze WSZYSTKICH aliasów
+   * tożsamości (profil FC, stare 0x, obecny portfel), ale wypłata idzie
+   * tylko z wpisu `summary/{claimUserId}`. Bez tej konsolidacji user widział
+   * np. 0.89$, a na łańcuch szło 0.015$. Zwraca listę ruchów do rollbacku.
+   */
+  async function ptgConsolidateReferralPendingForClaim(walletUserId) {
+      const dst = String(walletUserId || "").trim().toLowerCase();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(dst)) return [];
+      const ids = new Set();
+      try {
+          ptgGetMyIdentityAliasesLc().forEach(function (a) {
+              const s = String(a || "").trim().toLowerCase();
+              if (s && s !== "guest") ids.add(s);
+          });
+      } catch (_) {}
+      const me = String(myUserId || "").trim().toLowerCase();
+      if (me && me !== "guest") ids.add(me);
+      ids.delete(dst);
+      const moves = [];
+      for (const src of ids) {
+          try {
+              const r = await ptgBridgeReferralPendingToWallet(src, dst);
+              if (r && Number(r.moved) > 0) {
+                  moves.push({ src, moved: Number(r.moved) });
+              }
+          } catch (e) {
+              console.warn("[ptg-claim] consolidate bridge failed", src, e);
+          }
+      }
+      if (moves.length) console.info("[ptg-claim] consolidated", moves);
+      return moves;
+  }
+
   /** Cofnięcie bridge (FC -> wallet) gdy claim nie doszedł do wysłania tx. */
   async function ptgRollbackBridgedReferralPending(sourceUserId, walletUserId, amountCents) {
       const src = String(sourceUserId || "").trim();
@@ -9616,6 +9716,62 @@ async function ptgRefreshIdentityAliasesFromDb() {
       return movedBack;
   }
 
+  /**
+   * Sukces claimu: zamiast surowego stringa z URL-em renderuje kartę
+   * „USDC claimed” ze skróconym hashem (link do BaseScan) i przyciskiem
+   * kopiowania pełnego linku TX.
+   */
+  function ptgShowClaimSuccessTx(msgEl, txHash) {
+      if (!msgEl) return;
+      const hash = String(txHash || "").toLowerCase();
+      const url = "https://basescan.org/tx/" + hash;
+      const short = hash.slice(0, 8) + "…" + hash.slice(-6);
+      const copySvg =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      msgEl.innerHTML =
+          '<span class="referral-claim-tx">' +
+          '<span class="referral-claim-tx__title">✓ USDC claimed</span>' +
+          '<span class="referral-claim-tx__row">' +
+          '<a class="referral-claim-tx__link" href="' + url + '" target="_blank" rel="noopener" title="' + url + '">' +
+          short +
+          "</a>" +
+          '<button type="button" class="referral-claim-tx__copy" aria-label="Copy transaction link">' +
+          copySvg +
+          "</button>" +
+          "</span>" +
+          "</span>";
+      const copyBtn = msgEl.querySelector(".referral-claim-tx__copy");
+      if (copyBtn) {
+          copyBtn.addEventListener("click", async function () {
+              let ok = false;
+              try {
+                  await navigator.clipboard.writeText(url);
+                  ok = true;
+              } catch (_) {
+                  try {
+                      const ta = document.createElement("textarea");
+                      ta.value = url;
+                      ta.setAttribute("readonly", "");
+                      ta.style.position = "fixed";
+                      ta.style.left = "-9999px";
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand("copy");
+                      document.body.removeChild(ta);
+                      ok = true;
+                  } catch (_2) {}
+              }
+              if (!ok) return;
+              copyBtn.classList.add("referral-claim-tx__copy--copied");
+              copyBtn.innerHTML = PTG_COPY_OK_SVG;
+              setTimeout(function () {
+                  copyBtn.classList.remove("referral-claim-tx__copy--copied");
+                  copyBtn.innerHTML = copySvg;
+              }, 1200);
+          });
+      }
+  }
+
   async function claimReferralRewardsFromUi() {
       const btn = document.getElementById("referralClaimBtn");
       const msg = document.getElementById("referralClaimMsg");
@@ -9633,6 +9789,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       let bridgedSourceUserId = "";
       let bridgedWalletUserId = "";
       let bridgedAmountCents = 0;
+      let bridgedMoves = [];
       let txSubmitted = false;
       /* Auto-przełączenie tożsamości na 0x robimy WYŁĄCZNIE poza Farcaster.
        * W Warpcast/Farcaster profile-first jest celowe; wcześniej ten blok
@@ -9729,6 +9886,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
               return;
           }
       }
+      /* Zbierz pending ze wszystkich aliasów na portfel claimu — kwota
+       * podpisu/wypłaty ma się równać saldu pokazywanemu w UI. */
+      if (/^0x[a-fA-F0-9]{40}$/.test(claimUserId)) {
+          try {
+              bridgedMoves = await ptgConsolidateReferralPendingForClaim(claimUserId);
+          } catch (eCons) {
+              console.warn("[ptg-claim] consolidation failed", eCons);
+          }
+      }
       /* RESUME-FIRST: server może mieć ciągle ważny `claim_outstanding` po
        * wcześniejszej, niedokończonej próbie (wallet nie potwierdził tx,
        * appka wyleciała w połowie, fetch padł). Wtedy pending = 0 w RTDB,
@@ -9776,6 +9942,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   bridgedSourceUserId,
                   bridgedWalletUserId,
                   bridgedAmountCents,
+                  bridgedMoves,
                   rollbackBridge: bridgedAmountCents > 0,
                   keepMsg: true,
               });
@@ -9812,11 +9979,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               });
               if (resEarly && resEarly.ok && jEarly && jEarly.txHash) {
                   const txHash = String(jEarly.txHash).toLowerCase();
-                  const explorerUrl = "https://basescan.org/tx/" + txHash;
-                  if (msg) {
-                      msg.textContent =
-                          "USDC claimed. Tx: " + txHash.slice(0, 10) + "… " + explorerUrl;
-                  }
+                  ptgShowClaimSuccessTx(msg, txHash);
                   txSubmitted = true;
                   console.info("[ptg-claim] early execute ok", { txHash });
                   try {
@@ -10156,11 +10319,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               }
               ptgReferralFireSettle(claimUserId, txHash, auth.nonce);
           }
-          const explorerUrl = "https://basescan.org/tx/" + txHash;
-          if (msg) {
-              msg.textContent =
-                  "USDC claimed. Tx: " + txHash.slice(0, 10) + "… " + explorerUrl;
-          }
+          ptgShowClaimSuccessTx(msg, txHash);
           txSubmitted = true;
           console.info("[ptg-claim] tx sent", { txHash, serverExecuted: !!serverTxHash });
           ptgClaimDebug(claimTraceId, "claim.tx.sent", {
@@ -10186,6 +10345,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       bridgedSourceUserId,
                       bridgedWalletUserId,
                       bridgedAmountCents,
+                      bridgedMoves,
                       rollbackBridge: bridgedAmountCents > 0,
                   });
               } catch (eRec) {
@@ -10876,6 +11036,19 @@ async function ptgRefreshIdentityAliasesFromDb() {
               );
           } catch (eRb) {
               console.warn("[ptg-claim] bridge rollback failed", eRb);
+          }
+      }
+      /* Rollback konsolidacji aliasów (bez tego kasa „przykleja się” do portfela,
+       * co jest nieszkodliwe dla salda, ale mylące w podziale per-alias). */
+      if (Array.isArray(o.bridgedMoves) && o.bridgedMoves.length && o.claimUserId) {
+          for (let i = 0; i < o.bridgedMoves.length; i++) {
+              const b = o.bridgedMoves[i];
+              if (!b || !(Number(b.moved) > 0)) continue;
+              try {
+                  await ptgRollbackBridgedReferralPending(b.src, o.claimUserId, b.moved);
+              } catch (eRb2) {
+                  console.warn("[ptg-claim] consolidation rollback failed", b, eRb2);
+              }
           }
       }
 
