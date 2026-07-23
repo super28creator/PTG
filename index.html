@@ -2845,22 +2845,33 @@
     
     .big-mint-btn {
         background: linear-gradient(135deg, var(--base-blue) 0%, var(--cerulean) 100%);
-        color: white; font-size: 24px; font-weight: 900;
-        padding: 24px 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.25);
+        color: white; font-size: 18px; font-weight: 800;
+        padding: 16px 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25);
         width: 100%; cursor: pointer;
-        box-shadow: 0 10px 50px rgba(0, 0, 255, 0.35);
+        box-shadow: 0 10px 40px rgba(0, 0, 255, 0.3);
         transition: transform 0.2s var(--ease-base), box-shadow 0.2s var(--ease-base), filter 0.2s var(--ease-base);
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        text-transform: uppercase; letter-spacing: 1.5px;
+        display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px;
+        text-transform: uppercase; letter-spacing: 0.06em;
+        white-space: nowrap;
         position: relative; overflow: hidden;
         margin-top: 10px;
+        line-height: 1.2;
+    }
+    .big-mint-btn > span {
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        white-space: nowrap;
     }
     .big-mint-btn:before {
         content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         background: linear-gradient(to bottom, rgba(255,255,255,0.2), transparent);
+        pointer-events: none;
     }
-    .big-mint-btn:hover:not(:disabled) { transform: translateY(-5px) scale(1.03); box-shadow: 0 20px 60px rgba(60, 138, 255, 0.5); }
-    .big-mint-btn:active:not(:disabled) { transform: scale(0.97); }
+    .big-mint-btn:hover:not(:disabled) { transform: translateY(-3px) scale(1.02); box-shadow: 0 16px 48px rgba(60, 138, 255, 0.45); }
+    .big-mint-btn:active:not(:disabled) { transform: scale(0.98); }
     .big-mint-btn:disabled { 
         background: #334155; color: #94a3b8; 
         cursor: not-allowed; box-shadow: none; border-color: transparent;
