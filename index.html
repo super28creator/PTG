@@ -13896,7 +13896,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       throw new Error("Timed out waiting for wallet_sendCalls confirmation.");
   }
 
-  /** Musi być identyczny z `buildMintMessage` w `api/ptg-trophy-mint.js`. */
+  /** Musi być identyczny z `buildMintMessage` w `lib/ptg-sponsored-trophy-mint.js`. */
   function ptgTrophyMintSignMessage(minterAddr, metadataUri, issuedAt) {
       return (
           "Phrase To Guess — trophy mint (Base)\n" +
