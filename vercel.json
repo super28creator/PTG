@@ -29,6 +29,9 @@
     "api/ptg-referral-payout.js": {
       "includeFiles": "lib/**",
       "maxDuration": 60
+    },
+    "api/ptg-trophy-mint.js": {
+      "maxDuration": 60
     }
   },
   "headers": [
