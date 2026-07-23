@@ -14705,7 +14705,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   embedded && provider === embedded && typeof provider.request === "function";
               const singlePromptWalletMode = strictSingleTxPrompt || !isEmbeddedWallet;
 
-              /* Base App / Farcaster SCW: najpierw wallet_sendCalls (natywny UI). */
+              /* Base App SCW: najpierw wallet_sendCalls (natywny UI). Nie na Farcaster. */
               if (preferRelayFirst && isEmbeddedWallet && accounts[0] && ptgShouldPreferWalletSendCalls()) {
                   try {
                       setStatus("Confirm in Base wallet…", "#94a3b8");
@@ -14732,7 +14732,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   }
               }
 
-              /* Base App / embedded: podpis + relay — omija często wolny pierwszy eth_sendTransaction. */
+              /* Embedded: podpis + relay — omija często wolny pierwszy eth_sendTransaction. */
               if (preferRelayFirst && isEmbeddedWallet && accounts[0] && !didSendMintTxRequest) {
                   try {
                       setStatus("Sign — submitting via PhraseToGuess…", "#94a3b8");
@@ -15073,6 +15073,9 @@ async function ptgRefreshIdentityAliasesFromDb() {
       if (err == null) return "Failed.";
       const m = typeof err.message === "string" ? err.message.trim() : "";
       if (!m || /^failed\.?$/i.test(m)) return "Failed.";
+      if (ptgIsUnsupportedWalletMethod(err) || /unknown provider rpc/i.test(m)) {
+          return "Wallet could not send the mint. Reopen the mini app and try again.";
+      }
       if (m.length > 140) return m.slice(0, 137) + "…";
       return m;
   }
