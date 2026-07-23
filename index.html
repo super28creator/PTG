@@ -2562,34 +2562,50 @@
         background: #0a0e1b;
         background-attachment: scroll;
     }
-    /* Podczas sheetu portfela: display:none (NIE opacity:0) — niewidoczny
-     * ale nadal `display:flex; position:fixed` warstwa w Farcaster PC
-     * maluje się na szaro/biało za native Approve UI. */
-    html[data-ptg-wallet-sheet="1"] .modal-overlay {
-        display: none !important;
-        opacity: 0 !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
+    html[data-ptg-host="farcaster"],
+    html[data-ptg-host="base"] {
+        color-scheme: dark;
+        background: #0a0e1b !important;
     }
+    /* Na czas sheetu portfela NIE chowamy overlayów (display:none zostawiało
+     * pusty iframe → Farcaster PC malował jasnoszare tło). Zostawiamy UI
+     * widoczne, tylko solidne ciemne tło bez blur. */
     html[data-ptg-wallet-sheet="1"],
     html[data-ptg-wallet-sheet="1"] body {
         background: #0a0e1b !important;
         background-image: none !important;
+        color-scheme: dark;
     }
-    /* Pełnoekranowy, nieprzezroczysty fill — webview zawsze ma ciemne piksele
-     * pod sheetem hosta (nawet gdy UI gry jest przykryte / schowane). */
+    html[data-ptg-wallet-sheet="1"] .modal-overlay {
+        display: flex !important;
+        background: #0a0e1b !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    html[data-ptg-wallet-sheet="1"] .modal-overlay:not(.show) {
+        display: none !important;
+    }
+    /* Widoczny „waiting” panel — hostowi zostaje co sfotografować (ciemne),
+     * zamiast pustego szarego placeholdera. */
     #ptgWalletSheetFill {
         display: none;
         position: fixed;
         inset: 0;
-        z-index: 2147483000;
+        z-index: 100000;
         background: #0a0e1b;
+        color: #94a3b8;
+        font: 600 14px/1.4 var(--font-main), system-ui, sans-serif;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 24px;
         pointer-events: none;
+        letter-spacing: 0.02em;
     }
     html[data-ptg-wallet-sheet="1"] #ptgWalletSheetFill {
-        display: block;
+        display: flex;
     }
     .bug-report-card {
         max-width: 640px;
@@ -9173,17 +9189,14 @@ async function ptgRefreshIdentityAliasesFromDb() {
    * in wallet…" w nieskończoność.
    */
   /**
-   * Farcaster/Base PC: pełnoekranowy `.modal-overlay` (referral / victory)
-   * pod natywnym sheetem portfela maluje się na biało/szaro. Na czas RPC:
-   *  - zdejmujemy klasę `.show` (display:none zamiast opacity:0),
-   *  - dokładamy solidny ciemny fill,
-   *  - przywracamy overlaye po powrocie.
+   * Farcaster/Base PC: native Approve sheet. NIE chowamy overlayów
+   * (pusty iframe = jasnoszare tło hosta). Zamiast tego: solidne ciemne
+   * tło + widoczny fill „Confirm in wallet…”, żeby snapshot hosta był ciemny.
    */
   async function ptgWhileWalletHostSheet(asyncFn) {
       const root = document.documentElement;
       const depth = (window.__ptgWalletSheetDepth || 0) + 1;
       window.__ptgWalletSheetDepth = depth;
-      let pausedOverlays = null;
       try {
           try {
               if (ptgHost === "farcaster" || ptgHost === "base") {
@@ -9197,22 +9210,24 @@ async function ptgRefreshIdentityAliasesFromDb() {
           } catch (_) {}
 
           if (depth === 1) {
-              pausedOverlays = [];
               try {
+                  root.style.background = "#0a0e1b";
+                  root.style.backgroundColor = "#0a0e1b";
+                  root.style.colorScheme = "dark";
+                  if (document.body) {
+                      document.body.style.background = "#0a0e1b";
+                      document.body.style.backgroundColor = "#0a0e1b";
+                      document.body.style.backgroundImage = "none";
+                  }
                   const nodes = document.querySelectorAll(".modal-overlay.show");
                   for (let i = 0; i < nodes.length; i++) {
                       const el = nodes[i];
-                      if (!el || !el.id) continue;
-                      /* loadingScreen i tak znika — nie ruszamy. */
-                      if (el.id === "loadingScreen") continue;
-                      el.classList.remove("show");
-                      el.setAttribute("aria-hidden", "true");
-                      pausedOverlays.push(el.id);
+                      if (!el) continue;
+                      el.style.background = "#0a0e1b";
+                      el.style.backdropFilter = "none";
+                      el.style.webkitBackdropFilter = "none";
                   }
-                  window.__ptgWalletSheetPausedOverlays = pausedOverlays;
-              } catch (_) {
-                  pausedOverlays = [];
-              }
+              } catch (_) {}
               try {
                   let fill = document.getElementById("ptgWalletSheetFill");
                   if (!fill) {
@@ -9221,6 +9236,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       fill.setAttribute("aria-hidden", "true");
                       document.body.appendChild(fill);
                   }
+                  fill.textContent = "Confirm in wallet…";
               } catch (_) {}
           }
 
@@ -9228,13 +9244,16 @@ async function ptgRefreshIdentityAliasesFromDb() {
           try {
               void root.offsetHeight;
           } catch (_) {}
+          /* Daj compositorowi czas na ciemny paint zanim host zrobi snapshot. */
           await new Promise(function (resolve) {
               try {
                   requestAnimationFrame(function () {
-                      requestAnimationFrame(resolve);
+                      requestAnimationFrame(function () {
+                          setTimeout(resolve, 80);
+                      });
                   });
               } catch (_) {
-                  setTimeout(resolve, 32);
+                  setTimeout(resolve, 120);
               }
           });
           return await asyncFn();
@@ -9243,20 +9262,20 @@ async function ptgRefreshIdentityAliasesFromDb() {
           if (!window.__ptgWalletSheetDepth) {
               try {
                   root.removeAttribute("data-ptg-wallet-sheet");
+                  root.style.background = "";
+                  root.style.backgroundColor = "";
+                  root.style.colorScheme = "";
+                  if (document.body) {
+                      document.body.style.background = "";
+                      document.body.style.backgroundColor = "";
+                      document.body.style.backgroundImage = "";
+                  }
+                  document.querySelectorAll(".modal-overlay").forEach(function (el) {
+                      el.style.background = "";
+                      el.style.backdropFilter = "";
+                      el.style.webkitBackdropFilter = "";
+                  });
               } catch (_) {}
-              const toRestore =
-                  pausedOverlays ||
-                  window.__ptgWalletSheetPausedOverlays ||
-                  [];
-              window.__ptgWalletSheetPausedOverlays = null;
-              for (let i = 0; i < toRestore.length; i++) {
-                  try {
-                      const el = document.getElementById(toRestore[i]);
-                      if (!el) continue;
-                      el.classList.add("show");
-                      el.setAttribute("aria-hidden", "false");
-                  } catch (_) {}
-              }
           }
       }
   }
