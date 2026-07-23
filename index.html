@@ -9881,37 +9881,36 @@ async function ptgRefreshIdentityAliasesFromDb() {
   }
 
   /**
-   * Konsolidacja przed wypłatą: UI sumuje pending ze WSZYSTKICH aliasów
-   * tożsamości (profil FC, stare 0x, obecny portfel), ale wypłata idzie
-   * tylko z wpisu `summary/{claimUserId}`. Bez tej konsolidacji user widział
-   * np. 0.89$, a na łańcuch szło 0.015$. Zwraca listę ruchów do rollbacku.
+   * Przed wypłatą na Farcasterze: przenieś TYLKO pending bieżącego profilu
+   * (sourceUserId) na portfel claimu. NIE scalamy innych aliasów (Base App /
+   * MetaMask / stare 0x) — każde konto ma osobny system referral.
    */
-  async function ptgConsolidateReferralPendingForClaim(walletUserId) {
+  async function ptgPrepareClaimPendingForWallet(sourceUserId, walletUserId) {
+      const src = String(sourceUserId || "").trim();
       const dst = String(walletUserId || "").trim().toLowerCase();
-      if (!/^0x[a-fA-F0-9]{40}$/.test(dst)) return [];
-      const ids = new Set();
+      if (!src || !/^0x[a-fA-F0-9]{40}$/.test(dst)) return [];
+      if (src.toLowerCase() === dst) return [];
+      /* Tylko gdy źródło to profil FC / nie-0x — nie ruszamy innych portfeli. */
+      if (/^0x[a-fA-F0-9]{40}$/.test(src)) return [];
       try {
-          ptgGetMyIdentityAliasesLc().forEach(function (a) {
-              const s = String(a || "").trim().toLowerCase();
-              if (s && s !== "guest") ids.add(s);
-          });
-      } catch (_) {}
-      const me = String(myUserId || "").trim().toLowerCase();
-      if (me && me !== "guest") ids.add(me);
-      ids.delete(dst);
-      const moves = [];
-      for (const src of ids) {
-          try {
-              const r = await ptgBridgeReferralPendingToWallet(src, dst);
-              if (r && Number(r.moved) > 0) {
-                  moves.push({ src, moved: Number(r.moved) });
-              }
-          } catch (e) {
-              console.warn("[ptg-claim] consolidate bridge failed", src, e);
+          const r = await ptgBridgeReferralPendingToWallet(src, dst);
+          if (r && Number(r.moved) > 0) {
+              console.info("[ptg-claim] bridged active profile only", {
+                  src,
+                  dst,
+                  moved: Number(r.moved),
+              });
+              return [{ src, moved: Number(r.moved) }];
           }
+      } catch (e) {
+          console.warn("[ptg-claim] profile→wallet bridge failed", src, e);
       }
-      if (moves.length) console.info("[ptg-claim] consolidated", moves);
-      return moves;
+      return [];
+  }
+
+  /** @deprecated — dawna konsolidacja WSZYSTKICH aliasów scalała FC+Base+MM w jeden claim. */
+  async function ptgConsolidateReferralPendingForClaim(walletUserId) {
+      return ptgPrepareClaimPendingForWallet(myUserId, walletUserId);
   }
 
   /** Cofnięcie bridge (FC -> wallet) gdy claim nie doszedł do wysłania tx. */
@@ -10124,13 +10123,23 @@ async function ptgRefreshIdentityAliasesFromDb() {
               return;
           }
       }
-      /* Zbierz pending ze wszystkich aliasów na portfel claimu — kwota
-       * podpisu/wypłaty ma się równać saldu pokazywanemu w UI. */
+      /* Z Farcaster profilu → tylko TEN profil na portfel claimu.
+       * Nie scalamy pending z Base App / MetaMask (osobne konta referral). */
       if (/^0x[a-fA-F0-9]{40}$/.test(claimUserId)) {
           try {
-              bridgedMoves = await ptgConsolidateReferralPendingForClaim(claimUserId);
+              if (!/^0x[a-fA-F0-9]{40}$/.test(String(sourceUserId || ""))) {
+                  bridgedMoves = await ptgPrepareClaimPendingForWallet(
+                      sourceUserId,
+                      claimUserId
+                  );
+                  if (bridgedMoves.length && bridgedMoves[0].moved > 0) {
+                      bridgedSourceUserId = sourceUserId;
+                      bridgedWalletUserId = claimUserId;
+                      bridgedAmountCents = Number(bridgedMoves[0].moved) || 0;
+                  }
+              }
           } catch (eCons) {
-              console.warn("[ptg-claim] consolidation failed", eCons);
+              console.warn("[ptg-claim] profile prepare failed", eCons);
           }
       }
       /* RESUME-FIRST: server może mieć ciągle ważny `claim_outstanding` po
@@ -11276,7 +11285,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
       return best;
   }
 
-  /** Odśwież saldo/przycisk Claim z profilu + aliasów 0x (BEZ abort outstanding). */
+  /** Odśwież saldo/przycisk Claim TYLKO dla aktywnego konta (myUserId).
+   *  Aliasów FC/Base/MetaMask NIE sumujemy — osobne systemy referral. */
   async function ptgReferralRefreshClaimableBalanceUi(extraIds, opts) {
       const o = opts && typeof opts === "object" ? opts : {};
       const summaryIds = new Set();
@@ -11285,17 +11295,10 @@ async function ptgRefreshIdentityAliasesFromDb() {
           if (s) summaryIds.add(s.toLowerCase());
       };
       add(myUserId);
-      try {
-          ptgGetMyIdentityAliasesLc().forEach(add);
-      } catch (_) {}
+      /* extraIds tylko gdy caller świadomie podaje bieżący claim wallet /
+       * profil — nie dokładamy całej siatki aliasów. */
       if (Array.isArray(extraIds)) {
           for (let i = 0; i < extraIds.length; i++) add(extraIds[i]);
-      }
-      if (!o.skipWalletLookup) {
-          try {
-              const wallets = await ptgReferralWalletIdsForHeal();
-              for (let i = 0; i < wallets.length; i++) add(wallets[i]);
-          } catch (_) {}
       }
 
       let outstandingCents = 0;
@@ -11885,29 +11888,9 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
           if (isBaseApp) {
               ptgHost = "base";
-              /* WAŻNE: w Base App preferujemy wallet 0x tak jak na webie.
-               * Dzięki temu user ma ten sam `myUserId` wszędzie — pendingReward /
-               * invite_entries / claim history siedzą pod jednym kluczem, zamiast
-               * rozsypywać się pomiędzy `@username` (Base App) a `0x…` (web/mint).
-               * Farcaster profile działa jako fallback, gdy embedded wallet nie
-               * jest od razu gotowy — i dodatkowo zawsze ZAPAMIĘTUJEMY FC
-               * tożsamość jako alias identity (do wykrywania cross-platform
-               * atrybucji i zgodności ze starymi danymi). */
-              if (ctx.user && ctx.user.username) {
-                  try {
-                      const fcAlias = String(ctx.user.username)
-                          .replace(/^@/, "")
-                          .replace(/[^a-zA-Z0-9]/g, "")
-                          .toLowerCase();
-                      if (fcAlias) ptgRememberIdentityAlias(fcAlias);
-                  } catch (_) {}
-              }
-              if (ctx.user && ctx.user.fid != null && String(ctx.user.fid).length > 0) {
-                  try {
-                      const fidAlias = "fcfid" + String(ctx.user.fid).replace(/\D/g, "");
-                      if (fidAlias.length > "fcfid".length) ptgRememberIdentityAlias(fidAlias);
-                  } catch (_) {}
-              }
+              /* Base App = tożsamość po portfelu 0x (osobny system referral).
+               * NIE linkujemy profilu FC jako alias pieniężny — inaczej claim
+               * scalał saldo Base + Farcaster w jedną wypłatę. */
               try {
                   const fe = getEmbeddedEthProvider();
                   if (fe) {
@@ -11921,7 +11904,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               } catch (e) {
                   console.warn("Base eth_accounts", e);
               }
-              /* Wallet niedostępny — fallback do profilu Farcaster (tak jak dawniej). */
+              /* Wallet niedostępny — fallback do profilu Farcaster (osobne konto). */
               try {
                   if (ctx.user && (ctx.user.username || ctx.user.fid != null)) {
                       if (applyFarcasterProfileUser(ctx.user, true)) return;
