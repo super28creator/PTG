@@ -2567,6 +2567,21 @@
         color-scheme: dark;
         background: #0a0e1b !important;
     }
+    /* Warpcast wstrzykuje do iframe klasy bg-app / bg-muted (jasne tło hosta).
+     * Zawsze nadpisujemy je ciemnym kolorem appki. */
+    html.bg-app,
+    html.bg-muted,
+    html.bg-mutted,
+    body.bg-app,
+    body.bg-muted,
+    body.bg-mutted,
+    .bg-app,
+    .bg-muted,
+    .bg-mutted {
+        background: #0a0e1b !important;
+        background-color: #0a0e1b !important;
+        background-image: none !important;
+    }
     /* Na czas sheetu portfela: pełnoekranowe ciemne tło (bez tekstu na środku —
      * natywny Confirm TX Farcastera zasłania środek/dół i psuje napisy).
      * Branding tylko w górnej 1/3, nad sheetem. */
@@ -9297,13 +9312,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
   /**
    * Farcaster/Base PC: native Confirm sheet. Pusty iframe = jasnoszare tło
-   * hosta. Przed personal_sign: ciemne brandowe tło (bez tekstu na środku —
-   * sheet TX zasłania dół i psuje napisy), czekamy na paint.
+   * hosta. Przed personal_sign: ciemne brandowe tło + strip klas bg-muted
+   * (Warpcast je wstrzykuje) + keep-alive paint przez czas RPC.
    */
   async function ptgWhileWalletHostSheet(asyncFn) {
       const root = document.documentElement;
       const depth = (window.__ptgWalletSheetDepth || 0) + 1;
       window.__ptgWalletSheetDepth = depth;
+      let keepAlive = null;
+      let mo = null;
       try {
           try {
               if (ptgHost === "farcaster" || ptgHost === "base") {
@@ -9316,6 +9333,20 @@ async function ptgRefreshIdentityAliasesFromDb() {
               }
           } catch (_) {}
 
+          function ptgStripHostBgClasses() {
+              try {
+                  const kill = ["bg-app", "bg-muted", "bg-mutted"];
+                  [root, document.body].forEach(function (el) {
+                      if (!el || !el.classList) return;
+                      for (let i = 0; i < kill.length; i++) {
+                          try {
+                              el.classList.remove(kill[i]);
+                          } catch (_) {}
+                      }
+                  });
+              } catch (_) {}
+          }
+
           if (depth === 1) {
               try {
                   root.style.background = "#0a0e1b";
@@ -9327,6 +9358,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       document.body.style.backgroundImage = "none";
                       document.body.style.backgroundAttachment = "scroll";
                   }
+                  ptgStripHostBgClasses();
               } catch (_) {}
               try {
                   ptgPaintWalletSheetFill();
@@ -9337,22 +9369,56 @@ async function ptgRefreshIdentityAliasesFromDb() {
           try {
               void root.offsetHeight;
               ptgPaintWalletSheetFill();
+              ptgStripHostBgClasses();
           } catch (_) {}
+
+          if (depth === 1) {
+              try {
+                  mo = new MutationObserver(function () {
+                      ptgStripHostBgClasses();
+                      root.setAttribute("data-ptg-wallet-sheet", "1");
+                  });
+                  mo.observe(root, { attributes: true, attributeFilter: ["class"] });
+                  if (document.body) {
+                      mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+                  }
+              } catch (_) {
+                  mo = null;
+              }
+              try {
+                  keepAlive = setInterval(function () {
+                      try {
+                          root.setAttribute("data-ptg-wallet-sheet", "1");
+                          ptgStripHostBgClasses();
+                          ptgPaintWalletSheetFill();
+                      } catch (_) {}
+                  }, 400);
+              } catch (_) {
+                  keepAlive = null;
+              }
+          }
+
           await new Promise(function (resolve) {
               try {
                   requestAnimationFrame(function () {
                       requestAnimationFrame(function () {
-                          setTimeout(resolve, 280);
+                          setTimeout(resolve, 200);
                       });
                   });
               } catch (_) {
-                  setTimeout(resolve, 350);
+                  setTimeout(resolve, 250);
               }
           });
           return await asyncFn();
       } finally {
           window.__ptgWalletSheetDepth = Math.max(0, (window.__ptgWalletSheetDepth || 1) - 1);
           if (!window.__ptgWalletSheetDepth) {
+              try {
+                  if (keepAlive) clearInterval(keepAlive);
+              } catch (_) {}
+              try {
+                  if (mo) mo.disconnect();
+              } catch (_) {}
               try {
                   root.removeAttribute("data-ptg-wallet-sheet");
                   root.style.background = "";
@@ -10358,49 +10424,122 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   signer = null;
               }
               const signMsg = ptgReferralPayoutSignMessage(claimUserId, claimAmount);
-              let signature;
-              try {
-                  signature = await ptgSignReferralClaimMessageWithFallback(
-                      prov,
-                      signer,
-                      addr,
-                      signMsg,
-                      claimTraceId
-                  );
-              } catch (eSig) {
-                  console.warn("[ptg-claim] sign failed", eSig);
-                  ptgClaimDebug(claimTraceId, "claim.sign.err", eSig);
-                  if (msg) {
-                      msg.textContent =
-                          (eSig && eSig.message ? String(eSig.message) : null) ||
-                          "Wallet did not respond to the sign prompt. Reopen the app and try again.";
+              let signature = null;
+              let fcAuthToken = null;
+              /*
+               * Farcaster/Base: personal_sign otwiera native „Confirm transaction"
+               * i host zasłania iframe jasnoszarym tłem. Quick Auth JWT omija
+               * ten sheet — treasury i tak wysyła USDC (execute:true).
+               */
+              if (
+                  (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface) &&
+                  sdk &&
+                  sdk.quickAuth &&
+                  typeof sdk.quickAuth.getToken === "function"
+              ) {
+                  try {
+                      if (msg) msg.textContent = "Confirming with Farcaster…";
+                      ptgClaimDebug(claimTraceId, "claim.fc_auth.start");
+                      const tok = await withTimeout(
+                          sdk.quickAuth.getToken(),
+                          45000,
+                          "quickAuth.getToken"
+                      );
+                      fcAuthToken =
+                          tok && typeof tok.token === "string"
+                              ? tok.token
+                              : typeof tok === "string"
+                                ? tok
+                                : null;
+                      if (fcAuthToken) {
+                          ptgClaimDebug(claimTraceId, "claim.fc_auth.ok");
+                      }
+                  } catch (eFc) {
+                      console.warn("[ptg-claim] quickAuth failed, fallback to wallet sign", eFc);
+                      ptgClaimDebug(claimTraceId, "claim.fc_auth.err", eFc);
+                      fcAuthToken = null;
                   }
-                  return;
               }
-              console.info("[ptg-claim] signed");
-              ptgClaimDebug(claimTraceId, "claim.sign.ok");
+              if (!fcAuthToken) {
+                  try {
+                      if (msg) msg.textContent = "Confirm in wallet…";
+                      signature = await ptgSignReferralClaimMessageWithFallback(
+                          prov,
+                          signer,
+                          addr,
+                          signMsg,
+                          claimTraceId
+                      );
+                  } catch (eSig) {
+                      console.warn("[ptg-claim] sign failed", eSig);
+                      ptgClaimDebug(claimTraceId, "claim.sign.err", eSig);
+                      if (msg) {
+                          msg.textContent =
+                              (eSig && eSig.message ? String(eSig.message) : null) ||
+                              "Wallet did not respond to the sign prompt. Reopen the app and try again.";
+                      }
+                      return;
+                  }
+                  console.info("[ptg-claim] signed");
+                  ptgClaimDebug(claimTraceId, "claim.sign.ok");
+              }
               const origin =
                   typeof location !== "undefined" && location.origin ? location.origin : "";
               if (msg) msg.textContent = "Sending USDC payout…";
               let res, j;
-              try {
-                  res = await fetchWithTimeout(
+              async function ptgPostClaimAuth(authPayload) {
+                  const r = await fetchWithTimeout(
                       origin + "/api/ptg-referral-payout",
                       {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                              userId: claimUserId,
-                              claimAmountCents: claimAmount,
-                              signature,
-                              /* Treasury wysyła TWA — bez eth_sendTransaction w portfelu
-                               * (Farcaster SCW + Base App „fraud” warning). */
-                              execute: true,
-                          }),
+                          body: JSON.stringify(
+                              Object.assign(
+                                  {
+                                      userId: claimUserId,
+                                      claimAmountCents: claimAmount,
+                                      execute: true,
+                                  },
+                                  authPayload
+                              )
+                          ),
                       },
                       60000
                   );
-                  j = await res.json().catch(() => null);
+                  const bodyJson = await r.json().catch(() => null);
+                  return { res: r, j: bodyJson };
+              }
+              try {
+                  if (fcAuthToken) {
+                      const first = await ptgPostClaimAuth({ fcAuthToken: fcAuthToken });
+                      res = first.res;
+                      j = first.j;
+                      /* JWT OK, ale portfel nie w Neynar → personal_sign fallback. */
+                      if (
+                          (!res || !res.ok) &&
+                          j &&
+                          j.error === "signer_mismatch" &&
+                          j.mode === "fc_quick_auth"
+                      ) {
+                          ptgClaimDebug(claimTraceId, "claim.fc_auth.server_reject_fallback", j);
+                          fcAuthToken = null;
+                          if (msg) msg.textContent = "Confirm in wallet…";
+                          signature = await ptgSignReferralClaimMessageWithFallback(
+                              prov,
+                              signer,
+                              addr,
+                              signMsg,
+                              claimTraceId
+                          );
+                          const second = await ptgPostClaimAuth({ signature: signature });
+                          res = second.res;
+                          j = second.j;
+                      }
+                  } else {
+                      const only = await ptgPostClaimAuth({ signature: signature });
+                      res = only.res;
+                      j = only.j;
+                  }
               } catch (eFetch) {
                   console.warn("[ptg-claim] quote fetch failed", eFetch);
                   ptgClaimDebug(claimTraceId, "claim.quote.fetch.err", eFetch);
