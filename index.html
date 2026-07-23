@@ -10426,41 +10426,78 @@ async function ptgRefreshIdentityAliasesFromDb() {
               const signMsg = ptgReferralPayoutSignMessage(claimUserId, claimAmount);
               let signature = null;
               let fcAuthToken = null;
+              let fcSignInMessage = null;
+              let fcSignInSignature = null;
+              const preferFcAuthNoWalletSheet =
+                  ptgHost === "farcaster" ||
+                  ptgHost === "base" ||
+                  !!ptgInMiniAppSurface;
               /*
-               * Farcaster/Base: personal_sign otwiera native „Confirm transaction"
-               * i host zasłania iframe jasnoszarym tłem. Quick Auth JWT omija
-               * ten sheet — treasury i tak wysyła USDC (execute:true).
+               * Farcaster/Base: personal_sign = native „Confirm transaction" +
+               * jasnoszare tło hosta nad iframe. Na mini-appie NIE używamy
+               * personal_sign — tylko Quick Auth / SIWF (bez payout message).
                */
-              if (
-                  (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface) &&
-                  sdk &&
-                  sdk.quickAuth &&
-                  typeof sdk.quickAuth.getToken === "function"
-              ) {
+              if (preferFcAuthNoWalletSheet && sdk) {
                   try {
                       if (msg) msg.textContent = "Confirming with Farcaster…";
                       ptgClaimDebug(claimTraceId, "claim.fc_auth.start");
-                      const tok = await withTimeout(
-                          sdk.quickAuth.getToken(),
-                          45000,
-                          "quickAuth.getToken"
-                      );
-                      fcAuthToken =
-                          tok && typeof tok.token === "string"
-                              ? tok.token
-                              : typeof tok === "string"
-                                ? tok
-                                : null;
-                      if (fcAuthToken) {
-                          ptgClaimDebug(claimTraceId, "claim.fc_auth.ok");
+                      const qa = sdk.quickAuth;
+                      if (qa && typeof qa.getToken === "function") {
+                          const tok = await withTimeout(
+                              qa.getToken({ force: false }),
+                              45000,
+                              "quickAuth.getToken"
+                          );
+                          fcAuthToken =
+                              tok && typeof tok.token === "string"
+                                  ? tok.token
+                                  : typeof tok === "string"
+                                    ? tok
+                                    : null;
+                      } else if (qa && typeof qa.token === "string" && qa.token) {
+                          fcAuthToken = qa.token;
+                      }
+                      if (!fcAuthToken && sdk.actions && typeof sdk.actions.signIn === "function") {
+                          const nonce =
+                              Math.random().toString(36).slice(2) +
+                              Date.now().toString(36);
+                          const cred = await withTimeout(
+                              sdk.actions.signIn({
+                                  nonce: nonce,
+                                  acceptAuthAddress: true,
+                              }),
+                              45000,
+                              "actions.signIn"
+                          );
+                          if (cred && cred.message && cred.signature) {
+                              fcSignInMessage = String(cred.message);
+                              fcSignInSignature = String(cred.signature);
+                          }
+                      }
+                      if (fcAuthToken || (fcSignInMessage && fcSignInSignature)) {
+                          ptgClaimDebug(claimTraceId, "claim.fc_auth.ok", {
+                              via: fcAuthToken ? "quickAuth" : "signIn",
+                          });
+                      } else {
+                          ptgClaimDebug(claimTraceId, "claim.fc_auth.empty");
                       }
                   } catch (eFc) {
-                      console.warn("[ptg-claim] quickAuth failed, fallback to wallet sign", eFc);
+                      console.warn("[ptg-claim] FC auth failed", eFc);
                       ptgClaimDebug(claimTraceId, "claim.fc_auth.err", eFc);
                       fcAuthToken = null;
+                      fcSignInMessage = null;
+                      fcSignInSignature = null;
                   }
               }
-              if (!fcAuthToken) {
+              if (!fcAuthToken && !(fcSignInMessage && fcSignInSignature)) {
+                  if (preferFcAuthNoWalletSheet) {
+                      /* Świadomie BEZ personal_sign — unikamy białego tła Confirm TX. */
+                      if (msg) {
+                          msg.textContent =
+                              "Could not confirm with Farcaster. Close and reopen the mini app, then try Claim again.";
+                      }
+                      return;
+                  }
                   try {
                       if (msg) msg.textContent = "Confirm in wallet…";
                       signature = await ptgSignReferralClaimMessageWithFallback(
@@ -10510,36 +10547,19 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   return { res: r, j: bodyJson };
               }
               try {
-                  if (fcAuthToken) {
-                      const first = await ptgPostClaimAuth({ fcAuthToken: fcAuthToken });
-                      res = first.res;
-                      j = first.j;
-                      /* JWT OK, ale portfel nie w Neynar → personal_sign fallback. */
-                      if (
-                          (!res || !res.ok) &&
-                          j &&
-                          j.error === "signer_mismatch" &&
-                          j.mode === "fc_quick_auth"
-                      ) {
-                          ptgClaimDebug(claimTraceId, "claim.fc_auth.server_reject_fallback", j);
-                          fcAuthToken = null;
-                          if (msg) msg.textContent = "Confirm in wallet…";
-                          signature = await ptgSignReferralClaimMessageWithFallback(
-                              prov,
-                              signer,
-                              addr,
-                              signMsg,
-                              claimTraceId
-                          );
-                          const second = await ptgPostClaimAuth({ signature: signature });
-                          res = second.res;
-                          j = second.j;
-                      }
+                  let authPayload;
+                  if (fcAuthToken) authPayload = { fcAuthToken: fcAuthToken };
+                  else if (fcSignInMessage && fcSignInSignature) {
+                      authPayload = {
+                          fcSignInMessage: fcSignInMessage,
+                          fcSignInSignature: fcSignInSignature,
+                      };
                   } else {
-                      const only = await ptgPostClaimAuth({ signature: signature });
-                      res = only.res;
-                      j = only.j;
+                      authPayload = { signature: signature };
                   }
+                  const posted = await ptgPostClaimAuth(authPayload);
+                  res = posted.res;
+                  j = posted.j;
               } catch (eFetch) {
                   console.warn("[ptg-claim] quote fetch failed", eFetch);
                   ptgClaimDebug(claimTraceId, "claim.quote.fetch.err", eFetch);

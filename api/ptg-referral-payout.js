@@ -241,6 +241,10 @@ function buildClaimMessage(userId, claimAmountCents) {
 /**
  * Farcaster Quick Auth JWT → FID. Omija personal_sign / „Confirm transaction"
  * (desktop FC maluje wtedy jasnoszare tło nad iframe).
+ *
+ * Mini-app eth provider bywa SCW innym niż custody/primary w Neynar —
+ * NIE wymagamy matcha adresu. JWT + claim na własne pending (to=userId)
+ * wystarczy: atakujący z JWT nie może przekierować USDC na swój portfel.
  */
 async function verifyFcQuickAuthToken(token) {
   const raw = typeof token === "string" ? token.trim() : "";
@@ -267,72 +271,69 @@ async function verifyFcQuickAuthToken(token) {
   }
 }
 
-/** Adresy ETH powiązane z FID (custody + verified) przez Neynar. */
-async function fetchFidLinkedEthAddresses(fid) {
-  const out = new Set();
-  const nk = process.env.NEYNAR_API_KEY;
-  if (!nk || typeof nk !== "string" || nk.length < 5) return out;
+/** Opcjonalnie: SIWF z sdk.actions.signIn (gdy quickAuth niedostępne). */
+async function verifyFcSignInCredential(message, signature) {
+  const msg = typeof message === "string" ? message : "";
+  const sig = typeof signature === "string" ? signature : "";
+  if (!msg || !sig) return { ok: false, reason: "missing_siwf" };
   try {
-    const url =
-      "https://api.neynar.com/v2/farcaster/user/bulk?fids=" +
-      encodeURIComponent(String(fid));
-    const r = await fetch(url, {
-      headers: { accept: "application/json", "x-api-key": nk },
+    const { createClient } = require("@farcaster/quick-auth");
+    const client = createClient();
+    const result = await client.verifySiwf({
+      domain: "phrasetoguess.xyz",
+      message: msg,
+      signature: sig,
     });
-    if (!r.ok) return out;
-    const j = await r.json();
-    const users = Array.isArray(j && j.users) ? j.users : [];
-    const u = users[0];
-    if (!u) return out;
-    const add = (a) => {
-      if (typeof a === "string" && /^0x[a-fA-F0-9]{40}$/.test(a)) {
-        try {
-          out.add(getAddress(a).toLowerCase());
-        } catch (_) {
-          out.add(a.toLowerCase());
-        }
-      }
-    };
-    add(u.custody_address);
-    const va = u.verified_addresses || {};
-    if (Array.isArray(va.eth_addresses)) va.eth_addresses.forEach(add);
-    if (va.primary && va.primary.eth_address) add(va.primary.eth_address);
-    if (Array.isArray(u.verified_addresses)) {
-      /* starszy kształt odpowiedzi */
+    /* verifySiwf może zwrócić token albo payload — wyciągnij FID. */
+    let fid = NaN;
+    if (result && result.token) {
+      const jwt = await verifyFcQuickAuthToken(result.token);
+      if (jwt.ok) return { ok: true, fid: jwt.fid, mode: "fc_siwf" };
+      return { ok: false, reason: jwt.reason };
     }
+    if (result && result.sub != null) fid = Number(result.sub);
+    if (result && result.fid != null) fid = Number(result.fid);
+    if (!Number.isInteger(fid) || fid <= 0) {
+      return { ok: false, reason: "siwf_no_fid" };
+    }
+    return { ok: true, fid, mode: "fc_siwf" };
   } catch (e) {
-    console.warn("[claim-fc] neynar addresses", e && e.message);
+    return {
+      ok: false,
+      reason: "siwf_invalid:" + String((e && e.message) || e || "verify_failed"),
+    };
   }
-  return out;
 }
 
-async function verifyFcAuthForClaimWallet(fcAuthToken, userId) {
-  const jwt = await verifyFcQuickAuthToken(fcAuthToken);
-  if (!jwt.ok) return { ok: false, mode: "fc_quick_auth", reason: jwt.reason };
-  const addrs = await fetchFidLinkedEthAddresses(jwt.fid);
-  if (!addrs.size) {
-    return {
-      ok: false,
-      mode: "fc_quick_auth",
-      reason: "no_linked_addresses",
+async function verifyFcAuthForClaimWallet(body, userId) {
+  const fcAuthToken =
+    typeof body.fcAuthToken === "string"
+      ? body.fcAuthToken
+      : typeof body.fcToken === "string"
+        ? body.fcToken
+        : "";
+  if (fcAuthToken) {
+    const jwt = await verifyFcQuickAuthToken(fcAuthToken);
+    if (!jwt.ok) return { ok: false, mode: "fc_quick_auth", reason: jwt.reason };
+    console.info("[claim-fc] quick_auth ok", {
       fid: jwt.fid,
-    };
+      userId: String(userId || "").toLowerCase(),
+    });
+    return { ok: true, mode: "fc_quick_auth", fid: jwt.fid };
   }
-  let want;
-  try {
-    want = getAddress(userId).toLowerCase();
-  } catch (_) {
-    want = String(userId || "").toLowerCase();
+  if (body.fcSignInMessage && body.fcSignInSignature) {
+    const siwf = await verifyFcSignInCredential(
+      body.fcSignInMessage,
+      body.fcSignInSignature
+    );
+    if (!siwf.ok) return { ok: false, mode: "fc_siwf", reason: siwf.reason };
+    console.info("[claim-fc] siwf ok", {
+      fid: siwf.fid,
+      userId: String(userId || "").toLowerCase(),
+    });
+    return { ok: true, mode: "fc_siwf", fid: siwf.fid };
   }
-  if (!addrs.has(want)) {
-    return {
-      ok: false,
-      mode: "fc_quick_auth",
-      reason: "wallet_not_linked_to_fid",
-      fid: jwt.fid,
-    };
-  }
-  return { ok: true, mode: "fc_quick_auth", fid: jwt.fid };
+  return { ok: false, mode: "fc_auth", reason: "missing_fc_auth" };
 }
 
 /** Sprawdza, czy nonce EIP-3009 został już wykorzystany on-chain. */
@@ -728,12 +729,10 @@ async function handleQuote(req, res, body) {
   const claimAmountCents =
     body.claimAmountCents != null ? Number(body.claimAmountCents) : NaN;
   const signature = typeof body.signature === "string" ? body.signature : "";
-  const fcAuthToken =
-    typeof body.fcAuthToken === "string"
-      ? body.fcAuthToken
-      : typeof body.fcToken === "string"
-        ? body.fcToken
-        : "";
+  const hasFcAuth =
+    !!(typeof body.fcAuthToken === "string" && body.fcAuthToken.trim()) ||
+    !!(typeof body.fcToken === "string" && body.fcToken.trim()) ||
+    !!(body.fcSignInMessage && body.fcSignInSignature);
 
   if (!userId || !/^0x[a-fA-F0-9]{40}$/.test(userId)) {
     return res.status(400).json({
@@ -744,15 +743,15 @@ async function handleQuote(req, res, body) {
   if (!Number.isFinite(claimAmountCents) || claimAmountCents <= 0) {
     return res.status(400).json({ error: "invalid_amount" });
   }
-  if (!signature && !fcAuthToken) {
+  if (!signature && !hasFcAuth) {
     return res.status(400).json({ error: "missing_signature" });
   }
 
   const message = buildClaimMessage(userId, claimAmountCents);
   const rpcUrl = process.env.BASE_RPC_URL || "https://mainnet.base.org";
   let sigCheck;
-  if (fcAuthToken && !signature) {
-    sigCheck = await verifyFcAuthForClaimWallet(fcAuthToken, userId);
+  if (hasFcAuth && !signature) {
+    sigCheck = await verifyFcAuthForClaimWallet(body, userId);
   } else {
     sigCheck = await verifyClaimSignature(userId, message, signature, rpcUrl).catch(
       (e) => ({ ok: false, mode: "none", reason: "verify_threw:" + String(e && e.message) })
@@ -763,7 +762,7 @@ async function handleQuote(req, res, body) {
       userId: String(userId || "").toLowerCase(),
       mode: sigCheck && sigCheck.mode,
       reason: sigCheck && sigCheck.reason,
-      viaFc: !!fcAuthToken && !signature,
+      viaFc: hasFcAuth && !signature,
     });
     return res.status(403).json({
       error: "signer_mismatch",
@@ -1363,7 +1362,7 @@ module.exports = async (req, res) => {
   if (typeof body.op === "string" && body.op.toLowerCase() === "execute") {
     return handleExecute(req, res, body);
   }
-  if (typeof body.txHash === "string" && typeof body.nonce === "string" && !body.signature && !body.fcAuthToken && !body.fcToken) {
+  if (typeof body.txHash === "string" && typeof body.nonce === "string" && !body.signature && !body.fcAuthToken && !body.fcToken && !body.fcSignInMessage) {
     return handleSettle(req, res, body);
   }
   return handleQuote(req, res, body);
