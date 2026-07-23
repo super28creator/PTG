@@ -13897,11 +13897,27 @@ async function ptgRefreshIdentityAliasesFromDb() {
   }
 
   function ptgShouldPreferWalletSendCalls() {
+      /* Tylko Base App / Coinbase Smart Wallet.
+       * Farcaster mini-app host NIE obsługuje EIP-5792 — sdk mapuje to na
+       * dosłownie „Unknown provider RPC error” i psuje mint. */
+      if (ptgHost === "farcaster") return false;
       return (
           ptgHost === "base" ||
-          ptgHost === "farcaster" ||
-          (typeof ptgNotifDetectBaseSurface === "function" && ptgNotifDetectBaseSurface()) ||
-          !!ptgInMiniAppSurface
+          (typeof ptgNotifDetectBaseSurface === "function" && ptgNotifDetectBaseSurface())
+      );
+  }
+
+  function ptgIsUnsupportedWalletMethod(err) {
+      if (!err) return false;
+      const code = err.code;
+      const msg = err && err.message ? String(err.message) : String(err || "");
+      return (
+          code === 4200 ||
+          code === -32601 ||
+          code === "UNSUPPORTED_METHOD" ||
+          /unknown provider rpc|unsupported method|method not (found|supported)|does not exist|wallet_sendCalls|wallet_getCallsStatus/i.test(
+              msg
+          )
       );
   }
 
@@ -14907,8 +14923,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
           } catch (chainErr) {
               throw new Error("Switch wallet network to Base and try again.");
           }
-          /* Trofeum: w Base/Farcaster najpierw wallet_sendCalls (natywny SCW UI),
-           * dopiero potem eth_sendTransaction — mniej fałszywych ostrzeżeń fraud. */
+          /* Trofeum: na Base App najpierw wallet_sendCalls; na Farcaster
+           * od razu eth_sendTransaction (FC host nie umie EIP-5792). */
           if (__ptgWalletTxRequestInFlight) {
               throw new Error("Wallet request already in progress.");
           }
@@ -14933,11 +14949,38 @@ async function ptgRefreshIdentityAliasesFromDb() {
               }
           }
           if (!txHash) {
-              rawOne = await ethProvider.request({
-                  method: "eth_sendTransaction",
-                  params: [{ from: fromChk, to: toNft, data: dataHexPlain, value: valueHex }],
-              });
-              txHash = normalizeEthSendTxHash(rawOne);
+              try {
+                  setStatus("Confirm in your wallet…", "#94a3b8");
+                  rawOne = await ethProvider.request({
+                      method: "eth_sendTransaction",
+                      params: [{ from: fromChk, to: toNft, data: dataHexPlain, value: valueHex }],
+                  });
+                  txHash = normalizeEthSendTxHash(rawOne);
+              } catch (eSend) {
+                  if (isUserRejectedWalletRequest(eSend)) throw eSend;
+                  /* Relay-only fallback dla Farcaster, gdy eth_sendTransaction pada. */
+                  try {
+                      setStatus("Sign — submitting via PhraseToGuess…", "#94a3b8");
+                      txHash = await signMintTxAndBroadcastViaSite(
+                          ethProvider,
+                          fromChk,
+                          toNft,
+                          dataHexPlain,
+                          valueHex
+                      );
+                  } catch (eRelay) {
+                      if (isUserRejectedWalletRequest(eRelay)) throw eRelay;
+                      const detail =
+                          (eSend && eSend.message ? String(eSend.message) : "") ||
+                          (eRelay && eRelay.message ? String(eRelay.message) : "") ||
+                          "Wallet send failed";
+                      throw new Error(
+                          ptgIsUnsupportedWalletMethod(eSend)
+                              ? "Wallet could not send the mint transaction. Try again or reopen the mini app."
+                              : detail.slice(0, 180)
+                      );
+                  }
+              }
           }
           if (!txHash) {
               throw new Error("Wallet did not return transaction hash.");
