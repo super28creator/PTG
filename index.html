@@ -14048,25 +14048,12 @@ async function ptgRefreshIdentityAliasesFromDb() {
   }
 
   /**
-   * Farcaster trophy: najpierw sponsored, potem minimalny eth_sendTransaction.
+   * Farcaster trophy: najpierw normalna TX mintu (jeden prompt w portfelu).
+   * Sponsored personal_sign tylko gdy Warpcast odrzuci eth_sendTransaction —
+   * inaczej user widzi zbędne „Approve” zamiast mintu.
    * @returns {{ hash: string, preconfirmed: boolean }}
    */
   async function sendFarcasterMinimalMintTx(provider, fromAddr, toAddr, dataHex, valueHex, setStatusFn, metadataUri) {
-      try {
-          return await sendFarcasterSponsoredMintTx(
-              provider,
-              fromAddr,
-              metadataUri || METADATA_URL,
-              setStatusFn
-          );
-      } catch (sponsoredErr) {
-          console.warn("[ptg-fc-mint] sponsored path failed, trying wallet tx", sponsoredErr);
-          if (isUserRejectedWalletRequest(sponsoredErr)) throw sponsoredErr;
-          if (/cancelled|expired|busy/i.test(String((sponsoredErr && sponsoredErr.message) || ""))) {
-              throw sponsoredErr;
-          }
-      }
-
       if (!provider || typeof provider.request !== "function") {
           throw new Error("Wallet unavailable. Reopen the app and try again.");
       }
@@ -14081,9 +14068,6 @@ async function ptgRefreshIdentityAliasesFromDb() {
           try {
               value = await readMintPriceWeiHex(to, null);
           } catch (_) {}
-      }
-      if (!value || value === "0x" || value === "0x0") {
-          throw new Error("Mint failed. Reopen the app and try again.");
       }
 
       try {
@@ -14102,26 +14086,41 @@ async function ptgRefreshIdentityAliasesFromDb() {
           console.warn("[ptg-fc-mint] eth_chainId soft-check skipped", eChain);
       }
 
-      if (typeof setStatusFn === "function") setStatusFn("Confirm in your wallet…", "#94a3b8");
-      const payload = { from, to, data, value };
-      let rawSend;
-      try {
-          rawSend = await provider.request({
-              method: "eth_sendTransaction",
-              params: [payload],
-          });
-      } catch (eSend) {
-          if (isUserRejectedWalletRequest(eSend)) {
-              throw new Error("Mint cancelled.");
+      /* 1) Normalny mint TX — jeden ekran potwierdzenia (bez „Approve” od personal_sign). */
+      if (value && value !== "0x" && value !== "0x0") {
+          if (typeof setStatusFn === "function") setStatusFn("Confirm in your wallet…", "#94a3b8");
+          const payload = { from, to, data, value };
+          try {
+              const rawSend = await provider.request({
+                  method: "eth_sendTransaction",
+                  params: [payload],
+              });
+              const hash = normalizeEthSendTxHash(rawSend);
+              if (hash) return { hash, preconfirmed: false };
+          } catch (eSend) {
+              if (isUserRejectedWalletRequest(eSend)) {
+                  throw new Error("Mint cancelled.");
+              }
+              console.warn("[ptg-fc-mint] eth_sendTransaction failed, trying sponsored", eSend);
           }
-          console.error("[ptg-fc-mint] eth_sendTransaction", eSend);
+      }
+
+      /* 2) Fallback: treasury mint po personal_sign (gdy host nie umie wysłać TX). */
+      try {
+          return await sendFarcasterSponsoredMintTx(
+              provider,
+              fromAddr,
+              metadataUri || METADATA_URL,
+              setStatusFn
+          );
+      } catch (sponsoredErr) {
+          if (isUserRejectedWalletRequest(sponsoredErr)) throw sponsoredErr;
+          if (/cancelled|expired|busy/i.test(String((sponsoredErr && sponsoredErr.message) || ""))) {
+              throw sponsoredErr;
+          }
+          console.error("[ptg-fc-mint] sponsored fallback failed", sponsoredErr);
           throw new Error("Mint failed. Reopen the app and try again.");
       }
-      const hash = normalizeEthSendTxHash(rawSend);
-      if (!hash) {
-          throw new Error("Mint failed. Try again.");
-      }
-      return { hash, preconfirmed: false };
   }
 
   function ptgShouldPreferWalletSendCalls() {
