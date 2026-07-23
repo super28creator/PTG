@@ -10270,7 +10270,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       if (resumeAuth) {
           const originEarly =
               typeof location !== "undefined" && location.origin ? location.origin : "";
-          if (msg) msg.textContent = "Completing USDC payout…";
+          if (msg) msg.textContent = "Sending USDC…";
           try {
               const resEarly = await fetchWithTimeout(
                   originEarly + "/api/ptg-referral-payout",
@@ -10279,7 +10279,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ userId: claimUserId, op: "execute" }),
                   },
-                  60000
+                  25000
               );
               const jEarly = await resEarly.json().catch(() => null);
               ptgClaimDebug(claimTraceId, "claim.resume.execute.early", {
