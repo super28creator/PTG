@@ -2845,28 +2845,44 @@
     
     .big-mint-btn {
         background: linear-gradient(135deg, var(--base-blue) 0%, var(--cerulean) 100%);
-        color: white; font-size: clamp(15px, 4.2vw, 18px); font-weight: 800;
-        padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25);
+        color: white; font-size: clamp(16px, 4.5vw, 20px); font-weight: 800;
+        padding: 22px 18px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.25);
         width: 100%; max-width: 100%; box-sizing: border-box; cursor: pointer;
         box-shadow: 0 10px 40px rgba(0, 0, 255, 0.3);
         transition: transform 0.2s var(--ease-base), box-shadow 0.2s var(--ease-base), filter 0.2s var(--ease-base);
-        display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px;
-        text-transform: uppercase; letter-spacing: 0.04em;
-        white-space: normal;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-transform: uppercase; letter-spacing: 0.06em;
         text-align: center;
         position: relative; overflow: hidden;
         margin-top: 10px;
-        line-height: 1.25;
+        line-height: 1.15;
         min-width: 0;
+        min-height: 72px;
     }
-    .big-mint-btn > span {
-        display: inline;
-        white-space: normal;
-        overflow-wrap: anywhere;
-        word-break: break-word;
+    /* Celowe 2 linie (MINT / TROPHY) — zrównoważone na PC i telefonie. */
+    .big-mint-btn-stack {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        width: 100%;
         max-width: 100%;
         position: relative;
         z-index: 1;
+    }
+    .big-mint-btn-line {
+        display: block;
+        white-space: nowrap;
+        line-height: 1.1;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .big-mint-btn > span:not(.big-mint-btn-stack) {
+        position: relative;
+        z-index: 1;
+        white-space: nowrap;
     }
     .big-mint-btn:before {
         content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -4422,7 +4438,10 @@
         </div>
 
         <button id="victoryMintBtn" class="big-mint-btn" onclick="mintNFT()">
-            <span>✨ MINT TROPHY</span>
+            <span class="big-mint-btn-stack">
+                <span class="big-mint-btn-line">✨ Mint</span>
+                <span class="big-mint-btn-line">Trophy</span>
+            </span>
         </button>
         
         <div id="victoryStatus" style="margin-top:24px; font-weight:600; font-size:15px; min-height:24px; color:#94a3b8;"></div>
@@ -4559,7 +4578,10 @@
       <button class="btn" id="hintBtn" style="display: none;" type="button" aria-label="Buy a hint and reveal a random letter"><span class="hint-icon-glyph" aria-hidden="true">💡</span></button>
       
       <button id="recoverMintBtn" class="big-mint-btn" style="display:none;" onclick="document.getElementById('victoryModal').classList.add('show')">
-          <span>✨ Claim Trophy</span>
+          <span class="big-mint-btn-stack">
+              <span class="big-mint-btn-line">✨ Claim</span>
+              <span class="big-mint-btn-line">Trophy</span>
+          </span>
       </button>
     </div>
     <div id="hintStatus" style="display:none; margin-top: 10px; text-align: center; color: #94a3b8; font-size: 12px; min-height: 18px;" role="status" aria-live="polite"></div>
@@ -4568,7 +4590,7 @@
         <div style="margin-bottom: 10px; font-size: 16px; color:var(--cerulean); font-weight: 700; font-style:italic;">
             $PTG Token is coming soon.
         </div>
-        <div style="font-size:13px; color:var(--gray-30); margin-bottom:5px;">Daily limit reached (3/3).</div>
+        <div style="font-size:13px; color:var(--gray-30); margin-bottom:5px;">Daily limit reached.</div>
         <div style="font-size: 14px; color: #fff;">Next game in: <span id="countdown" style="color:var(--cerulean); font-weight:800; font-family:'Roboto Mono', monospace; font-size: 18px;">--:--:--</span></div>
     </div>
     
@@ -12605,7 +12627,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
     syncMistakesPillState(0);
     
     const vBtn = document.getElementById('victoryMintBtn');
-    vBtn.innerHTML = "<span>✨ MINT TROPHY</span>";
+    vBtn.innerHTML = ptgTrophyMintBtnHtml("✨ Mint", "Trophy");
     vBtn.disabled = false;
     document.getElementById('victoryStatus').textContent = "";
     document.getElementById('victoryTxLink').innerHTML = "";
@@ -15493,6 +15515,19 @@ async function ptgRefreshIdentityAliasesFromDb() {
   }
 
   // --- MINT LOGIC: PhraseToGuess NFT + serwerowy voucher EIP-712 (brak mintu z samego Basescan) ---
+  function ptgTrophyMintBtnHtml(line1, line2) {
+      return (
+          '<span class="big-mint-btn-stack">' +
+          '<span class="big-mint-btn-line">' +
+          String(line1 || "") +
+          "</span>" +
+          '<span class="big-mint-btn-line">' +
+          String(line2 || "") +
+          "</span>" +
+          "</span>"
+      );
+  }
+
   function showVictoryMintFailed(err) {
       if (err) console.error(err);
       const statusDiv = document.getElementById("victoryStatus");
@@ -15509,7 +15544,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
           statusDiv.style.display = "";
       }
       if (btn) {
-          btn.innerHTML = "<span>Try Again</span>";
+          btn.innerHTML = ptgTrophyMintBtnHtml("Try", "Again");
           btn.disabled = false;
       }
       if (txL) txL.innerHTML = "";
@@ -15532,7 +15567,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
         clearTimeout(victoryStatusAutoClearT);
         victoryStatusAutoClearT = 0;
     }
-      btn.innerHTML = "Minting…"; btn.disabled = true;
+      btn.innerHTML = ptgTrophyMintBtnHtml("Minting", "…"); btn.disabled = true;
     statusDiv.textContent = "";
     statusDiv.style.color = "#94a3b8";
 
