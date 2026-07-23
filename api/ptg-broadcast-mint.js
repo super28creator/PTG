@@ -104,6 +104,15 @@ module.exports = async (req, res) => {
       logMint400("bad_raw_transaction");
       return res.status(400).json({ error: "bad_raw_transaction" });
     }
+    /* 65-bajtowy ECDSA (r||s||v) z eth_signTransaction SCW — nie jest raw TX. */
+    const rawHexLen = raw.length - 2;
+    if (rawHexLen === 130 || rawHexLen < 100) {
+      logMint400("not_a_signed_tx", `len=${rawHexLen}`);
+      return res.status(400).json({
+        error: "not_a_signed_tx",
+        hint: "Payload looks like an ECDSA signature, not a signed Ethereum transaction.",
+      });
+    }
 
     const { ethers } = await import("ethers");
     const allowedTo = buildAllowedMintAddressSet(ethers);
@@ -126,10 +135,14 @@ module.exports = async (req, res) => {
     try {
       tx = ethers.Transaction.from(raw);
     } catch (e) {
-      logMint400("invalid_raw_tx", String(e && e.message ? e.message : e).slice(0, 120));
+      const detail = String(e && e.message ? e.message : e);
+      logMint400("invalid_raw_tx", detail.slice(0, 120));
       return res.status(400).json({
         error: "invalid_raw_tx",
-        detail: String(e && e.message ? e.message : e),
+        detail,
+        hint: /unsupported transaction type/i.test(detail)
+          ? "Wallet likely returned a signature/UserOp instead of a typed Ethereum tx. Client should use eth_sendTransaction."
+          : undefined,
       });
     }
 

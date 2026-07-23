@@ -5059,7 +5059,7 @@
         <div class="docs-callout">
           <span class="docs-callout__icon">$</span>
           <p class="docs-callout__text">
-            Rewards accumulate automatically. When your balance is ready, press <strong>Claim referral rewards</strong> to send the payout on-chain to your wallet.
+            Rewards accumulate automatically. When your balance is ready, press <strong>Claim referral rewards</strong> — sign once in your wallet; USDC is sent on Base to your address.
           </p>
         </div>
       </section>
@@ -9627,6 +9627,54 @@ async function ptgRefreshIdentityAliasesFromDb() {
           if (btn) btn.disabled = true;
           return;
       }
+
+      /* Outstanding bez portfela: treasury sama wysyła TWA (Farcaster / Base). */
+      if (resumeAuth) {
+          const originEarly =
+              typeof location !== "undefined" && location.origin ? location.origin : "";
+          if (msg) msg.textContent = "Completing USDC payout…";
+          try {
+              const resEarly = await fetchWithTimeout(
+                  originEarly + "/api/ptg-referral-payout",
+                  {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ userId: claimUserId, op: "execute" }),
+                  },
+                  60000
+              );
+              const jEarly = await resEarly.json().catch(() => null);
+              ptgClaimDebug(claimTraceId, "claim.resume.execute.early", {
+                  ok: !!(resEarly && resEarly.ok),
+                  body: jEarly || null,
+              });
+              if (resEarly && resEarly.ok && jEarly && jEarly.txHash) {
+                  const txHash = String(jEarly.txHash).toLowerCase();
+                  const explorerUrl = "https://basescan.org/tx/" + txHash;
+                  if (msg) {
+                      msg.textContent =
+                          "USDC claimed. Tx: " + txHash.slice(0, 10) + "… " + explorerUrl;
+                  }
+                  txSubmitted = true;
+                  console.info("[ptg-claim] early execute ok", { txHash });
+                  try {
+                      const s = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + uiSummaryUserId));
+                      ptgUpdateReferralUiFromSnapshot(s.exists() ? s.val() : null);
+                  } catch (_) {}
+                  if (btn) btn.disabled = true;
+                  return;
+              }
+              if (jEarly && jEarly.error === "already_claimed") {
+                  if (msg) msg.textContent = "Already claimed. Refresh the app.";
+                  return;
+              }
+              console.warn("[ptg-claim] early execute failed, continue with wallet", jEarly);
+          } catch (eEarly) {
+              console.warn("[ptg-claim] early execute fetch failed", eEarly);
+              ptgClaimDebug(claimTraceId, "claim.resume.execute.early.err", eEarly);
+          }
+      }
+
       /* Base / Coinbase webview: najpierw SDK (ethProvider / getEthereumProvider),
        * potem window.ethereum — w praktyce to SAMO konto co na desktopie, gdy
        * SDK nie pokazuje UI; strict match na claimUserId eliminuje „zły” portfel.
@@ -9794,6 +9842,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
           ptgClaimDebug(claimTraceId, "claim.provider.matched", { addr: String(addr || "").toLowerCase() });
 
           let auth = resumeAuth;
+          let serverTxHash = null;
           if (!auth) {
               let signer = null;
               try {
@@ -9826,7 +9875,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               ptgClaimDebug(claimTraceId, "claim.sign.ok");
               const origin =
                   typeof location !== "undefined" && location.origin ? location.origin : "";
-              if (msg) msg.textContent = "Preparing payout…";
+              if (msg) msg.textContent = "Sending USDC payout…";
               let res, j;
               try {
                   res = await fetchWithTimeout(
@@ -9838,9 +9887,12 @@ async function ptgRefreshIdentityAliasesFromDb() {
                               userId: claimUserId,
                               claimAmountCents: claimAmount,
                               signature,
+                              /* Treasury wysyła TWA — bez eth_sendTransaction w portfelu
+                               * (Farcaster SCW + Base App „fraud” warning). */
+                              execute: true,
                           }),
                       },
-                      22000
+                      60000
                   );
                   j = await res.json().catch(() => null);
               } catch (eFetch) {
@@ -9868,40 +9920,82 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   return;
               }
               auth = j && j.auth;
+              if (j && j.txHash && /^0x[0-9a-fA-F]{64}$/.test(String(j.txHash))) {
+                  serverTxHash = String(j.txHash).toLowerCase();
+              }
               ptgClaimDebug(claimTraceId, "claim.quote.ok", {
                   hasAuth: !!auth,
+                  executed: !!serverTxHash,
                   contract: auth && auth.contract ? String(auth.contract).toLowerCase() : null,
+                  executeError: j && j.executeError ? String(j.executeError) : null,
               });
               if (!auth || !auth.contract || !auth.from || !auth.to) {
                   if (msg) msg.textContent = "Server did not return payout authorization.";
                   return;
               }
+          } else {
+              /* Resume outstanding — treasury execute, bez kolejnego personal_sign. */
+              const origin =
+                  typeof location !== "undefined" && location.origin ? location.origin : "";
+              if (msg) msg.textContent = "Resuming USDC payout…";
+              try {
+                  const resExec = await fetchWithTimeout(
+                      origin + "/api/ptg-referral-payout",
+                      {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ userId: claimUserId, op: "execute" }),
+                      },
+                      60000
+                  );
+                  const jExec = await resExec.json().catch(() => null);
+                  ptgClaimDebug(claimTraceId, "claim.resume.execute", {
+                      ok: !!(resExec && resExec.ok),
+                      body: jExec || null,
+                  });
+                  if (resExec && resExec.ok && jExec && jExec.txHash) {
+                      serverTxHash = String(jExec.txHash).toLowerCase();
+                  } else if (jExec && jExec.error === "already_claimed") {
+                      if (msg) msg.textContent = "Already claimed. Refresh the app.";
+                      return;
+                  } else {
+                      console.warn("[ptg-claim] resume execute failed, wallet fallback", jExec);
+                  }
+              } catch (eExec) {
+                  console.warn("[ptg-claim] resume execute fetch failed", eExec);
+                  ptgClaimDebug(claimTraceId, "claim.resume.execute.err", eExec);
+              }
           }
 
-          /* EIP-3009: wallet usera wysyła realną tx do kontraktu USDC — wallet
-           * pokaże „+X USDC" na zielono, z siecią i fee. */
-          let txHash;
-          try {
-              txHash = await ptgReferralSubmitAuthorizationTx(prov, addr, auth, msg, claimTraceId);
-          } catch (eTx) {
-              console.warn("[ptg-claim] sendTransaction failed", eTx);
-              ptgClaimDebug(claimTraceId, "claim.tx.err", eTx);
-              if (msg) {
-                  msg.textContent =
-                      (eTx && eTx.message ? String(eTx.message) : null) ||
-                      "Wallet did not send the transaction.";
+          let txHash = serverTxHash;
+          if (!txHash) {
+              /* Fallback: stary flow (user wysyła TWA) — tylko gdy treasury execute padł. */
+              if (msg) msg.textContent = "Confirm USDC in wallet…";
+              try {
+                  txHash = await ptgReferralSubmitAuthorizationTx(prov, addr, auth, msg, claimTraceId);
+              } catch (eTx) {
+                  console.warn("[ptg-claim] sendTransaction failed", eTx);
+                  ptgClaimDebug(claimTraceId, "claim.tx.err", eTx);
+                  if (msg) {
+                      msg.textContent =
+                          (eTx && eTx.message ? String(eTx.message) : null) ||
+                          "Wallet did not send the transaction.";
+                  }
+                  return;
               }
-              return;
+              ptgReferralFireSettle(claimUserId, txHash, auth.nonce);
           }
           const explorerUrl = "https://basescan.org/tx/" + txHash;
           if (msg) {
               msg.textContent =
-                  "USDC claim sent. Tx: " + txHash.slice(0, 10) + "… " + explorerUrl;
+                  "USDC claimed. Tx: " + txHash.slice(0, 10) + "… " + explorerUrl;
           }
           txSubmitted = true;
-          console.info("[ptg-claim] tx sent", { txHash });
-          ptgClaimDebug(claimTraceId, "claim.tx.sent", { txHash: String(txHash || "").toLowerCase() });
-          ptgReferralFireSettle(claimUserId, txHash, auth.nonce);
+          console.info("[ptg-claim] tx sent", { txHash, serverExecuted: !!serverTxHash });
+          ptgClaimDebug(claimTraceId, "claim.tx.sent", {
+              txHash: String(txHash || "").toLowerCase(),
+              serverExecuted: !!serverTxHash,
+          });
       } catch (e) {
           console.warn("[ptg-claim] fatal", e);
           ptgClaimDebug(claimTraceId, "claim.fatal", e);
@@ -14264,6 +14358,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
       }
       if (typeof rawSigned !== "string" || !/^0x[0-9a-fA-F]+$/.test(rawSigned)) {
           throw new Error("Wallet returned an invalid signed transaction");
+      }
+      /* Base / Coinbase Smart Wallet czasem zwraca sam podpis ECDSA (65 bajtów)
+       * zamiast raw TX — ethers.Transaction.from pada wtedy z
+       * „unsupported transaction type”. Nie wysyłaj śmieci do relay. */
+      const hexBody = rawSigned.slice(2);
+      if (hexBody.length === 130 || hexBody.length < 100) {
+          throw new Error(
+              "Wallet returned a signature instead of a signed transaction (SCW). Use eth_sendTransaction."
+          );
       }
       return postBroadcastMintRaw(rawSigned);
   }

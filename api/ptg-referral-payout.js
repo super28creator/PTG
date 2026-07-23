@@ -1,34 +1,33 @@
 /**
  * Wypłata nagród referralowych w USDC na Base — przez EIP-3009
- * `transferWithAuthorization`. Serwer (treasury) podpisuje off-chain
- * autoryzację, a wallet usera sam wysyła transakcję on-chain — dzięki
- * czemu w portfelu widać REAL TX z efektem `+X USDC` na zielono.
+ * `transferWithAuthorization`.
  *
- * Endpoint obsługuje DWIE operacje po typie body:
+ * Preferowana ścieżka (2026-07): treasury SAM wysyła TWA on-chain po
+ * weryfikacji personal_sign usera. Dzięki temu:
+ *  - Farcaster / Base Smart Wallet nie muszą robić eth_signTransaction
+ *    (często zwracają 65-bajtowy podpis zamiast raw tx → broadcast pada),
+ *  - Base App nie pokazuje fałszywego ostrzeżenia „fraud/scam” na
+ *    transferWithAuthorization wywoływanym z portfela usera.
  *
- *  A) QUOTE (body.claimAmountCents + body.signature)
- *     POST: { userId, claimAmountCents, signature }
- *     200 : { ok, amountCents, auth: { contract, from, to, value, validAfter,
- *            validBefore, nonce, v, r, s, chainId }, note? }
+ * Endpoint obsługuje operacje po typie body:
  *
- *  B) SETTLE (body.txHash + body.nonce)
+ *  A) QUOTE (+ opcjonalnie execute)
+ *     POST: { userId, claimAmountCents, signature, execute?: true }
+ *     200 : { ok, amountCents, auth, txHash?, explorer?, executeError? }
+ *
+ *  B) SETTLE (body.txHash + body.nonce) — legacy / fallback gdy user sam
+ *     wysłał TWA z portfela
  *     POST: { userId, txHash, nonce }
- *     200 : { ok, txHash, amountCents, explorer }
  *
  *  C) RESTORE (body.op === "restore")
  *     POST: { userId, op: "restore" }
- *     200 : { ok, restored, claimed, pendingReward, outstanding? }
- *     Idempotentny self-heal: jeżeli user ma zombie `claim_outstanding`
- *     (pendingReward wyzerowany, autoryzacja nigdy nie trafiła on-chain i już
- *     wygasła), odtwarza `summary.pendingReward` i usuwa rekord. Jeżeli auth
- *     został faktycznie wykorzystany on-chain (a klient nie zdążył dobić
- *     SETTLE), domyka historię claimu.
  *
- * (Scalone w jeden endpoint z powodu limitu 12 funkcji na planie Hobby Vercela.)
+ *  D) EXECUTE (body.op === "execute") — wznów outstanding bez nowego podpisu
+ *     POST: { userId, op: "execute" }
+ *     200 : { ok, txHash, amountCents, explorer }
  *
  * Env: FIREBASE_SERVICE_ACCOUNT_JSON,
- *      PTG_PAYOUT_PRIVATE_KEY (treasury z USDC + gazu nie potrzebuje;
- *        akceptowane też jako REFERRAL_PAYOUT_PRIVATE_KEY dla kompat.),
+ *      PTG_PAYOUT_PRIVATE_KEY (treasury: USDC + trochę ETH na gas Base),
  *      BASE_RPC_URL (opcjonalnie),
  *      PTG_REFERRAL_SEASON, PTG_REFERRAL_DATA_VERSION.
  */
@@ -270,6 +269,209 @@ async function isAuthorizationUsed(rpcUrl, authorizer, nonce) {
   return !!decoded[0];
 }
 
+function payoutPrivateKey() {
+  const pk =
+    process.env.PTG_PAYOUT_PRIVATE_KEY || process.env.REFERRAL_PAYOUT_PRIVATE_KEY;
+  if (!pk || String(pk).length < 20) return null;
+  return pk.startsWith("0x") ? pk : `0x${pk}`;
+}
+
+/**
+ * Treasury wysyła `transferWithAuthorization` — user nie musi klikać TX
+ * w portfelu (omija fraud-warning Base App + broken eth_signTransaction SCW).
+ */
+async function executeTransferWithAuthorization(auth, rpcUrl) {
+  const pk = payoutPrivateKey();
+  if (!pk) {
+    return { ok: false, error: "payout_not_configured" };
+  }
+  if (!auth || !auth.from || !auth.to || !auth.nonce || auth.v == null || !auth.r || !auth.s) {
+    return { ok: false, error: "invalid_auth" };
+  }
+
+  let used = false;
+  try {
+    used = await isAuthorizationUsed(rpcUrl, auth.from, auth.nonce);
+  } catch (e) {
+    return { ok: false, error: "rpc_auth_state_failed", detail: String(e && e.message) };
+  }
+  if (used) {
+    return { ok: false, error: "already_used" };
+  }
+
+  const provider = new JsonRpcProvider(rpcUrl);
+  let treasury;
+  try {
+    treasury = new Wallet(pk, provider);
+  } catch (e) {
+    return { ok: false, error: "treasury_wallet_invalid", detail: String(e && e.message) };
+  }
+
+  const data = USDC_IFACE.encodeFunctionData("transferWithAuthorization", [
+    auth.from,
+    auth.to,
+    auth.value,
+    auth.validAfter ?? 0,
+    auth.validBefore,
+    auth.nonce,
+    auth.v,
+    auth.r,
+    auth.s,
+  ]);
+
+  let txResponse;
+  try {
+    txResponse = await treasury.sendTransaction({
+      to: USDC_BASE,
+      data,
+      chainId: CHAIN_ID,
+      gasLimit: 180000n,
+    });
+  } catch (e) {
+    const msg = String((e && e.shortMessage) || (e && e.message) || e).slice(0, 280);
+    console.error("[claim-execute] sendTransaction failed", msg);
+    return { ok: false, error: "execute_send_failed", detail: msg };
+  }
+
+  const txHash = txResponse && txResponse.hash ? String(txResponse.hash) : "";
+  if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+    return { ok: false, error: "execute_no_hash" };
+  }
+
+  /* Czekamy na mining, żeby SETTLE mógł od razu zamknąć outstanding. */
+  try {
+    const receipt = await txResponse.wait(1);
+    if (receipt && receipt.status === 0) {
+      return { ok: false, error: "tx_reverted", txHash };
+    }
+  } catch (e) {
+    console.warn("[claim-execute] wait failed (returning hash anyway)", String(e && e.message));
+  }
+
+  return { ok: true, txHash: txHash.toLowerCase() };
+}
+
+async function settleOutstandingInDb(db, root, userId, nonce, txHash, amountCents) {
+  const summaryPath = `${root}/summary/${userId}`;
+  const outstandingPath = `${root}/claim_outstanding/${userId}`;
+  const histKey = `${root}/claim_history/${userId}/${nonce}`;
+  const histRef = db.ref(histKey);
+  const existing = await histRef.once("value");
+  if (!existing.exists()) {
+    await histRef.set({
+      amount: amountCents,
+      ts: Date.now(),
+      txHash,
+      chainId: CHAIN_ID,
+      token: "USDC",
+      nonce,
+      source: "server_execute",
+    });
+    await db.ref(summaryPath).transaction((cur) => {
+      const o = cur && typeof cur === "object" && cur !== null ? cur : {};
+      return {
+        ...o,
+        claimedTotal:
+          (typeof o.claimedTotal === "number" ? o.claimedTotal : 0) + amountCents,
+        lastClaimAt: Date.now(),
+      };
+    });
+  } else {
+    /* Uzupełnij brakujący txHash w starszym wpisie. */
+    const cur = existing.val() || {};
+    if (!cur.txHash && txHash) {
+      await histRef.update({ txHash, source: cur.source || "server_execute" });
+    }
+  }
+  await db.ref(outstandingPath).remove();
+}
+
+/**
+ * EXECUTE — wyślij outstanding TWA z treasury (resume albo po quote).
+ * Bezpieczne bez nowego podpisu: auth już powstał po zweryfikowanym claim sign,
+ * a on-chain transfer idzie TYLKO do `auth.to` (user).
+ */
+async function handleExecute(req, res, body) {
+  if (!hasServiceAccount()) {
+    return res.status(503).json({ error: "firebase_admin_missing" });
+  }
+  if (!payoutPrivateKey()) {
+    return res.status(503).json({
+      error: "payout_not_configured",
+      hint: "Set PTG_PAYOUT_PRIVATE_KEY on Vercel (treasury needs USDC + ETH for gas).",
+    });
+  }
+
+  const userId = typeof body.userId === "string" ? body.userId.trim() : "";
+  if (!userId || !/^0x[a-fA-F0-9]{40}$/.test(userId)) {
+    return res.status(400).json({ error: "invalid_user_id" });
+  }
+
+  const root = referralRoot();
+  const outstandingPath = `${root}/claim_outstanding/${userId}`;
+  let db;
+  try {
+    db = getAdminDb();
+  } catch (e) {
+    return res.status(503).json({ error: "firebase_admin", detail: String(e && e.message) });
+  }
+
+  let outstanding = null;
+  try {
+    const s = await db.ref(outstandingPath).once("value");
+    outstanding = s.exists() ? s.val() : null;
+  } catch (e) {
+    return res.status(500).json({ error: "rtdb_read_failed", detail: String(e && e.message) });
+  }
+  if (!outstanding || !outstanding.auth || !outstanding.nonce) {
+    return res.status(400).json({ error: "nothing_to_execute", hint: "No outstanding claim authorization." });
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (Number(outstanding.validBefore || 0) <= nowSec) {
+    return res.status(400).json({ error: "auth_expired", hint: "Re-open claim to restore balance and try again." });
+  }
+
+  const rpcUrl = process.env.BASE_RPC_URL || "https://mainnet.base.org";
+  const amountCents = Number(outstanding.amountCents) || 0;
+  const exec = await executeTransferWithAuthorization(outstanding.auth, rpcUrl);
+
+  if (!exec.ok) {
+    if (exec.error === "already_used") {
+      return res.status(400).json({
+        error: "already_claimed",
+        hint: "Authorization already used on-chain. Refresh the app.",
+      });
+    }
+    return res.status(502).json({
+      error: exec.error || "execute_failed",
+      detail: exec.detail || undefined,
+      txHash: exec.txHash || undefined,
+    });
+  }
+
+  try {
+    await settleOutstandingInDb(db, root, userId, outstanding.nonce, exec.txHash, amountCents);
+  } catch (e) {
+    console.error("[claim-execute] settle after send failed", e);
+    return res.status(500).json({
+      error: "db_update_failed_after_transfer",
+      txHash: exec.txHash,
+      warning: "USDC was transferred; reconcile history manually.",
+      explorer: `https://basescan.org/tx/${exec.txHash}`,
+    });
+  }
+
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  return res.status(200).json({
+    ok: true,
+    txHash: exec.txHash,
+    amountCents,
+    explorer: `https://basescan.org/tx/${exec.txHash}`,
+    auth: outstanding.auth,
+  });
+}
+
 async function handleSettle(req, res, body) {
   if (!hasServiceAccount()) {
     return res.status(503).json({ error: "firebase_admin_missing" });
@@ -504,7 +706,54 @@ async function handleQuote(req, res, body) {
       return res.status(400).json({ error: "already_claimed" });
     }
     if (Number(outstanding.validBefore) > now) {
-      /* Aktywny, nadal ważny — zwróć bez powtórnego zdejmowania pendingReward. */
+      /* Aktywny, nadal ważny — bez powtórnego zdejmowania pendingReward. */
+      const wantExecuteResume =
+        body.execute === true || body.execute === 1 || body.execute === "true";
+      if (wantExecuteResume && outstanding.auth) {
+        const exec = await executeTransferWithAuthorization(outstanding.auth, rpcUrl);
+        if (exec.ok && exec.txHash) {
+          const amt = Number(outstanding.amountCents) || 0;
+          try {
+            await settleOutstandingInDb(
+              db,
+              root,
+              userId,
+              outstanding.nonce,
+              exec.txHash,
+              amt
+            );
+          } catch (e) {
+            console.error("[claim-quote] resume settle failed", e);
+            return res.status(500).json({
+              ok: true,
+              amountCents: amt,
+              auth: outstanding.auth,
+              txHash: exec.txHash,
+              explorer: `https://basescan.org/tx/${exec.txHash}`,
+              note: "resuming_existing",
+              error: "db_update_failed_after_transfer",
+            });
+          }
+          return res.status(200).json({
+            ok: true,
+            amountCents: amt,
+            auth: outstanding.auth,
+            txHash: exec.txHash,
+            explorer: `https://basescan.org/tx/${exec.txHash}`,
+            note: "resuming_existing",
+            executed: true,
+          });
+        }
+        return res.status(200).json({
+          ok: true,
+          amountCents: outstanding.amountCents,
+          auth: outstanding.auth,
+          note: "resuming_existing",
+          executed: false,
+          executeError: exec.error || "execute_failed",
+          executeDetail: exec.detail || undefined,
+        });
+      }
       return res.status(200).json({
         ok: true,
         amountCents: outstanding.amountCents,
@@ -666,6 +915,47 @@ async function handleQuote(req, res, body) {
   }
 
   res.setHeader("Content-Type", "application/json; charset=utf-8");
+
+  /* Preferowane: serwer zaraz wysyła TWA (execute:true). Omija fraud UI w Base
+   * App i zepsuty eth_signTransaction w Farcaster/SCW. */
+  const wantExecute = body.execute === true || body.execute === 1 || body.execute === "true";
+  if (wantExecute) {
+    const exec = await executeTransferWithAuthorization(auth, rpcUrl);
+    if (exec.ok && exec.txHash) {
+      try {
+        await settleOutstandingInDb(db, root, userId, nonce, exec.txHash, priorPending);
+      } catch (e) {
+        console.error("[claim-quote] settle after execute failed", e);
+        return res.status(500).json({
+          ok: true,
+          amountCents: priorPending,
+          auth,
+          txHash: exec.txHash,
+          explorer: `https://basescan.org/tx/${exec.txHash}`,
+          error: "db_update_failed_after_transfer",
+          warning: "USDC was transferred; reconcile history manually.",
+        });
+      }
+      return res.status(200).json({
+        ok: true,
+        amountCents: priorPending,
+        auth,
+        txHash: exec.txHash,
+        explorer: `https://basescan.org/tx/${exec.txHash}`,
+        executed: true,
+      });
+    }
+    console.warn("[claim-quote] execute failed, returning auth for wallet fallback", exec);
+    return res.status(200).json({
+      ok: true,
+      amountCents: priorPending,
+      auth,
+      executed: false,
+      executeError: exec.error || "execute_failed",
+      executeDetail: exec.detail || undefined,
+    });
+  }
+
   return res.status(200).json({
     ok: true,
     amountCents: priorPending,
@@ -831,11 +1121,15 @@ module.exports = async (req, res) => {
 
   /* Dispatch po obecności pól:
    *  - op === "restore"                      → RESTORE
+   *  - op === "execute"                      → EXECUTE (treasury sends TWA)
    *  - txHash + nonce (bez signature)        → SETTLE
-   *  - claimAmountCents + signature          → QUOTE
+   *  - claimAmountCents + signature          → QUOTE (+ optional execute)
    */
   if (typeof body.op === "string" && body.op.toLowerCase() === "restore") {
     return handleRestore(req, res, body);
+  }
+  if (typeof body.op === "string" && body.op.toLowerCase() === "execute") {
+    return handleExecute(req, res, body);
   }
   if (typeof body.txHash === "string" && typeof body.nonce === "string" && !body.signature) {
     return handleSettle(req, res, body);
