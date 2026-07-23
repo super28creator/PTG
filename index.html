@@ -2848,38 +2848,38 @@
     
     .big-mint-btn {
         background: linear-gradient(135deg, var(--base-blue) 0%, var(--cerulean) 100%);
-        color: white; font-size: clamp(17px, 4.6vw, 21px); font-weight: 800;
-        padding: 24px 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.25);
+        color: white; font-size: clamp(15px, 4.2vw, 19px); font-weight: 800;
+        padding: 18px 16px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.25);
         width: 100%; max-width: 100%; box-sizing: border-box; cursor: pointer;
         box-shadow: 0 10px 40px rgba(0, 0, 255, 0.3);
         transition: transform 0.2s var(--ease-base), box-shadow 0.2s var(--ease-base), filter 0.2s var(--ease-base);
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        text-transform: uppercase; letter-spacing: 0.08em;
+        display: flex; flex-direction: row; align-items: center; justify-content: center;
+        text-transform: uppercase; letter-spacing: 0.04em;
         text-align: center;
         position: relative; overflow: hidden;
         margin-top: 10px;
-        line-height: 1.15;
+        line-height: 1.2;
         min-width: 0;
-        min-height: 84px;
+        min-height: 56px;
         flex: 1 1 100%;
     }
-    /* Celowe 2 linie (MINT / TROPHY) — zrównoważone na PC i telefonie. */
+    /* Dwa słowa (Claim Trophy / Mint Trophy) — zawsze jedna linia. */
     .big-mint-btn-stack {
-        display: flex;
-        flex-direction: column;
+        display: inline-flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
         align-items: center;
         justify-content: center;
-        gap: 6px;
-        width: 100%;
+        gap: 0.35em;
         max-width: 100%;
         position: relative;
         z-index: 1;
+        white-space: nowrap;
     }
     .big-mint-btn-line {
-        display: block;
+        display: inline;
         white-space: nowrap;
-        line-height: 1.15;
-        max-width: 100%;
+        line-height: 1.2;
     }
     .big-mint-btn > span:not(.big-mint-btn-stack) {
         position: relative;
@@ -4446,8 +4446,7 @@
 
         <button id="victoryMintBtn" class="big-mint-btn" onclick="mintNFT()">
             <span class="big-mint-btn-stack">
-                <span class="big-mint-btn-line">✨ Mint</span>
-                <span class="big-mint-btn-line">Trophy</span>
+                <span class="big-mint-btn-line">✨ Mint Trophy</span>
             </span>
         </button>
         
@@ -4586,8 +4585,7 @@
       
       <button id="recoverMintBtn" class="big-mint-btn" style="display:none;" onclick="document.getElementById('victoryModal').classList.add('show')">
           <span class="big-mint-btn-stack">
-              <span class="big-mint-btn-line">✨ Claim</span>
-              <span class="big-mint-btn-line">Trophy</span>
+              <span class="big-mint-btn-line">✨ Claim Trophy</span>
           </span>
       </button>
     </div>
@@ -15616,13 +15614,14 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
   // --- MINT LOGIC: PhraseToGuess NFT + serwerowy voucher EIP-712 (brak mintu z samego Basescan) ---
   function ptgTrophyMintBtnHtml(line1, line2) {
+      var label = [line1, line2]
+          .map(function (p) { return String(p || "").trim(); })
+          .filter(Boolean)
+          .join(" ");
       return (
           '<span class="big-mint-btn-stack">' +
           '<span class="big-mint-btn-line">' +
-          String(line1 || "") +
-          "</span>" +
-          '<span class="big-mint-btn-line">' +
-          String(line2 || "") +
+          label +
           "</span>" +
           "</span>"
       );
