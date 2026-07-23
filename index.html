@@ -13779,6 +13779,132 @@ async function ptgRefreshIdentityAliasesFromDb() {
       return null;
   }
 
+  /**
+   * Base App / Coinbase Smart Wallet: preferuj EIP-5792 `wallet_sendCalls`
+   * zamiast surowego `eth_sendTransaction` — natywny UI, mniej fałszywych
+   * ostrzeżeń „scam/fraud” i brak 65-bajtowych „hashy”.
+   */
+  function ptgExtractSendCallsId(res) {
+      if (res == null) return null;
+      if (typeof res === "string" && /^0x[0-9a-fA-F]+$/.test(res.trim())) return res.trim();
+      if (typeof res === "object") {
+          if (typeof res.id === "string") return res.id;
+          if (typeof res.batchId === "string") return res.batchId;
+          if (typeof res.callsId === "string") return res.callsId;
+          if (res.result != null) return ptgExtractSendCallsId(res.result);
+      }
+      return null;
+  }
+
+  function ptgExtractHashFromCallsStatus(status) {
+      if (!status || typeof status !== "object") return null;
+      const receipts = status.receipts;
+      if (Array.isArray(receipts) && receipts.length) {
+          for (let i = 0; i < receipts.length; i++) {
+              const r = receipts[i];
+              if (!r) continue;
+              const h =
+                  normalizeEthSendTxHash(r.transactionHash) ||
+                  normalizeEthSendTxHash(r.hash) ||
+                  normalizeEthSendTxHash(r.txHash);
+              if (h) return h;
+          }
+      }
+      return (
+          normalizeEthSendTxHash(status.transactionHash) ||
+          normalizeEthSendTxHash(status.hash) ||
+          null
+      );
+  }
+
+  async function ptgWalletSendCallsAndWaitHash(provider, fromAddr, toAddr, dataHex, valueHex) {
+      if (!provider || typeof provider.request !== "function") {
+          throw new Error("Wallet provider unavailable");
+      }
+      const from = ethers.utils.getAddress(fromAddr);
+      const to = ethers.utils.getAddress(toAddr);
+      const value = valueHex && String(valueHex).startsWith("0x") ? valueHex : "0x0";
+      const data = dataHex && String(dataHex).startsWith("0x") ? dataHex : "0x";
+
+      let sendRes;
+      try {
+          sendRes = await walletRequestWithTimeout(
+              provider,
+              "wallet_sendCalls",
+              [
+                  {
+                      version: "2.0.0",
+                      from,
+                      chainId: BASE_CHAIN_ID_HEX,
+                      atomicRequired: true,
+                      calls: [{ to, value, data }],
+                  },
+              ],
+              120000
+          );
+      } catch (eV2) {
+          /* Część SDK nadal chce version 1.0 */
+          sendRes = await walletRequestWithTimeout(
+              provider,
+              "wallet_sendCalls",
+              [
+                  {
+                      version: "1.0",
+                      from,
+                      chainId: BASE_CHAIN_ID_HEX,
+                      calls: [{ to, value, data }],
+                  },
+              ],
+              120000
+          );
+      }
+
+      const directHash = normalizeEthSendTxHash(sendRes);
+      if (directHash) return directHash;
+
+      const callsId = ptgExtractSendCallsId(sendRes);
+      if (!callsId) {
+          throw new Error("wallet_sendCalls returned no batch id");
+      }
+
+      const deadline = Date.now() + 90000;
+      while (Date.now() < deadline) {
+          let st = null;
+          try {
+              st = await walletRequestWithTimeout(
+                  provider,
+                  "wallet_getCallsStatus",
+                  [callsId],
+                  15000
+              );
+          } catch (eSt) {
+              console.warn("[ptg] wallet_getCallsStatus", eSt);
+          }
+          const code = st && st.status != null ? Number(st.status) : NaN;
+          const h = ptgExtractHashFromCallsStatus(st);
+          if (h && (code === 200 || !Number.isFinite(code) || code >= 200)) {
+              if (code === 500 || code === 600 || code === 400) {
+                  throw new Error("Transaction batch failed in wallet (status " + code + ").");
+              }
+              return h;
+          }
+          if (code === 400 || code === 500 || code === 600) {
+              throw new Error("Transaction batch failed in wallet (status " + code + ").");
+          }
+          await new Promise((r) => setTimeout(r, 1500));
+      }
+      throw new Error("Timed out waiting for wallet_sendCalls confirmation.");
+  }
+
+  function ptgShouldPreferWalletSendCalls() {
+      return (
+          ptgHost === "base" ||
+          ptgHost === "farcaster" ||
+          (typeof ptgNotifDetectBaseSurface === "function" && ptgNotifDetectBaseSurface()) ||
+          !!ptgInMiniAppSurface
+      );
+  }
+
   function isUserRejectedWalletRequest(err) {
       if (!err) return false;
       const code = err.code;
@@ -14563,8 +14689,35 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   embedded && provider === embedded && typeof provider.request === "function";
               const singlePromptWalletMode = strictSingleTxPrompt || !isEmbeddedWallet;
 
-              /* Base App / embedded: najpierw podpis + relay — omija często wolny pierwszy eth_sendTransaction. */
-              if (preferRelayFirst && isEmbeddedWallet && accounts[0]) {
+              /* Base App / Farcaster SCW: najpierw wallet_sendCalls (natywny UI). */
+              if (preferRelayFirst && isEmbeddedWallet && accounts[0] && ptgShouldPreferWalletSendCalls()) {
+                  try {
+                      setStatus("Confirm in Base wallet…", "#94a3b8");
+                      if (didSendMintTxRequest) {
+                          throw new Error("Mint transaction already requested in this flow.");
+                      }
+                      didSendMintTxRequest = true;
+                      const hCalls = await ptgWalletSendCallsAndWaitHash(
+                          provider,
+                          accounts[0],
+                          toNft,
+                          dHex,
+                          valueHex
+                      );
+                      if (hCalls) return hCalls;
+                  } catch (sendCallsErr) {
+                      passLastErr = sendCallsErr;
+                      didSendMintTxRequest = false;
+                      if (isUserRejectedWalletRequest(sendCallsErr)) throw sendCallsErr;
+                      console.warn(
+                          "mint wallet_sendCalls failed, falling back",
+                          sendCallsErr
+                      );
+                  }
+              }
+
+              /* Base App / embedded: podpis + relay — omija często wolny pierwszy eth_sendTransaction. */
+              if (preferRelayFirst && isEmbeddedWallet && accounts[0] && !didSendMintTxRequest) {
                   try {
                       setStatus("Sign — submitting via PhraseToGuess…", "#94a3b8");
                       return await signMintTxAndBroadcastViaSite(
@@ -14754,16 +14907,38 @@ async function ptgRefreshIdentityAliasesFromDb() {
           } catch (chainErr) {
               throw new Error("Switch wallet network to Base and try again.");
           }
-          /* Trofeum: twardy single-shot (1 request, bez fallbacków/retry). */
+          /* Trofeum: w Base/Farcaster najpierw wallet_sendCalls (natywny SCW UI),
+           * dopiero potem eth_sendTransaction — mniej fałszywych ostrzeżeń fraud. */
           if (__ptgWalletTxRequestInFlight) {
               throw new Error("Wallet request already in progress.");
           }
           __ptgWalletTxRequestInFlight = true;
-          const rawOne = await ethProvider.request({
-              method: "eth_sendTransaction",
-              params: [{ from: fromChk, to: toNft, data: dataHexPlain, value: valueHex }],
-          });
-          txHash = normalizeEthSendTxHash(rawOne);
+          let rawOne = null;
+          if (ptgShouldPreferWalletSendCalls()) {
+              try {
+                  setStatus("Confirm mint in Base wallet…", "#94a3b8");
+                  txHash = await ptgWalletSendCallsAndWaitHash(
+                      ethProvider,
+                      fromChk,
+                      toNft,
+                      dataHexPlain,
+                      valueHex
+                  );
+              } catch (eSendCalls) {
+                  if (isUserRejectedWalletRequest(eSendCalls)) throw eSendCalls;
+                  console.warn(
+                      "mint wallet_sendCalls failed, falling back to eth_sendTransaction",
+                      eSendCalls
+                  );
+              }
+          }
+          if (!txHash) {
+              rawOne = await ethProvider.request({
+                  method: "eth_sendTransaction",
+                  params: [{ from: fromChk, to: toNft, data: dataHexPlain, value: valueHex }],
+              });
+              txHash = normalizeEthSendTxHash(rawOne);
+          }
           if (!txHash) {
               throw new Error("Wallet did not return transaction hash.");
           }
