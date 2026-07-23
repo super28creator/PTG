@@ -13898,24 +13898,20 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
   /** Musi być identyczny z `buildMintMessage` w `lib/ptg-sponsored-trophy-mint.js`. */
   function ptgTrophyMintSignMessage(minterAddr, metadataUri, issuedAt) {
+      void metadataUri;
       return (
-          "Phrase To Guess — trophy mint (Base)\n" +
-          "Wallet: " +
+          "Phrase To Guess\n" +
+          "Claim your victory trophy\n" +
           String(minterAddr).toLowerCase() +
           "\n" +
-          "URI: " +
-          String(metadataUri) +
-          "\n" +
-          "IssuedAt: " +
-          String(issuedAt) +
-          "\n" +
-          "Chain: 8453"
+          String(issuedAt)
       );
   }
 
   /**
    * Farcaster: personal_sign + treasury mint (jak claim referral).
    * Omija zepsuty eth_sendTransaction / „Unknown provider RPC error” w Warpcast.
+   * @returns {{ hash: string, preconfirmed: boolean }}
    */
   async function sendFarcasterSponsoredMintTx(provider, fromAddr, metadataUri, setStatusFn) {
       if (!provider || typeof provider.request !== "function") {
@@ -13929,7 +13925,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       const message = ptgTrophyMintSignMessage(from, uri, issuedAt);
 
       if (typeof setStatusFn === "function") {
-          setStatusFn("Sign mint in Farcaster…", "#94a3b8");
+          setStatusFn("Confirm in your wallet…", "#94a3b8");
       }
 
       let signature;
@@ -13945,18 +13941,18 @@ async function ptgRefreshIdentityAliasesFromDb() {
           );
       } catch (signErr) {
           if (isUserRejectedWalletRequest(signErr)) {
-              throw new Error("Mint cancelled in wallet.");
+              throw new Error("Mint cancelled.");
           }
           throw new Error(
-              ptgHumanizeWalletError(signErr) || "Could not sign mint request."
+              ptgHumanizeWalletError(signErr) || "Could not confirm mint."
           );
       }
       if (typeof signature !== "string" || !signature.startsWith("0x") || signature.length < 130) {
-          throw new Error("Invalid mint signature from wallet.");
+          throw new Error("Could not confirm mint. Try again.");
       }
 
       if (typeof setStatusFn === "function") {
-          setStatusFn("Minting trophy on Base…", "#94a3b8");
+          setStatusFn("Minting your trophy…", "#94a3b8");
       }
 
       const origin = getCanonicalSiteOrigin();
@@ -13998,34 +13994,32 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   const code = j && j.error ? String(j.error) : "http_" + resp.status;
                   lastErr = new Error(code);
                   if (/treasury_low_eth|trophy_mint_not_configured/i.test(code)) {
-                      throw new Error(
-                          "Mint service temporarily unavailable. Try again in a minute."
-                      );
+                      throw new Error("Mint is busy — try again in a moment.");
                   }
                   if (/bad_signature|signature_expired/i.test(code)) {
-                      throw new Error("Mint signature rejected. Try again.");
+                      throw new Error("Confirmation expired. Try again.");
                   }
                   continue;
               }
               const hash =
                   normalizeEthSendTxHash(j && j.txHash) ||
                   normalizeEthSendTxHash(j && j.mintTxHash);
-              if (hash) return hash;
+              if (hash) return { hash, preconfirmed: true };
               lastErr = new Error("sponsored_mint_no_hash");
           } catch (e) {
               lastErr = e;
-              if (e && /unavailable|signature rejected|cancelled/i.test(String(e.message || ""))) {
+              if (e && /busy|expired|cancelled|Mint cancelled/i.test(String(e.message || ""))) {
                   throw e;
               }
               console.warn("[ptg-fc-mint] sponsored attempt", urls[i], e);
           }
       }
-      throw lastErr || new Error("Sponsored Farcaster mint failed.");
+      throw lastErr || new Error("Mint failed. Try again.");
   }
 
   /**
-   * Farcaster trophy: najpierw sponsored (działa jak claim), potem minimalny
-   * eth_sendTransaction jako fallback gdy treasury niedostępne.
+   * Farcaster trophy: najpierw sponsored, potem minimalny eth_sendTransaction.
+   * @returns {{ hash: string, preconfirmed: boolean }}
    */
   async function sendFarcasterMinimalMintTx(provider, fromAddr, toAddr, dataHex, valueHex, setStatusFn, metadataUri) {
       try {
@@ -14038,26 +14032,30 @@ async function ptgRefreshIdentityAliasesFromDb() {
       } catch (sponsoredErr) {
           console.warn("[ptg-fc-mint] sponsored path failed, trying wallet tx", sponsoredErr);
           if (isUserRejectedWalletRequest(sponsoredErr)) throw sponsoredErr;
-          if (/cancelled in wallet|signature rejected/i.test(String((sponsoredErr && sponsoredErr.message) || ""))) {
+          if (/cancelled|expired|busy/i.test(String((sponsoredErr && sponsoredErr.message) || ""))) {
               throw sponsoredErr;
           }
       }
 
       if (!provider || typeof provider.request !== "function") {
-          throw new Error("Farcaster wallet unavailable.");
+          throw new Error("Wallet unavailable. Reopen the app and try again.");
       }
       const from = ethers.utils.getAddress(fromAddr);
       const to = ethers.utils.getAddress(toAddr);
       const data = dataHex && String(dataHex).startsWith("0x") ? dataHex : "0x";
-      const value =
+      let value =
           valueHex && String(valueHex).startsWith("0x") && valueHex !== "0x"
               ? valueHex
               : "0x0";
       if (value === "0x0") {
-          throw new Error("Could not read mint price. Reopen the mini app and try again.");
+          try {
+              value = await readMintPriceWeiHex(to, null);
+          } catch (_) {}
+      }
+      if (!value || value === "0x" || value === "0x0") {
+          throw new Error("Mint failed. Reopen the app and try again.");
       }
 
-      /* Soft chain check — bez switch/add (psują kolejne eth_sendTransaction). */
       try {
           const cid = await withTimeout(
               provider.request({ method: "eth_chainId", params: [] }),
@@ -14065,16 +14063,16 @@ async function ptgRefreshIdentityAliasesFromDb() {
               "fc eth_chainId"
           );
           if (!chainIdMatchesBase(cid)) {
-              throw new Error("Farcaster wallet is not on Base. Switch to Base and try again.");
+              throw new Error("Switch to Base in your wallet, then try again.");
           }
       } catch (eChain) {
-          if (eChain && /not on Base|Switch to Base/i.test(String(eChain.message || ""))) {
+          if (eChain && /Switch to Base/i.test(String(eChain.message || ""))) {
               throw eChain;
           }
           console.warn("[ptg-fc-mint] eth_chainId soft-check skipped", eChain);
       }
 
-      if (typeof setStatusFn === "function") setStatusFn("Confirm mint in Farcaster…", "#94a3b8");
+      if (typeof setStatusFn === "function") setStatusFn("Confirm in your wallet…", "#94a3b8");
       const payload = { from, to, data, value };
       let rawSend;
       try {
@@ -14084,22 +14082,16 @@ async function ptgRefreshIdentityAliasesFromDb() {
           });
       } catch (eSend) {
           if (isUserRejectedWalletRequest(eSend)) {
-              throw new Error("Mint cancelled in wallet.");
+              throw new Error("Mint cancelled.");
           }
-          const detail = String((eSend && eSend.message) || eSend || "").slice(0, 200);
           console.error("[ptg-fc-mint] eth_sendTransaction", eSend);
-          if (/unknown provider rpc|unsupported method|4200/i.test(detail)) {
-              throw new Error(
-                  "Farcaster could not submit the mint. Sign the mint request when prompted, or reopen the mini app."
-              );
-          }
-          throw new Error(detail || "Farcaster wallet failed to send mint.");
+          throw new Error("Mint failed. Reopen the app and try again.");
       }
       const hash = normalizeEthSendTxHash(rawSend);
       if (!hash) {
-          throw new Error("Farcaster wallet did not return a transaction hash.");
+          throw new Error("Mint failed. Try again.");
       }
-      return hash;
+      return { hash, preconfirmed: false };
   }
 
   function ptgShouldPreferWalletSendCalls() {
@@ -14822,31 +14814,31 @@ async function ptgRefreshIdentityAliasesFromDb() {
       }
 
       if (db && myUserId && myUserId !== "guest" && userLc !== minterLc) {
-          setStatus("Linking wallet for mint…", "#94a3b8");
+          setStatus("Preparing…", "#94a3b8");
           void update(playerDocRef(myUserId), { mintWalletForMint: minterLc }).catch(function (e) {
               console.warn("mintWalletForMint update skipped — mint continues on-chain", e);
           });
       }
 
-      setStatus("Building mint transaction…", "#94a3b8");
+      setStatus("Preparing…", "#94a3b8");
       const isBadge = isPtgBadgeContract(toNft);
       let dataHexPlain;
       let dataHexWithBuilder = null;
 
       if (isBadge) {
-          setStatus("Requesting mint voucher…", "#94a3b8");
+          setStatus("Preparing…", "#94a3b8");
           let voucher;
           try {
               voucher = await fetchBadgeMintVoucher(toNft, minter);
           } catch (voucherErr) {
               if (voucherErr && voucherErr._alreadyMinted) {
-                  setStatus("Checking on-chain badge balance…", "#94a3b8");
+                  setStatus("Checking…", "#94a3b8");
                   let onchainBal = ethers.BigNumber.from(0);
                   try {
                       onchainBal = await readNftBalanceBn(toNft, minter, ethProvider);
                   } catch (_) {}
                   if (onchainBal.gt(0)) {
-                      setStatus("Badge already minted — confirming…", "#86efac");
+                      setStatus("Already minted!", "#86efac");
                       return { txHash: "already_minted", minter, ethProvider };
                   }
               }
@@ -14878,23 +14870,30 @@ async function ptgRefreshIdentityAliasesFromDb() {
           dataHexWithBuilder = appendErc8021BuilderSuffix(dataHexPlain);
       }
 
-      setStatus("Reading contract state…", "#94a3b8");
+      setStatus("Preparing…", "#94a3b8");
       let valueHex = "0x0";
-      try {
-          const earlyPrice = await earlyMintPricePromise;
-          valueHex = earlyPrice || (await readMintPriceWeiHex(toNft, ethProvider));
-      } catch (priceErr) {
-          console.warn("readMintPriceWeiHex failed — will try wallet-estimated value", priceErr);
+      const skipPriceWarmup =
+          ptgHost === "farcaster" && !isPtgBadgeContract(toNft);
+      if (!skipPriceWarmup) {
+          try {
+              const earlyPrice = await earlyMintPricePromise;
+              valueHex = earlyPrice || (await readMintPriceWeiHex(toNft, ethProvider));
+          } catch (priceErr) {
+              console.warn("readMintPriceWeiHex failed — will try wallet-estimated value", priceErr);
+          }
       }
 
-      const balBeforePromise = readNftBalanceBn(toNft, minter, ethProvider).catch((balErr) => {
-          console.warn("readNftBalanceBn pre-mint failed — proceeding with 0", balErr);
-          return ethers.BigNumber.from(0);
-      });
+      const balBeforePromise = skipPriceWarmup
+          ? Promise.resolve(ethers.BigNumber.from(0))
+          : readNftBalanceBn(toNft, minter, ethProvider).catch((balErr) => {
+                console.warn("readNftBalanceBn pre-mint failed — proceeding with 0", balErr);
+                return ethers.BigNumber.from(0);
+            });
 
-      setStatus("Preparing transaction…", "#94a3b8");
+      setStatus("Preparing…", "#94a3b8");
       const fromChk = ethers.utils.getAddress(accounts[0]);
       let didSendMintTxRequest = false;
+      let mintPreconfirmed = false;
 
       let txHash;
       let lastSendErr = null;
@@ -14941,7 +14940,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               /* Base App SCW: najpierw wallet_sendCalls (natywny UI). Nie na Farcaster. */
               if (allowRelay && accounts[0] && ptgShouldPreferWalletSendCalls()) {
                   try {
-                      setStatus("Confirm in Base wallet…", "#94a3b8");
+                      setStatus("Confirm in your wallet…", "#94a3b8");
                       if (didSendMintTxRequest) {
                           throw new Error("Mint transaction already requested in this flow.");
                       }
@@ -14968,7 +14967,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               /* Embedded (nie Farcaster): podpis + relay. */
               if (allowRelay && accounts[0] && !didSendMintTxRequest && !ptgShouldPreferWalletSendCalls()) {
                   try {
-                      setStatus("Sign — submitting via PhraseToGuess…", "#94a3b8");
+                      setStatus("Confirm in your wallet…", "#94a3b8");
                       return await signMintTxAndBroadcastViaSite(
                           provider,
                           accounts[0],
@@ -15060,7 +15059,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               /* 2) Podpis + wysyłka przez PhraseToGuess — nie na Farcaster. */
               if (ptgHost !== "farcaster") {
                   try {
-                      setStatus("Sign — submitting via PhraseToGuess…", "#94a3b8");
+                      setStatus("Confirm in your wallet…", "#94a3b8");
                       return await signMintTxAndBroadcastViaSite(
                           provider,
                           accounts[0],
@@ -15088,7 +15087,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                               (gasFields2 && gasFields2.gas) ||
                               ethers.utils.hexValue(260000),
                       };
-                      setStatus("Confirm mint in wallet…", "#94a3b8");
+                      setStatus("Confirm in your wallet…", "#94a3b8");
                       const raw2 = await trySendTransaction(provider, payload2);
                       const h2 = normalizeEthSendTxHash(raw2);
                       if (h2) return h2;
@@ -15186,10 +15185,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
               throw new Error("Wallet request already in progress.");
           }
           __ptgWalletTxRequestInFlight = true;
-          if (!valueHex || valueHex === "0x" || valueHex === "0x0") {
-              valueHex = await readMintPriceWeiHex(toNft, null);
-          }
-          txHash = await sendFarcasterMinimalMintTx(
+          /* Sponsored path nie potrzebuje price przed podpisem — szybszy prompt. */
+          const fcMint = await sendFarcasterMinimalMintTx(
               ethProvider,
               fromChk,
               toNft,
@@ -15198,6 +15195,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
               setStatus,
               metadataUri
           );
+          txHash = fcMint && fcMint.hash ? fcMint.hash : null;
+          mintPreconfirmed = !!(fcMint && fcMint.preconfirmed);
       } else if (useMetaMaskTrophyOneShot) {
           try {
               const chainIdNow = await ethProvider.request({ method: "eth_chainId", params: [] });
@@ -15253,8 +15252,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
           if (lastSendErr) console.warn("mint: user cancelled or send failed", lastSendErr);
           const detail = mintWalletErrorDetail(lastSendErr);
           const errMsg = detail
-              ? "Wallet rejected: " + detail.slice(0, 160)
-              : "Transaction was not signed — open your wallet and try again.";
+              ? "Mint cancelled."
+              : "Mint was not confirmed — try again.";
           throw new Error(errMsg);
       }
 
@@ -15267,7 +15266,13 @@ async function ptgRefreshIdentityAliasesFromDb() {
           }
       }
 
-      setStatus("Waiting for confirmation…", "#94a3b8");
+      /* Sponsored Farcaster: serwer już poczekał na mint — bez drugiego długiego polla. */
+      if (mintPreconfirmed) {
+          setStatus("Done!", "#86efac");
+          return { txHash, minter, ethProvider };
+      }
+
+      setStatus("Almost done…", "#94a3b8");
       let receipt;
       try {
           receipt = await waitForTxReceiptViaServer(txHash);
@@ -15282,7 +15287,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       }
 
       if (receipt && !receiptIndicatesSuccess(receipt)) {
-          throw new Error("Transaction reverted on-chain (status 0). Check wallet for details.");
+          throw new Error("Mint failed on-chain. Check your wallet.");
       }
 
       if (!receipt) {
@@ -15290,7 +15295,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
           return { txHash, minter, ethProvider };
       }
 
-      setStatus("Verifying mint on-chain…", "#94a3b8");
+      setStatus("Almost done…", "#94a3b8");
       const balBefore = await balBeforePromise;
       async function readBal(tag) {
           return readNftBalanceBn(toNft, minter, ethProvider, tag);
@@ -15495,7 +15500,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
         clearTimeout(victoryStatusAutoClearT);
         victoryStatusAutoClearT = 0;
     }
-    btn.innerHTML = "Processing..."; btn.disabled = true;
+      btn.innerHTML = "Minting…"; btn.disabled = true;
     statusDiv.textContent = "";
     statusDiv.style.color = "#94a3b8";
 
@@ -15504,13 +15509,13 @@ async function ptgRefreshIdentityAliasesFromDb() {
           throw new Error("PTG_NFT_ADDRESS not set — deploy contract and paste address in index.html");
       }
 
-      const { txHash } = await runPublicMintStringNftTx(PTG_NFT_ADDRESS, METADATA_URL, null, {
+      const { txHash } = await runPublicMintStringNftTx(PTG_NFT_ADDRESS, METADATA_URL, statusDiv, {
           onTxHash(hashNow) {
               const txLNow = document.getElementById("victoryTxLink");
               if (txLNow) {
-                  txLNow.innerHTML = `<a href="${txLinkForHash(hashNow)}" target="_blank" rel="noopener">View tx on BaseScan</a>`;
+                  txLNow.innerHTML = `<a href="${txLinkForHash(hashNow)}" target="_blank" rel="noopener">View on BaseScan</a>`;
               }
-              statusDiv.textContent = "Tx sent — waiting for confirmation…";
+              statusDiv.textContent = "Almost done…";
               statusDiv.style.color = "#94a3b8";
           },
       });
