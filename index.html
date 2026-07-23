@@ -15330,21 +15330,21 @@ async function ptgRefreshIdentityAliasesFromDb() {
       const m = typeof err.message === "string" ? err.message.trim() : "";
       if (!m || /^failed\.?$/i.test(m)) return "Failed.";
       if (/insufficient funds|insufficient balance|Not enough ETH/i.test(m)) {
-          return "Not enough ETH on Base for mint + gas.";
+          return "Not enough ETH for mint.";
       }
-      if (/user rejected|denied|4001|cancelled in wallet/i.test(m)) {
-          return "Mint cancelled in wallet.";
+      if (/user rejected|denied|4001|cancelled/i.test(m)) {
+          return "Mint cancelled.";
       }
-      if (/Mint would fail on-chain|price mismatch|Could not read mint price/i.test(m)) {
-          return m.length > 140 ? m.slice(0, 137) + "…" : m;
+      if (/busy|unavailable|expired/i.test(m)) {
+          return m.length > 80 ? m.slice(0, 77) + "…" : m;
       }
       if (ptgIsUnsupportedWalletMethod(err) || /unknown provider rpc/i.test(m)) {
-          return "Farcaster mint failed. Fully close the mini app, reopen, and sign the mint prompt.";
+          return "Mint failed. Close the app, reopen, and try again.";
       }
-      if (/sponsored|trophy_mint|treasury/i.test(m)) {
-          return "Mint service busy — wait a moment and try again.";
+      if (/sponsored|trophy_mint|treasury|Basescan|0x[a-fA-F0-9]{10,}/i.test(m)) {
+          return "Mint failed. Try again.";
       }
-      if (m.length > 140) return m.slice(0, 137) + "…";
+      if (m.length > 80) return m.slice(0, 77) + "…";
       return m;
   }
 
