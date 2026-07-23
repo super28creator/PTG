@@ -7594,8 +7594,12 @@ let __ptgIdentityAliasRefreshPromise = null;
       }
       const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId);
       referralSummaryUnsubscribe = onValue(sRef, (snap) => {
-          const d = snap.exists() ? snap.val() : null;
-          ptgUpdateReferralUiFromSnapshot(d);
+          void snap;
+          /* Lekki refresh bez heal/RPC — unikamy pętli gdy restore zapisuje summary. */
+          void ptgReferralRefreshClaimableBalanceUi([myUserId], {
+              skipHeal: true,
+              skipWalletLookup: true,
+          });
       });
       const aliasIds = Array.from(ptgGetMyIdentityAliasesLc());
       aliasIds.push(String(myUserId || "").toLowerCase());
@@ -9555,6 +9559,9 @@ async function ptgRefreshIdentityAliasesFromDb() {
               const pr = ptgReadPendingRewardCents(o);
               return { ...o, pendingReward: pr + moved };
           });
+          try {
+              void ptgPersistIdentityAliasPair(src, dst);
+          } catch (_) {}
           return { moved };
       } catch (e) {
           /* rollback best-effort */
@@ -9761,8 +9768,25 @@ async function ptgRefreshIdentityAliasesFromDb() {
       }
 
       if (claimAmount <= 0 && !resumeAuth) {
+          let rec = null;
+          try {
+              rec = await ptgReferralRecoverClaimUiAfterCancel({
+                  claimUserId,
+                  uiSummaryUserId,
+                  bridgedSourceUserId,
+                  bridgedWalletUserId,
+                  bridgedAmountCents,
+                  rollbackBridge: bridgedAmountCents > 0,
+                  keepMsg: true,
+              });
+          } catch (_) {
+              if (btn) btn.disabled = true;
+          }
+          if (rec && Number(rec.totalPending) > 0) {
+              if (msg) msg.textContent = "Balance restored. Tap Claim again.";
+              return;
+          }
           if (msg) msg.textContent = "Nothing to claim.";
-          if (btn) btn.disabled = true;
           return;
       }
 
@@ -9803,6 +9827,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   return;
               }
               if (jEarly && jEarly.error === "already_claimed") {
+                  if (msg) msg.textContent = "Already claimed. Refresh the app.";
+                  try {
+                      await ptgReferralRecoverClaimUiAfterCancel({
+                          claimUserId,
+                          uiSummaryUserId,
+                          keepMsg: true,
+                      });
+                  } catch (_) {}
+                  if (btn) btn.disabled = true;
                   if (msg) msg.textContent = "Already claimed. Refresh the app.";
                   return;
               }
@@ -10145,37 +10178,28 @@ async function ptgRefreshIdentityAliasesFromDb() {
               bridgedSourceUserId: bridgedSourceUserId || null,
               bridgedWalletUserId: bridgedWalletUserId || null,
           });
-          if (
-              bridgedAmountCents > 0 &&
-              !txSubmitted &&
-              bridgedSourceUserId &&
-              bridgedWalletUserId
-          ) {
+          if (!txSubmitted) {
               try {
-                  const restored = await ptgRollbackBridgedReferralPending(
+                  await ptgReferralRecoverClaimUiAfterCancel({
+                      claimUserId,
+                      uiSummaryUserId,
                       bridgedSourceUserId,
                       bridgedWalletUserId,
-                      bridgedAmountCents
-                  );
-                  if (restored > 0 && msg) {
-                      msg.textContent = "Claim cancelled. Balance restored.";
-                  }
-                  console.info("[ptg-claim] bridge rollback", { restored });
-              } catch (eRb) {
-                  console.warn("[ptg-claim] bridge rollback failed", eRb);
-              }
-          }
-          if (btn) {
-              const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + uiSummaryUserId);
-              get(sRef)
-                  .then((snap) => {
-                      const d = snap.exists() ? snap.val() : null;
-                      const pr = ptgReadPendingRewardCents(d);
-                      btn.disabled = pr <= 0;
-                  })
-                  .catch(() => {
-                      if (btn) btn.disabled = false;
+                      bridgedAmountCents,
+                      rollbackBridge: bridgedAmountCents > 0,
                   });
+              } catch (eRec) {
+                  console.warn("[ptg-claim] recover ui failed", eRec);
+                  if (btn) btn.disabled = false;
+              }
+          } else {
+              try {
+                  const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + uiSummaryUserId);
+                  const snap = await get(sRef);
+                  ptgUpdateReferralUiFromSnapshot(snap.exists() ? snap.val() : null);
+              } catch (_) {
+                  if (btn) btn.disabled = true;
+              }
           }
       }
   }
@@ -10638,11 +10662,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
           return;
       }
       try {
-          const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId);
-          const snap = await get(sRef);
-          ptgUpdateReferralUiFromSnapshot(snap.exists() ? snap.val() : null);
+          await ptgReferralRefreshClaimableBalanceUi([myUserId]);
       } catch (_) {
-          ptgUpdateReferralUiFromSnapshot(null);
+          try {
+              const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId);
+              const snap = await get(sRef);
+              ptgUpdateReferralUiFromSnapshot(snap.exists() ? snap.val() : null);
+          } catch (__) {
+              ptgUpdateReferralUiFromSnapshot(null);
+          }
       }
   }
 
@@ -10655,31 +10683,220 @@ async function ptgRefreshIdentityAliasesFromDb() {
    * pendingReward wraca na konto; jeżeli została użyta on-chain bez SETTLE,
    * rekord ląduje w claim_history. Bezstanowy po stronie klienta i bez
    * podpisu — bezpiecznie wywoływany wielokrotnie.
+   *
+   * Farcaster profile-first: myUserId może NIE być 0x — wtedy healujemy
+   * wszystkie znane aliasy 0x + aktualny portfel (tam ląduje outstanding).
    */
-  async function ptgReferralSelfHealOutstanding() {
-      if (!isLoggedIn() || myUserId === "guest") return null;
-      if (!/^0x[a-fA-F0-9]{40}$/.test(String(myUserId || ""))) return null;
+  async function ptgReferralAbortOutstanding(userId) {
+      const uid = String(userId || "").trim();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(uid)) return null;
       try {
           const origin =
               typeof location !== "undefined" && location.origin ? location.origin : "";
-          const r = await fetch(origin + "/api/ptg-referral-payout", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ userId: myUserId, op: "restore" }),
-          });
-          const j = await r.json().catch(() => null);
-          if (r.ok && j && (j.restored || j.claimed)) {
-              console.info("[ptg-referral] self-heal", {
-                  restored: j.restored,
-                  claimed: j.claimed,
-                  pending: j.pendingReward,
-              });
-          }
-          return j;
+          const r = await fetchWithTimeout(
+              origin + "/api/ptg-referral-payout",
+              {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId: uid, op: "abort" }),
+              },
+              20000
+          );
+          return await r.json().catch(() => null);
       } catch (e) {
-          console.warn("ptgReferralSelfHealOutstanding", e);
+          console.warn("ptgReferralAbortOutstanding", e);
           return null;
       }
+  }
+
+  async function ptgReferralWalletIdsForHeal() {
+      const ids = new Set();
+      try {
+          const aliases = ptgGetMyIdentityAliasesLc();
+          aliases.forEach(function (a) {
+              const s = String(a || "").trim();
+              if (/^0x[a-fA-F0-9]{40}$/.test(s)) ids.add(s.toLowerCase());
+          });
+      } catch (_) {}
+      const me = String(myUserId || "").trim();
+      if (/^0x[a-fA-F0-9]{40}$/.test(me)) ids.add(me.toLowerCase());
+      try {
+          const providers = [];
+          const embeddedAsync = await getEmbeddedEthProviderAsync().catch(() => null);
+          const embeddedLegacy = getEmbeddedEthProvider();
+          const injected = getInjectedProvider();
+          if (embeddedAsync && typeof embeddedAsync.request === "function") providers.push(embeddedAsync);
+          if (
+              embeddedLegacy &&
+              typeof embeddedLegacy.request === "function" &&
+              embeddedLegacy !== embeddedAsync
+          ) {
+              providers.push(embeddedLegacy);
+          }
+          if (injected && typeof injected.request === "function" && !providers.includes(injected)) {
+              providers.push(injected);
+          }
+          for (let i = 0; i < providers.length; i++) {
+              const acc = await getWalletAccountsFast(providers[i]).catch(() => []);
+              const a0 = acc && acc[0] ? String(acc[0]).trim() : "";
+              if (/^0x[a-fA-F0-9]{40}$/.test(a0)) ids.add(a0.toLowerCase());
+          }
+      } catch (_) {}
+      return Array.from(ids);
+  }
+
+  async function ptgReferralSelfHealOutstanding() {
+      if (!isLoggedIn() || myUserId === "guest") return null;
+      const walletIds = await ptgReferralWalletIdsForHeal();
+      if (!walletIds.length) return null;
+      let best = null;
+      for (let i = 0; i < walletIds.length; i++) {
+          try {
+              const origin =
+                  typeof location !== "undefined" && location.origin ? location.origin : "";
+              const r = await fetch(origin + "/api/ptg-referral-payout", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId: walletIds[i], op: "restore" }),
+              });
+              const j = await r.json().catch(() => null);
+              if (r.ok && j) {
+                  if (j.restored || j.claimed || (j.outstanding && j.outstanding.auth)) {
+                      console.info("[ptg-referral] self-heal", {
+                          userId: walletIds[i],
+                          restored: j.restored,
+                          claimed: j.claimed,
+                          pending: j.pendingReward,
+                          hasOutstanding: !!(j.outstanding && j.outstanding.auth),
+                      });
+                  }
+                  if (
+                      !best ||
+                      Number(j.pendingReward || 0) > Number(best.pendingReward || 0) ||
+                      (j.outstanding && j.outstanding.auth)
+                  ) {
+                      best = j;
+                  }
+              }
+          } catch (e) {
+              console.warn("ptgReferralSelfHealOutstanding", walletIds[i], e);
+          }
+      }
+      return best;
+  }
+
+  /** Odśwież saldo/przycisk Claim z profilu + aliasów 0x (BEZ abort outstanding). */
+  async function ptgReferralRefreshClaimableBalanceUi(extraIds, opts) {
+      const o = opts && typeof opts === "object" ? opts : {};
+      const summaryIds = new Set();
+      const add = function (id) {
+          const s = String(id || "").trim();
+          if (s) summaryIds.add(s.toLowerCase());
+      };
+      add(myUserId);
+      try {
+          ptgGetMyIdentityAliasesLc().forEach(add);
+      } catch (_) {}
+      if (Array.isArray(extraIds)) {
+          for (let i = 0; i < extraIds.length; i++) add(extraIds[i]);
+      }
+      if (!o.skipWalletLookup) {
+          try {
+              const wallets = await ptgReferralWalletIdsForHeal();
+              for (let i = 0; i < wallets.length; i++) add(wallets[i]);
+          } catch (_) {}
+      }
+
+      let outstandingCents = 0;
+      if (!o.skipHeal) {
+          try {
+              const healed = await ptgReferralSelfHealOutstanding();
+              if (healed && healed.outstanding && Number(healed.outstanding.amountCents) > 0) {
+                  outstandingCents = Number(healed.outstanding.amountCents) || 0;
+              }
+          } catch (_) {}
+      }
+
+      let totalPending = 0;
+      const sumList = Array.from(summaryIds).filter(Boolean);
+      for (let i = 0; i < sumList.length; i++) {
+          try {
+              const snap = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + sumList[i]));
+              if (snap.exists()) totalPending += ptgReadPendingRewardCents(snap.val());
+          } catch (_) {}
+      }
+
+      const displayCents = totalPending + outstandingCents;
+      const btn = document.getElementById("referralClaimBtn");
+      const bal = document.getElementById("referralBalanceDisplay");
+      if (bal) {
+          const n = ptgFormatReferralCents(displayCents);
+          bal.innerHTML = ptgEscapeReferralHtml(n) + '<span class="referral-balance-currency">$</span>';
+      }
+      if (btn) {
+          btn.disabled = !isLoggedIn() || myUserId === "guest" || displayCents <= 0;
+      }
+      return { totalPending, outstandingCents, displayCents };
+  }
+
+  /** Po anulowaniu / błędzie claimu: oddaj pending z outstanding i odśwież UI. */
+  async function ptgReferralRecoverClaimUiAfterCancel(opts) {
+      const o = opts && typeof opts === "object" ? opts : {};
+      const ids = new Set();
+      const add = function (id) {
+          const s = String(id || "").trim();
+          if (/^0x[a-fA-F0-9]{40}$/.test(s)) ids.add(s.toLowerCase());
+      };
+      add(o.claimUserId);
+      add(o.bridgedWalletUserId);
+      add(myUserId);
+      try {
+          const wallets = await ptgReferralWalletIdsForHeal();
+          for (let i = 0; i < wallets.length; i++) add(wallets[i]);
+      } catch (_) {}
+
+      let restoredAny = 0;
+      const idList = Array.from(ids);
+      for (let i = 0; i < idList.length; i++) {
+          const j = await ptgReferralAbortOutstanding(idList[i]);
+          if (j && Number(j.restored) > 0) restoredAny += Number(j.restored) || 0;
+      }
+
+      if (
+          o.rollbackBridge &&
+          Number(o.bridgedAmountCents) > 0 &&
+          o.bridgedSourceUserId &&
+          o.bridgedWalletUserId
+      ) {
+          try {
+              await ptgRollbackBridgedReferralPending(
+                  o.bridgedSourceUserId,
+                  o.bridgedWalletUserId,
+                  o.bridgedAmountCents
+              );
+          } catch (eRb) {
+              console.warn("[ptg-claim] bridge rollback failed", eRb);
+          }
+      }
+
+      const refreshed = await ptgReferralRefreshClaimableBalanceUi([
+          o.uiSummaryUserId,
+          o.claimUserId,
+          o.bridgedSourceUserId,
+          o.bridgedWalletUserId,
+      ]);
+      const msg = document.getElementById("referralClaimMsg");
+      if (msg && restoredAny > 0 && !o.keepMsg) {
+          msg.textContent = "Claim cancelled. Balance restored — you can try again.";
+      }
+      return {
+          restoredAny,
+          totalPending: refreshed && refreshed.displayCents != null
+              ? refreshed.displayCents
+              : refreshed && refreshed.totalPending != null
+                ? refreshed.totalPending
+                : 0,
+      };
   }
 
   async function showReferralModal() {

@@ -1099,6 +1099,125 @@ async function handleRestore(req, res, body) {
   });
 }
 
+/**
+ * ABORT — user anulował podpis / TX. Jeżeli outstanding NIE został użyty
+ * on-chain, natychmiast przywróć pendingReward (nie czekaj na TTL 15 min).
+ * Dzięki temu Claim nie zostaje „martwy" z saldem 0$ do wygaśnięcia auth.
+ */
+async function handleAbort(req, res, body) {
+  if (!hasServiceAccount()) {
+    return res.status(503).json({ error: "firebase_admin_missing" });
+  }
+  const userId = typeof body.userId === "string" ? body.userId.trim() : "";
+  if (!userId || !/^0x[a-fA-F0-9]{40}$/.test(userId)) {
+    return res.status(400).json({ error: "invalid_user_id" });
+  }
+
+  const root = referralRoot();
+  const summaryPath = `${root}/summary/${userId}`;
+  const outstandingPath = `${root}/claim_outstanding/${userId}`;
+
+  let db;
+  try {
+    db = getAdminDb();
+  } catch (e) {
+    return res.status(503).json({ error: "firebase_admin", detail: String(e && e.message) });
+  }
+
+  const rpcUrl = process.env.BASE_RPC_URL || "https://mainnet.base.org";
+
+  const [oSnap, sSnap] = await Promise.all([
+    db.ref(outstandingPath).once("value"),
+    db.ref(summaryPath).once("value"),
+  ]);
+  const outstanding = oSnap.exists() ? oSnap.val() : null;
+  const summary = sSnap.exists() ? sSnap.val() : null;
+  const pendingNow =
+    summary && typeof summary.pendingReward === "number" ? summary.pendingReward : 0;
+
+  if (!outstanding || !outstanding.nonce || !outstanding.treasuryAddr) {
+    return res.status(200).json({
+      ok: true,
+      aborted: false,
+      restored: 0,
+      claimed: 0,
+      pendingReward: pendingNow,
+    });
+  }
+
+  let used = false;
+  try {
+    used = await isAuthorizationUsed(rpcUrl, outstanding.treasuryAddr, outstanding.nonce);
+  } catch (e) {
+    return res.status(502).json({ error: "rpc_read_failed", detail: String(e && e.message) });
+  }
+
+  const amountCents = Number(outstanding.amountCents) || 0;
+
+  if (used) {
+    /* Payout już poszedł — zamknij jak RESTORE(used), bez przywracania pending. */
+    let claimed = 0;
+    try {
+      const nonce = outstanding.nonce;
+      const histRef = db.ref(`${root}/claim_history/${userId}/${nonce}`);
+      const existing = await histRef.once("value");
+      if (!existing.exists()) {
+        await histRef.set({
+          amount: amountCents,
+          ts: Date.now(),
+          chainId: CHAIN_ID,
+          token: "USDC",
+          nonce,
+          source: "abort_already_used",
+        });
+        await db.ref(summaryPath).transaction((cur) => {
+          const o = cur && typeof cur === "object" && cur !== null ? cur : {};
+          return {
+            ...o,
+            claimedTotal:
+              (typeof o.claimedTotal === "number" ? o.claimedTotal : 0) + amountCents,
+            lastClaimAt: Date.now(),
+          };
+        });
+        claimed = amountCents;
+      }
+      await db.ref(outstandingPath).remove();
+    } catch (e) {
+      return res.status(500).json({ error: "db_update_failed", detail: String(e && e.message) });
+    }
+    return res.status(200).json({
+      ok: true,
+      aborted: false,
+      restored: 0,
+      claimed,
+      pendingReward: pendingNow,
+    });
+  }
+
+  let restored = 0;
+  try {
+    if (amountCents > 0) {
+      await db.ref(summaryPath).transaction((cur) => {
+        const o = cur && typeof cur === "object" && cur !== null ? cur : {};
+        const pr = typeof o.pendingReward === "number" ? o.pendingReward : 0;
+        return { ...o, pendingReward: pr + amountCents };
+      });
+      restored = amountCents;
+    }
+    await db.ref(outstandingPath).remove();
+  } catch (e) {
+    return res.status(500).json({ error: "db_abort_failed", detail: String(e && e.message) });
+  }
+
+  return res.status(200).json({
+    ok: true,
+    aborted: true,
+    restored,
+    claimed: 0,
+    pendingReward: pendingNow + restored,
+  });
+}
+
 module.exports = async (req, res) => {
   setCors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -1121,12 +1240,16 @@ module.exports = async (req, res) => {
 
   /* Dispatch po obecności pól:
    *  - op === "restore"                      → RESTORE
+   *  - op === "abort"                        → ABORT (cancel → restore pending now)
    *  - op === "execute"                      → EXECUTE (treasury sends TWA)
    *  - txHash + nonce (bez signature)        → SETTLE
    *  - claimAmountCents + signature          → QUOTE (+ optional execute)
    */
   if (typeof body.op === "string" && body.op.toLowerCase() === "restore") {
     return handleRestore(req, res, body);
+  }
+  if (typeof body.op === "string" && body.op.toLowerCase() === "abort") {
+    return handleAbort(req, res, body);
   }
   if (typeof body.op === "string" && body.op.toLowerCase() === "execute") {
     return handleExecute(req, res, body);
