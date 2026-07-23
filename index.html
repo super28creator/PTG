@@ -11181,6 +11181,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY && !pendingMint) {
           if (!tryRestoreActiveRound()) await initGame(true);
       } else {
+          if (pendingMint) resetVisualsWhileAwaitingTrophyMint();
           checkGameStateAndRender();
       }
       void ptgMaybeShowInviteAcceptOverlay();
@@ -12087,6 +12088,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               if (gamesPlayedTodayCount < MAX_GAMES_PER_DAY && !pendingMint) {
                   if (!tryRestoreActiveRound()) await initGame(true);
               } else {
+                  if (pendingMint) resetVisualsWhileAwaitingTrophyMint();
                   checkGameStateAndRender();
               }
           } else {
@@ -12570,6 +12572,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
         return;
     }
     if(pendingMint || gamesPlayedTodayCount >= MAX_GAMES_PER_DAY) {
+        if (pendingMint) resetVisualsWhileAwaitingTrophyMint();
         refreshCategoryDisplayText();
         checkGameStateAndRender();
         syncRoundLockUI();
@@ -12750,6 +12753,77 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
   // --- CHART & GAME VISUALS ---
   function preloadChartHistory() { for(let i=0; i<80; i++) { generateCandle((Math.random() - 0.5) * 1.5, 2.5); } }
+
+  /**
+   * Po wygranej bez mintu / po powrocie z pendingMint: NIE zostawiaj
+   * VICTORY + zielonej świecy + odkrytego hasła. Tylko neutralny wykres,
+   * puste pola na hasło i przycisk Claim Trophy.
+   */
+  function resetVisualsWhileAwaitingTrophyMint() {
+      try {
+          const statusEl = document.getElementById("status");
+          if (statusEl) statusEl.innerHTML = "";
+      } catch (_) {}
+      try {
+          document.getElementById("victoryModal")?.classList.remove("show");
+          document.getElementById("lossModal")?.classList.remove("show");
+      } catch (_) {}
+
+      secret = "";
+      revealed = [];
+      mistakes = 0;
+      moves = 0;
+      gameOver = true;
+      currentCategory = "";
+      guessSequence = [];
+
+      try {
+          const tries = document.getElementById("tries");
+          if (tries) tries.textContent = "0";
+          syncMistakesPillState(0);
+      } catch (_) {}
+
+      chartData = [];
+      currentPrice = 1000;
+      preloadChartHistory();
+      try {
+          drawCandleChart();
+      } catch (_) {}
+
+      renderIdlePhraseSlots();
+      try {
+          renderKeyboard();
+      } catch (_) {}
+      refreshCategoryDisplayText();
+      syncRoundLockUI();
+      updateDailyUI();
+  }
+
+  /** Puste boksy jak przed grą — „miejsce na hasło”, bez odkrytego secretu. */
+  function renderIdlePhraseSlots() {
+      const container = document.getElementById("wordDisplay");
+      if (!container) return;
+      container.innerHTML = "";
+      container.classList.remove("word-container--dense", "word-container--xdense");
+      const vp = document.createElement("div");
+      vp.className = "word-scale-viewport";
+      const inner = document.createElement("div");
+      inner.className = "word-scale-inner";
+      const group = document.createElement("div");
+      group.className = "word-group";
+      for (let i = 0; i < 8; i++) {
+          const letterBox = document.createElement("div");
+          letterBox.className = "letter-box";
+          letterBox.textContent = "";
+          group.appendChild(letterBox);
+      }
+      inner.appendChild(group);
+      vp.appendChild(inner);
+      container.appendChild(vp);
+      requestAnimationFrame(function () {
+          requestAnimationFrame(fitWordDisplay);
+      });
+  }
 
   let wordFitResizeTimer;
   function scheduleWordFit() {
@@ -15544,10 +15618,11 @@ async function ptgRefreshIdentityAliasesFromDb() {
           statusDiv.style.display = "";
       }
       if (btn) {
-          btn.innerHTML = ptgTrophyMintBtnHtml("Try", "Again");
+          btn.innerHTML = ptgTrophyMintBtnHtml("✨ Mint", "Trophy");
           btn.disabled = false;
       }
       if (txL) txL.innerHTML = "";
+      if (pendingMint) resetVisualsWhileAwaitingTrophyMint();
       victoryStatusAutoClearT = setTimeout(function () {
           victoryStatusAutoClearT = 0;
           const sd = document.getElementById("victoryStatus");
@@ -15918,7 +15993,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
           __ptgConfettiClearT = null;
           if (typeof confetti === "function" && typeof confetti.reset === "function") confetti.reset();
       } catch (_) {}
-      // Always re-check state. If pendingMint is true, the button will appear.
+      /* Bez mintu: schowaj VICTORY / zieloną świecę — zostaw Claim Trophy + pustą planszę. */
+      if (pendingMint) resetVisualsWhileAwaitingTrophyMint();
       checkGameStateAndRender();
   }
   
