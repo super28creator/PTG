@@ -2845,25 +2845,28 @@
     
     .big-mint-btn {
         background: linear-gradient(135deg, var(--base-blue) 0%, var(--cerulean) 100%);
-        color: white; font-size: 18px; font-weight: 800;
-        padding: 16px 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25);
-        width: 100%; cursor: pointer;
+        color: white; font-size: clamp(15px, 4.2vw, 18px); font-weight: 800;
+        padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25);
+        width: 100%; max-width: 100%; box-sizing: border-box; cursor: pointer;
         box-shadow: 0 10px 40px rgba(0, 0, 255, 0.3);
         transition: transform 0.2s var(--ease-base), box-shadow 0.2s var(--ease-base), filter 0.2s var(--ease-base);
         display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px;
-        text-transform: uppercase; letter-spacing: 0.06em;
-        white-space: nowrap;
+        text-transform: uppercase; letter-spacing: 0.04em;
+        white-space: normal;
+        text-align: center;
         position: relative; overflow: hidden;
         margin-top: 10px;
-        line-height: 1.2;
+        line-height: 1.25;
+        min-width: 0;
     }
     .big-mint-btn > span {
-        display: inline-flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        white-space: nowrap;
+        display: inline;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        max-width: 100%;
+        position: relative;
+        z-index: 1;
     }
     .big-mint-btn:before {
         content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -4555,8 +4558,8 @@
       <button class="btn" id="newCategoryBtn" style="width: 100%; display: none;" type="button" aria-label="Draw a new category and phrase">New Category</button>
       <button class="btn" id="hintBtn" style="display: none;" type="button" aria-label="Buy a hint and reveal a random letter"><span class="hint-icon-glyph" aria-hidden="true">💡</span></button>
       
-      <button id="recoverMintBtn" class="big-mint-btn" style="display:none; font-size: 16px; padding: 16px;" onclick="document.getElementById('victoryModal').classList.add('show')">
-          ✨ Claim Your Pending Trophy
+      <button id="recoverMintBtn" class="big-mint-btn" style="display:none;" onclick="document.getElementById('victoryModal').classList.add('show')">
+          <span>✨ Claim Trophy</span>
       </button>
     </div>
     <div id="hintStatus" style="display:none; margin-top: 10px; text-align: center; color: #94a3b8; font-size: 12px; min-height: 18px;" role="status" aria-live="polite"></div>
