@@ -5997,27 +5997,77 @@
       return false;
   }
 
-  /** Po zalogowaniu portfelem: pokaż Basename zamiast samego 0x… (klucz RTDB zostaje adresem). */
+  /**
+   * Po zalogowaniu portfelem (MetaMask / Base App / inne 0x):
+   *  1) Basename (*.base.eth) — jak w Base App
+   *  2) primary Ethereum ENS (.eth)
+   *  3) zwykły skrót 0x… (już ustawiony w applyWalletIdentity)
+   * Klucz RTDB / referral (`myUserId`) ZAWSZE zostaje adresem 0x.
+   */
   async function applyBasenameToUiIfAny(hostKind) {
       if (!myUserId || typeof myUserId !== "string" || !myUserId.startsWith("0x")) return;
-      const m = await resolveDisplayNamesBatch([myUserId]);
-      const k = myUserId.toLowerCase();
-      let basename = m && m[k] && String(m[k]).trim() ? String(m[k]).trim() : "";
-      if (!basename) basename = await resolveBasenameForAddress(myUserId);
-      if (!basename) return;
-      myUsername = basename;
+
+      let displayName = "";
+      let source = "";
+
+      /* 1) Basename — najpierw lokalny reverse na Base (pewny priorytet). */
+      try {
+          const bn = await resolveBasenameForAddress(myUserId);
+          if (bn && String(bn).trim()) {
+              displayName = String(bn).trim();
+              source = "basename";
+          }
+      } catch (_) {}
+
+      /* 2) Primary ENS na Ethereum mainnet — tylko gdy brak Basename. */
+      if (!displayName) {
+          try {
+              const ens = await resolveEthMainnetEnsName(myUserId);
+              if (ens && String(ens).trim()) {
+                  displayName = String(ens).trim();
+                  source = "ens";
+              }
+          } catch (_) {}
+      }
+
+      /* Batch API jako uzupełnienie (gdy lokalne RPC nic nie dało). */
+      if (!displayName) {
+          try {
+              const m = await resolveDisplayNamesBatch([myUserId]);
+              const k = myUserId.toLowerCase();
+              const batch = m && m[k] && String(m[k]).trim() ? String(m[k]).trim() : "";
+              if (batch) {
+                  displayName = batch;
+                  source = /\.base\.eth$/i.test(batch)
+                      ? "basename"
+                      : /\.eth$/i.test(batch)
+                        ? "ens"
+                        : "batch";
+              }
+          } catch (_) {}
+      }
+
+      if (!displayName) return;
+
+      myUsername = displayName;
       ptgRefreshTierModeBadge();
-      let chipCore = basename;
-      if (hostKind === "base") chipCore = "Base · " + basename;
-      else if (hostKind === "farcaster") chipCore = basename;
+      let chipCore = displayName;
+      if (hostKind === "base") chipCore = "Base · " + displayName;
+      else if (hostKind === "farcaster") chipCore = displayName;
       setPlayerChip(truncateDisplayName(chipCore, 36), hostKind);
       const chip = document.getElementById("playerDisplay");
-      if (chip) chip.title = basename + " · " + myUserId;
+      if (chip) {
+          chip.title =
+              displayName +
+              " · " +
+              myUserId +
+              (source ? " (" + source + ")" : "");
+      }
       if (db && isLoggedIn()) {
           try {
               await update(playerDocRef(myUserId), { name: myUsername });
           } catch (e) {
-              console.warn("RTDB display name (basename)", e);
+              console.warn("RTDB display name (wallet)", e);
           }
       }
   }
