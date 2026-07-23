@@ -10487,15 +10487,10 @@ async function ptgRefreshIdentityAliasesFromDb() {
               let fcAuthToken = null;
               let fcSignInMessage = null;
               let fcSignInSignature = null;
-              const preferFcAuthNoWalletSheet =
-                  ptgHost === "farcaster" ||
-                  ptgHost === "base" ||
-                  !!ptgInMiniAppSurface;
-              /*
-               * Farcaster/Base: personal_sign = native „Confirm transaction" +
-               * jasnoszare tło hosta nad iframe. Na mini-appie NIE używamy
-               * personal_sign — tylko Quick Auth / SIWF (bez payout message).
-               */
+              /* Quick Auth tylko na prawdziwym Farcasterze.
+               * Base App (i webview bez FC hosta) NIE ma działającego quickAuth —
+               * wisiało na „Confirming with Farcaster…" i padało. Tam: personal_sign. */
+              const preferFcAuthNoWalletSheet = ptgHost === "farcaster";
               if (preferFcAuthNoWalletSheet && sdk) {
                   try {
                       if (msg) msg.textContent = "Confirming with Farcaster…";
@@ -10550,7 +10545,6 @@ async function ptgRefreshIdentityAliasesFromDb() {
               }
               if (!fcAuthToken && !(fcSignInMessage && fcSignInSignature)) {
                   if (preferFcAuthNoWalletSheet) {
-                      /* Świadomie BEZ personal_sign — unikamy białego tła Confirm TX. */
                       if (msg) {
                           msg.textContent =
                               "Could not confirm with Farcaster. Close and reopen the mini app, then try Claim again.";
@@ -10558,7 +10552,12 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       return;
                   }
                   try {
-                      if (msg) msg.textContent = "Confirm in wallet…";
+                      if (msg) {
+                          msg.textContent =
+                              ptgHost === "base" || isBaseClaimUi
+                                  ? "Confirm in Base wallet…"
+                                  : "Confirm in wallet…";
+                      }
                       signature = await ptgSignReferralClaimMessageWithFallback(
                           prov,
                           signer,
