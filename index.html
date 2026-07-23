@@ -2567,10 +2567,9 @@
         color-scheme: dark;
         background: #0a0e1b !important;
     }
-    /* Na czas sheetu portfela: NIE display:none na całym UI (pusty iframe =
-     * Farcaster PC maluje jasnoszare tło hosta). Zamiast tego pełnoekranowy
-     * ciemny raster (#ptgWalletSheetFill + canvas), żeby snapshot hosta
-     * był ciemny, nie szary placeholder. */
+    /* Na czas sheetu portfela: pełnoekranowe ciemne tło (bez tekstu na środku —
+     * natywny Confirm TX Farcastera zasłania środek/dół i psuje napisy).
+     * Branding tylko w górnej 1/3, nad sheetem. */
     html[data-ptg-wallet-sheet="1"],
     html[data-ptg-wallet-sheet="1"] body {
         background: #0a0e1b !important;
@@ -2592,17 +2591,14 @@
         position: fixed;
         inset: 0;
         z-index: 2147483000;
-        background-color: #0a0e1b;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%230a0e1b'/%3E%3C/svg%3E");
-        background-size: cover;
-        color: #94a3b8;
-        font: 600 15px/1.45 var(--font-main), system-ui, sans-serif;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 24px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background:
+            radial-gradient(120% 70% at 50% 0%, rgba(60, 138, 255, 0.22) 0%, transparent 55%),
+            radial-gradient(90% 50% at 80% 100%, rgba(0, 0, 255, 0.12) 0%, transparent 50%),
+            #0a0e1b;
         pointer-events: none;
-        letter-spacing: 0.02em;
         overflow: hidden;
     }
     #ptgWalletSheetFill canvas {
@@ -2613,12 +2609,44 @@
         display: block;
         pointer-events: none;
     }
-    #ptgWalletSheetFill span {
-        position: relative;
+    #ptgWalletSheetFill .ptg-wallet-sheet-brand {
+        position: absolute;
+        left: 50%;
+        top: 18%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
         z-index: 1;
+        pointer-events: none;
+        user-select: none;
+    }
+    #ptgWalletSheetFill .ptg-wallet-sheet-mark {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: linear-gradient(145deg, #1a2744 0%, #0d1424 100%);
+        border: 1px solid rgba(60, 138, 255, 0.35);
+        box-shadow:
+            0 0 0 1px rgba(0, 0, 0, 0.35) inset,
+            0 12px 40px rgba(0, 40, 120, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font: 800 15px/1 var(--font-main), system-ui, sans-serif;
+        letter-spacing: 0.04em;
+        color: #e8f0ff;
+    }
+    #ptgWalletSheetFill .ptg-wallet-sheet-name {
+        font: 600 13px/1.2 "Cormorant Garamond", Georgia, serif;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(180, 198, 230, 0.72);
+        white-space: nowrap;
     }
     html[data-ptg-wallet-sheet="1"] #ptgWalletSheetFill {
-        display: flex !important;
+        display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
     }
@@ -5371,7 +5399,13 @@
   </div>
 </div>
 
-<div id="ptgWalletSheetFill" aria-hidden="true"><canvas></canvas><span>Confirm in wallet…</span></div>
+<div id="ptgWalletSheetFill" aria-hidden="true">
+  <canvas></canvas>
+  <div class="ptg-wallet-sheet-brand">
+    <div class="ptg-wallet-sheet-mark">PTG</div>
+    <div class="ptg-wallet-sheet-name">Phrase To Guess</div>
+  </div>
+</div>
 
 <script>
   (function (w) {
@@ -9206,26 +9240,36 @@ async function ptgRefreshIdentityAliasesFromDb() {
    * in wallet…" w nieskończoność.
    */
   function ptgPaintWalletSheetFill() {
+      const brandHtml =
+          '<div class="ptg-wallet-sheet-brand">' +
+          '<div class="ptg-wallet-sheet-mark">PTG</div>' +
+          '<div class="ptg-wallet-sheet-name">Phrase To Guess</div>' +
+          "</div>";
       let fill = document.getElementById("ptgWalletSheetFill");
       if (!fill) {
           fill = document.createElement("div");
           fill.id = "ptgWalletSheetFill";
           fill.setAttribute("aria-hidden", "true");
-          fill.innerHTML = "<canvas></canvas><span></span>";
+          fill.innerHTML = "<canvas></canvas>" + brandHtml;
           document.body.appendChild(fill);
-      }
-      let label = fill.querySelector("span");
-      if (!label) {
-          label = document.createElement("span");
-          fill.appendChild(label);
-      }
-      label.textContent = "Confirm in wallet…";
-      try {
-          let canvas = fill.querySelector("canvas");
-          if (!canvas) {
-              canvas = document.createElement("canvas");
-              fill.insertBefore(canvas, fill.firstChild);
+      } else {
+          if (!fill.querySelector("canvas")) {
+              const c = document.createElement("canvas");
+              fill.insertBefore(c, fill.firstChild);
           }
+          if (!fill.querySelector(".ptg-wallet-sheet-brand")) {
+              fill.insertAdjacentHTML("beforeend", brandHtml);
+          }
+          /* Stary napis „Confirm in wallet…" — usuń, koliduje z sheetem TX. */
+          const kids = fill.children;
+          for (let i = kids.length - 1; i >= 0; i--) {
+              const el = kids[i];
+              if (el && el.tagName === "SPAN") el.remove();
+          }
+      }
+      try {
+          const canvas = fill.querySelector("canvas");
+          if (!canvas) return fill;
           const w = Math.max(window.innerWidth || 360, 320);
           const h = Math.max(window.innerHeight || 640, 480);
           const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -9236,6 +9280,16 @@ async function ptgRefreshIdentityAliasesFromDb() {
               ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
               ctx.fillStyle = "#0a0e1b";
               ctx.fillRect(0, 0, w, h);
+              const g1 = ctx.createRadialGradient(w * 0.5, 0, 0, w * 0.5, 0, h * 0.55);
+              g1.addColorStop(0, "rgba(60, 138, 255, 0.22)");
+              g1.addColorStop(1, "rgba(60, 138, 255, 0)");
+              ctx.fillStyle = g1;
+              ctx.fillRect(0, 0, w, h);
+              const g2 = ctx.createRadialGradient(w * 0.85, h, 0, w * 0.85, h, h * 0.45);
+              g2.addColorStop(0, "rgba(0, 0, 255, 0.12)");
+              g2.addColorStop(1, "rgba(0, 0, 255, 0)");
+              ctx.fillStyle = g2;
+              ctx.fillRect(0, 0, w, h);
           }
       } catch (_) {}
       return fill;
@@ -9243,9 +9297,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
   /**
    * Farcaster/Base PC: native Confirm sheet. Pusty iframe = jasnoszare tło
-   * hosta. Przed personal_sign malujemy pełnoekranowy ciemny raster (canvas
-   * + SVG), chowamy .wrap/overlaye visibility (nie display:none całego DOM),
-   * czekamy na paint — żeby snapshot hosta był ciemny.
+   * hosta. Przed personal_sign: ciemne brandowe tło (bez tekstu na środku —
+   * sheet TX zasłania dół i psuje napisy), czekamy na paint.
    */
   async function ptgWhileWalletHostSheet(asyncFn) {
       const root = document.documentElement;
@@ -9285,17 +9338,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
               void root.offsetHeight;
               ptgPaintWalletSheetFill();
           } catch (_) {}
-          /* Dłuższy paint — desktop Farcaster często robi snapshot zanim
-           * compositor zdąży po visibility:hidden na .wrap. */
           await new Promise(function (resolve) {
               try {
                   requestAnimationFrame(function () {
                       requestAnimationFrame(function () {
-                          setTimeout(resolve, 320);
+                          setTimeout(resolve, 280);
                       });
                   });
               } catch (_) {
-                  setTimeout(resolve, 400);
+                  setTimeout(resolve, 350);
               }
           });
           return await asyncFn();
