@@ -8,6 +8,7 @@ const {
   defaultAppUrl,
   fetchOptInWalletAddresses,
   sendToWallets,
+  aggregateSendResults,
 } = require("../lib/base-dashboard-notifications.js");
 const { hasServiceAccount, listAllTokenFids } = require("../lib/fc-notif-store.js");
 const dailyCopy = require("../lib/daily-notification-copy.js");
@@ -266,9 +267,12 @@ module.exports = async (req, res) => {
           }
         } else {
           let fetchErr = null;
+          let fetchMeta = null;
           if (mode === "daily" && wallet_addresses.length === 0) {
             try {
-              wallet_addresses = await fetchOptInWalletAddresses(baseKey, appUrl);
+              const fetched = await fetchOptInWalletAddresses(baseKey, appUrl);
+              wallet_addresses = fetched.addresses || [];
+              fetchMeta = { truncated: !!fetched.truncated, pages: fetched.pages || 0 };
             } catch (e) {
               fetchErr = e;
             }
@@ -299,15 +303,28 @@ module.exports = async (req, res) => {
                 message,
                 target_path,
               });
+              const delivery = aggregateSendResults(sendResults);
+              const deliveredOk = !delivery.known || delivery.sentCount > 0;
               out.base = {
-                ok: true,
+                ok: deliveredOk,
                 app_url: appUrl,
                 recipient_count: wallet_addresses.length,
                 title,
                 message,
                 target_path,
+                delivery,
+                fetchMeta,
                 sendResults,
+                ...(deliveredOk
+                  ? {}
+                  : {
+                      error: "zero_deliveries",
+                      hint: "Base accepted the request but delivered 0 pushes (dedupe or users disabled)",
+                    }),
               };
+              if (!deliveredOk && channel === "base") {
+                return res.status(422).json(out.base);
+              }
             } catch (e) {
               out.base = { ok: false, status: e.status, body: e.body };
               if (channel === "base") {

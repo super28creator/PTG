@@ -4,8 +4,8 @@
  *
  * Hobby plan: funkcja ma 60s budżetu (vercel.json: maxDuration). Dlatego:
  *  - Base i Farcaster lecą RÓWNOLEGLE (różne domeny, osobne rate-limity).
- *  - Nie robimy zbędnego pre-sleepu przed wysyłką — rate-gap jest już wewnątrz lib.
  *  - Błąd jednego kanału NIE blokuje drugiego (każdy own try/catch).
+ *  - Base: dzienna wariacja title/message/path — Dashboard deduplikuje identyczne payloady 24h.
  */
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -17,6 +17,7 @@ const {
   defaultAppUrl,
   fetchOptInWalletAddresses,
   sendToWallets,
+  aggregateSendResults,
 } = require("../lib/base-dashboard-notifications.js");
 const { hasServiceAccount, listAllTokenFids, getAdminDb } = require("../lib/fc-notif-store.js");
 const dailyCopy = require("../lib/daily-notification-copy.js");
@@ -33,26 +34,76 @@ function makeUuid() {
   return `00000000-0000-4000-8000-${seed.padEnd(12, "0")}`;
 }
 
+function channelOk(result) {
+  if (!result) return false;
+  /* skipped + ok:false (np. brak opted-in wallets) = kanał niezdrowy */
+  if (result.skipped) return result.ok !== false;
+  return result.ok === true;
+}
+
 async function runBaseChannel(baseKey, appUrl) {
   if (!baseKey) return { skipped: true, reason: "missing_base_dashboard_api_key" };
+
+  const now = new Date();
+  const payload = {
+    title: dailyCopy.dailyTitleBase(now),
+    message: dailyCopy.dailyMessageBase(now),
+    target_path: dailyCopy.dailyTargetPathForCron(now),
+    day: dailyCopy.utcDayKey(now),
+  };
+
   let wallets = [];
+  let fetchMeta = { truncated: false, pages: 0 };
   try {
-    wallets = await fetchOptInWalletAddresses(baseKey, appUrl);
+    const fetched = await fetchOptInWalletAddresses(baseKey, appUrl);
+    wallets = fetched.addresses || [];
+    fetchMeta = { truncated: !!fetched.truncated, pages: fetched.pages || 0 };
   } catch (e) {
-    return { ok: false, error: "fetch_users_failed", detail: e.body || e.message };
+    return { ok: false, error: "fetch_users_failed", detail: e.body || e.message, payload };
   }
   if (wallets.length === 0) {
-    return { ok: true, skipped: true, reason: "no_opted_in_wallets" };
+    return {
+      ok: false,
+      skipped: true,
+      reason: "no_opted_in_wallets",
+      hint: "BASE_APP_URL must match Base Dashboard app URL; users need Save + Allow notifications",
+      payload,
+    };
   }
+
   try {
     const sendResults = await sendToWallets(baseKey, appUrl, wallets, {
-      title: dailyCopy.dailyTitleBase(),
-      message: dailyCopy.dailyMessageBase(),
-      target_path: dailyCopy.dailyTargetPathForCron(),
+      title: payload.title,
+      message: payload.message,
+      target_path: payload.target_path,
     });
-    return { ok: true, recipient_count: wallets.length, sendResults };
+    const delivery = aggregateSendResults(sendResults);
+    /*
+     * HTTP 200 przy sentCount=0 = typowy objaw 24h dedupe albo wszyscy bez opt-in.
+     * Przy known delivery i zerze — oznaczamy błąd, żeby cron nie wyglądał na „ok”.
+     */
+    if (delivery.known && delivery.sentCount === 0) {
+      return {
+        ok: false,
+        error: "zero_deliveries",
+        hint: "Base accepted the request but delivered 0 pushes (dedupe or users disabled notifications)",
+        recipient_count: wallets.length,
+        delivery,
+        fetchMeta,
+        payload,
+        sendResults,
+      };
+    }
+    return {
+      ok: true,
+      recipient_count: wallets.length,
+      delivery,
+      fetchMeta,
+      payload,
+      sendResults,
+    };
   } catch (e) {
-    return { ok: false, status: e.status, body: e.body };
+    return { ok: false, status: e.status, body: e.body, payload, fetchMeta };
   }
 }
 
@@ -182,17 +233,34 @@ module.exports = async (req, res) => {
   try {
     /* Kanały lecą równolegle — różne domeny/rate-limity, a budżet funkcji = 60s wspólny. */
     const [baseResult, directResult, neynarResult] = await Promise.all([
-      runBaseChannel(baseKey, appUrl).catch((e) => ({ ok: false, error: String(e && e.message || e) })),
-      runFarcasterDirect(dailyFcNotification).catch((e) => ({ ok: false, error: String(e && e.message || e) })),
-      runFarcasterNeynar(neynarKey, dailyFcNotification).catch((e) => ({ ok: false, error: String(e && e.message || e) })),
+      runBaseChannel(baseKey, appUrl).catch((e) => ({
+        ok: false,
+        error: String((e && e.message) || e),
+      })),
+      runFarcasterDirect(dailyFcNotification).catch((e) => ({
+        ok: false,
+        error: String((e && e.message) || e),
+      })),
+      runFarcasterNeynar(neynarKey, dailyFcNotification).catch((e) => ({
+        ok: false,
+        error: String((e && e.message) || e),
+      })),
     ]);
 
+    const baseOk = channelOk(baseResult);
+    const fcDirectOk = channelOk(directResult);
+    const fcNeynarOk = channelOk(neynarResult);
+    const anyFcOk = fcDirectOk || fcNeynarOk;
+    const allOk = baseOk && anyFcOk;
+
     const out = {
-      ok: true,
+      ok: allOk,
+      partial: !allOk && (baseOk || anyFcOk),
       app_url: appUrl,
       schedule_utc: "17:00",
-      schedule_note: "Vercel cron 0 17 * * *; maxDuration=60s (Hobby max)",
+      schedule_note: "Vercel cron 0 17 * * *; maxDuration=60s (Hobby max); Base+FC same time",
       elapsed_ms: Date.now() - startedAt,
+      channels_ok: { base: baseOk, farcaster_direct: fcDirectOk, farcaster_neynar: fcNeynarOk },
       base: baseResult,
       farcaster_direct: directResult,
       farcaster: neynarResult,
@@ -203,7 +271,7 @@ module.exports = async (req, res) => {
       completed_at_iso: new Date().toISOString(),
     });
 
-    return res.status(200).json(out);
+    return res.status(allOk || out.partial ? 200 : 500).json(out);
   } catch (err) {
     const fail = {
       ok: false,
