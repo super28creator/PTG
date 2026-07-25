@@ -203,7 +203,7 @@
         gap: 10px;
         pointer-events: none;
         /* % względem karty — w Farcaster/Base 100vw potrafi rozszerzać layout */
-        max-width: min(220px, calc(100% - 16px));
+        max-width: min(260px, calc(100% - 16px));
     }
     .card--main-game .cal-floating-tools > * {
         pointer-events: auto;
@@ -221,9 +221,22 @@
         max-width: 100%;
         width: max-content;
     }
-    /* Kolumna ikon + blok wyniku — bez nadmiernego % szerokości w miniappach (3 ikony: ref, gwiazda, kalendarz) */
+    /* Kolumna ikon + blok wyniku (invite obok rankingu) */
     .card--main-game .card-header-main {
-        padding-right: clamp(132px, 36vw, 198px);
+        padding-right: clamp(148px, 40vw, 220px);
+    }
+    .header-stats-row {
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        max-width: 100%;
+    }
+    .header-stats-row .cal-icon-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        flex-shrink: 0;
     }
     .cal-icon-svg--users {
         stroke: currentColor;
@@ -1945,6 +1958,78 @@
         max-width: 42em;
     }
     
+    /* --- PHRASE + CHART STACK (swap na mobile) --- */
+    .phrase-chart-stack {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+    .phrase-chart-stack .word-container {
+        margin-top: 20px;
+        margin-bottom: 4px;
+        order: 1;
+    }
+    .phrase-chart-stack #chart {
+        margin-top: 4px;
+        margin-bottom: 0;
+        order: 3;
+    }
+    .phrase-chart-swap-btn {
+        order: 2;
+        align-self: center;
+        width: 40px;
+        height: 28px;
+        margin: 2px 0;
+        padding: 0;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(230, 236, 248, 0.92);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+        flex-shrink: 0;
+    }
+    .phrase-chart-swap-btn:hover {
+        background: rgba(60, 138, 255, 0.18);
+        border-color: rgba(60, 138, 255, 0.45);
+        color: #fff;
+    }
+    .phrase-chart-swap-btn:active {
+        transform: scale(0.94);
+    }
+    .phrase-chart-swap-btn:focus-visible {
+        outline: 2px solid var(--cerulean);
+        outline-offset: 2px;
+    }
+    .phrase-chart-swap-btn svg {
+        width: 18px;
+        height: 18px;
+        display: block;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    /* Chart nad hasłem — hasło bliżej klawiatury */
+    .phrase-chart-stack--chart-first .word-container {
+        order: 3;
+        margin-top: 4px;
+        margin-bottom: 20px;
+    }
+    .phrase-chart-stack--chart-first #chart {
+        order: 1;
+        margin-top: 20px;
+    }
+    .phrase-chart-stack--chart-first .phrase-chart-swap-btn {
+        order: 2;
+    }
+
     /* --- WORD DISPLAY AREA --- */
     .word-container {
         margin-top: 20px; margin-bottom: 28px;
@@ -2072,7 +2157,7 @@
     }
 
     /* --- CONTROLS & BUTTONS --- */
-    .controls { display: flex; gap: 12px; justify-content: flex-end; align-items: stretch; margin-top: 24px; }
+    .controls { display: flex; gap: 12px; justify-content: flex-end; align-items: stretch; margin-top: 12px; }
     .controls.controls--claim-trophy {
         justify-content: stretch;
     }
@@ -2133,7 +2218,20 @@
     }
     button.ghost:hover { border-color: var(--text-bright); color: var(--text-bright); background: rgba(255,255,255,0.08);}
 
-    .status { font-weight: 800; font-size: 20px; margin-top: 18px; text-align: center; letter-spacing: 2px; min-height: 30px; text-transform: uppercase; }
+    .status {
+        font-weight: 800;
+        font-size: 20px;
+        margin-top: 10px;
+        text-align: center;
+        letter-spacing: 2px;
+        min-height: 0;
+        text-transform: uppercase;
+    }
+    .status:empty {
+        display: none;
+        margin: 0;
+        min-height: 0;
+    }
     .dead { color: var(--danger); text-shadow: 0 0 20px rgba(252, 64, 31, 0.45); animation: shake 0.5s var(--ease-base); } 
     .won { color: var(--success); text-shadow: 0 0 20px rgba(102, 200, 0, 0.45); animation: bounce 0.6s var(--ease-base); }
 
@@ -3345,15 +3443,7 @@
         box-sizing: border-box;
         min-width: 0;
     }
-    /* Odznaki punktów — obok OG, ten sam rozmiar kółka */
-    .score-milestones {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 8px;
-        max-width: 100%;
-    }
+    /* Odznaki punktów — w siatce panelu (display: contents w .badges-grid) */
     .score-milestone {
         width: var(--hero-badge-diameter, 40px);
         height: var(--hero-badge-diameter, 40px);
@@ -3471,7 +3561,7 @@
         align-items: center;
         gap: 6px;
     }
-    /* Tytuł → rząd OG + odznaki punktów → tagline (ciaśno, bez „dziury”) */
+    /* Tytuł → tagline (odznaki w rozwijanym panelu) */
     .hero-stack {
         display: flex;
         flex-direction: column;
@@ -3484,23 +3574,163 @@
         margin: 0;
         line-height: 1.08;
     }
-    .hero-badge-row {
-        /* Większe kółko OG + odznaki; ta sama średnica dla wszystkich */
-        --hero-badge-diameter: clamp(36px, 7.25vw, 44px);
+    /* Ekran odznak — ta sama szerokość co gra (.wrap: max-width 600px) */
+    #badgesOverlay {
+        padding: 0;
+        align-items: stretch;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.72);
+    }
+    #badgesOverlay.modal-overlay.show {
         display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
+    }
+    .badges-screen-card {
+        /* Jak .wrap: kolumna gry, nie cały desktop viewport */
+        width: 100%;
+        max-width: 600px;
+        height: 100%;
+        max-height: none;
+        min-height: 100%;
+        border-radius: 0;
+        border-left: 1px solid rgba(60, 138, 255, 0.22);
+        border-right: 1px solid rgba(60, 138, 255, 0.22);
+        border-top: none;
+        border-bottom: none;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.55);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        text-align: left;
+        padding:
+            max(clamp(14px, 3.5vw, 22px), env(safe-area-inset-top, 0px))
+            max(clamp(14px, 3.5vw, 24px), env(safe-area-inset-right, 0px))
+            max(clamp(14px, 3.5vw, 22px), env(safe-area-inset-bottom, 0px))
+            max(clamp(14px, 3.5vw, 24px), env(safe-area-inset-left, 0px));
+        box-sizing: border-box;
+        background: #0b0f1a;
+        --badges-rows: 7;
+        --badges-cols: 4;
+        --badges-grid-gap: clamp(6px, 1.1vh, 12px);
+    }
+    /* Bez małych kółeczek / ptaszków przy odznakach na tym ekranie */
+    #badgesOverlay .badge-onchain--held::after {
+        display: none;
+    }
+    #badgesOverlay .badge-onchain--held {
+        overflow: hidden;
+    }
+    .badges-screen-topbar {
+        display: flex;
         align-items: center;
-        gap: 10px 12px;
+        justify-content: center;
+        position: relative;
+        flex-shrink: 0;
+        margin-bottom: 6px;
+        padding: 2px 44px 6px;
+    }
+    .badges-screen-topbar h2 {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -0.02em;
+        text-align: center;
+    }
+    .badges-screen-topbar .referral-modal-close {
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    .badges-screen-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        container-type: size;
+    }
+    .badges-screen-card .badge-mint-feedback:not(:empty) {
+        margin-top: 8px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .badges-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-rows: repeat(7, minmax(0, 1fr));
+        gap: var(--badges-grid-gap);
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        margin: 0;
+        justify-items: center;
+        align-items: center;
+        padding: 0;
+        box-sizing: border-box;
+        overflow: hidden;
+        /* Symetrycznie: kółko = min(szer. komórki, wys. komórki) */
+        --hero-badge-diameter: min(
+            calc((100cqi - (var(--badges-cols) - 1) * var(--badges-grid-gap)) / var(--badges-cols) * 0.92),
+            calc((100cqb - (var(--badges-rows) - 1) * var(--badges-grid-gap)) / var(--badges-rows) * 0.92)
+        );
+    }
+    @supports not (width: 1cqi) {
+        .badges-grid {
+            --hero-badge-diameter: min(
+                calc((100% - (var(--badges-cols) - 1) * var(--badges-grid-gap)) / var(--badges-cols) * 0.92),
+                calc((100dvh - 96px - (var(--badges-rows) - 1) * var(--badges-grid-gap)) / var(--badges-rows) * 0.92)
+            );
+        }
+    }
+    .badges-grid .hero-og-slot,
+    .badges-grid .score-milestone,
+    .badges-grid .badge-slot-empty {
+        margin: 0 auto;
         max-width: 100%;
-        min-width: 0;
+        max-height: 100%;
+    }
+    .score-milestones {
+        display: contents;
+    }
+    .badge-slot-empty {
+        width: var(--hero-badge-diameter, 56px);
+        height: var(--hero-badge-diameter, 56px);
+        min-width: var(--hero-badge-diameter, 56px);
+        min-height: var(--hero-badge-diameter, 56px);
+        border-radius: 50%;
+        box-sizing: border-box;
+        border: 1.5px dashed rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.03);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(148, 163, 184, 0.4);
+        font-size: clamp(16px, 5cqi, 22px);
+        font-weight: 600;
+        line-height: 1;
+        user-select: none;
+        pointer-events: none;
+    }
+    .cal-icon-btn.badge-slot--mintable {
+        animation: badge-mintable-pulse 1.8s ease-in-out infinite;
+        color: #fff;
+        border-color: rgba(96, 165, 250, 0.55);
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .cal-icon-btn.badge-slot--mintable {
+            animation: none;
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5);
+        }
     }
     /* OG: minimalnie mniejsze kółko niż milestone’y (ta sama grafika, ciaśniejszy slot) */
     .hero-og-slot {
-        width: calc(var(--hero-badge-diameter) * 0.9);
-        height: calc(var(--hero-badge-diameter) * 0.9);
-        min-width: calc(var(--hero-badge-diameter) * 0.9);
-        min-height: calc(var(--hero-badge-diameter) * 0.9);
+        width: calc(var(--hero-badge-diameter, 40px) * 0.9);
+        height: calc(var(--hero-badge-diameter, 40px) * 0.9);
+        min-width: calc(var(--hero-badge-diameter, 40px) * 0.9);
+        min-height: calc(var(--hero-badge-diameter, 40px) * 0.9);
         flex-shrink: 0;
         border-radius: 50%;
         overflow: hidden;
@@ -3584,6 +3814,7 @@
     }
     .badge-onchain--held {
         position: relative;
+        overflow: visible;
     }
     .badge-onchain--held::after {
         content: "";
@@ -3602,9 +3833,6 @@
         background-size: 9px 9px;
         pointer-events: none;
         z-index: 2;
-    }
-    .hero-badge-row .badge-onchain--held::after {
-        display: none;
     }
     .badge-mint-feedback {
         margin: 0;
@@ -4661,14 +4889,6 @@
   <div class="card card--main-game">
     <div class="cal-floating-tools" role="toolbar" aria-label="Game tools">
       <div class="cal-floating-tools__icons">
-        <button type="button" id="referralOpenBtn" class="cal-icon-btn" title="Invites & referral link" aria-label="Open referral invites and rewards">
-          <svg class="cal-icon-svg cal-icon-svg--users" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-        </button>
         <button type="button" id="categoryFilterToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="categoryFilterPanel" title="Category pool" aria-label="Choose categories for new phrases">
           <svg class="cal-icon-svg cal-icon-svg--star" viewBox="0 0 24 24" aria-hidden="true">
             <polygon points="12 2 15 9 22 9 17 14 19 22 12 18 5 22 7 14 2 9 9 9"/>
@@ -4682,11 +4902,28 @@
             <line x1="16" y1="2" x2="16" y2="6"/>
           </svg>
         </button>
+        <button type="button" id="badgesToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="badgesOverlay" title="NFT badges" aria-label="Open NFT badges">
+          <svg class="cal-icon-svg cal-icon-svg--badge" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="9" r="6"/>
+            <path d="M9.5 14.5 8 22l4-2 4 2-1.5-7.5"/>
+            <circle cx="12" cy="9" r="2.2"/>
+          </svg>
+        </button>
       </div>
-      <div class="header-stats-cluster" role="group" aria-label="Leaderboard and score">
-        <div class="header-cluster-merge">
-          <button type="button" id="leaderboardBtn" class="header-cluster-trophy" title="Leaderboard" aria-label="Open leaderboard">🏆</button>
-          <span class="header-cluster-score" id="scoreDisplay">0</span>
+      <div class="header-stats-row">
+        <button type="button" id="referralOpenBtn" class="cal-icon-btn" title="Invites & referral link" aria-label="Open referral invites and rewards">
+          <svg class="cal-icon-svg cal-icon-svg--users" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </button>
+        <div class="header-stats-cluster" role="group" aria-label="Leaderboard and score">
+          <div class="header-cluster-merge">
+            <button type="button" id="leaderboardBtn" class="header-cluster-trophy" title="Leaderboard" aria-label="Open leaderboard">🏆</button>
+            <span class="header-cluster-score" id="scoreDisplay">0</span>
+          </div>
         </div>
       </div>
     </div>
@@ -4694,23 +4931,6 @@
         <div class="card-header-main">
             <div class="hero-stack">
               <h1>Phrase To Guess</h1>
-              <div class="hero-badge-row">
-                <button type="button" class="hero-og-slot" id="ogBadgeMintBtn" disabled aria-label="OG badge mint" title="OG badge">
-                  <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="40" height="40" alt="OG badge" decoding="async" />
-                </button>
-                <div class="score-milestones" id="scoreMilestones" aria-label="Score milestone badges">
-                  <button type="button" class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" data-badge-kind="10" disabled title="Unlock at 10 points">
-                    <img class="milestone-badge-img" src="/badge-10.png" width="44" height="44" alt="10 points milestone badge" decoding="async" />
-                  </button>
-                  <button type="button" class="score-milestone score-milestone--100 score-milestone--locked" id="scoreMilestone100" data-badge-kind="100" disabled title="Unlock at 100 points">
-                    <img class="milestone-badge-img" src="/badge-100.png" width="44" height="44" alt="100 points milestone badge" decoding="async" />
-                  </button>
-                  <button type="button" class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" data-badge-kind="1000" disabled title="Unlock at 1000 points">
-                    <img class="milestone-badge-img" src="/badge-1000.png" width="44" height="44" alt="1000 points milestone badge" decoding="async" />
-                  </button>
-                </div>
-              </div>
-              <p id="badgeMintFeedback" class="badge-mint-feedback" role="status" aria-live="polite"></p>
             </div>
             <div class="header-rewards-row">
               <div class="rewards-compact">
@@ -4755,9 +4975,17 @@
       <div id="categoryFilterMsg" class="category-filter-msg" role="status" aria-live="polite"></div>
     </div>
 
-    <div class="word-container" id="wordDisplay"></div>
-    
-    <canvas id="chart" width="800" height="250"></canvas>
+    <div class="phrase-chart-stack" id="phraseChartStack">
+      <div class="word-container" id="wordDisplay"></div>
+      <button type="button" id="phraseChartSwapBtn" class="phrase-chart-swap-btn" aria-pressed="false" title="Swap phrase and chart" aria-label="Swap phrase and chart positions">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 4v16"/>
+          <path d="M7 9l5-5 5 5"/>
+          <path d="M7 15l5 5 5-5"/>
+        </svg>
+      </button>
+      <canvas id="chart" width="800" height="250"></canvas>
+    </div>
     <div class="status" id="status"></div>
     
     <div class="controls">
@@ -4831,6 +5059,34 @@
 <footer class="site-footer">
   <p class="site-footer__legal">©2026 Super Creator.Powered by Base.</p>
 </footer>
+
+<div class="modal-overlay" id="badgesOverlay" aria-hidden="true" role="dialog" aria-labelledby="badgesModalTitle" aria-modal="true">
+  <div class="mint-card badges-screen-card">
+    <div class="badges-screen-topbar">
+      <h2 id="badgesModalTitle">NFT badges</h2>
+      <button type="button" class="referral-modal-close" id="badgesModalCloseBtn" aria-label="Close badges">×</button>
+    </div>
+    <div class="badges-screen-body">
+      <div class="badges-grid" aria-label="Badge collection">
+        <button type="button" class="hero-og-slot" id="ogBadgeMintBtn" disabled aria-label="OG badge mint" title="OG badge">
+          <img id="ogBadge" class="og-badge og-badge--dim" src="/OG-Badge.png" width="64" height="64" alt="OG badge" decoding="async" />
+        </button>
+        <div class="score-milestones" id="scoreMilestones" aria-label="Score milestone badges">
+          <button type="button" class="score-milestone score-milestone--10 score-milestone--locked" id="scoreMilestone10" data-badge-kind="10" disabled title="Unlock at 10 points">
+            <img class="milestone-badge-img" src="/badge-10.png" width="64" height="64" alt="10 points milestone badge" decoding="async" />
+          </button>
+          <button type="button" class="score-milestone score-milestone--100 score-milestone--locked" id="scoreMilestone100" data-badge-kind="100" disabled title="Unlock at 100 points">
+            <img class="milestone-badge-img" src="/badge-100.png" width="64" height="64" alt="100 points milestone badge" decoding="async" />
+          </button>
+          <button type="button" class="score-milestone score-milestone--1000 score-milestone--locked" id="scoreMilestone1000" data-badge-kind="1000" disabled title="Unlock at 1000 points">
+            <img class="milestone-badge-img" src="/badge-1000.png" width="64" height="64" alt="1000 points milestone badge" decoding="async" />
+          </button>
+        </div>
+      </div>
+      <p id="badgeMintFeedback" class="badge-mint-feedback" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="referralOverlay" aria-hidden="true" role="dialog" aria-labelledby="referralModalTitle" aria-modal="true">
   <div class="mint-card referral-modal-card">
@@ -12593,6 +12849,19 @@ async function ptgRefreshIdentityAliasesFromDb() {
               el.title = "Tap to mint " + need + " points badge (price on contract)";
           }
       });
+      const badgesToggle = document.getElementById("badgesToggle");
+      if (badgesToggle) {
+          const anyMintable =
+              showMintableChrome &&
+              !badgeMintInFlight &&
+              ((ogBtn && ogBtn.classList.contains("badge-slot--mintable")) ||
+                  milestones.some(function (m) {
+                      const el = document.getElementById(m.id);
+                      return !!(el && el.classList.contains("badge-slot--mintable"));
+                  }));
+          badgesToggle.classList.toggle("badge-slot--mintable", anyMintable);
+          badgesToggle.title = anyMintable ? "NFT badges — mint ready" : "NFT badges";
+      }
   }
 
   /** Mint-day badge in calendar (PTG-circle.png at site root). */
@@ -17834,10 +18103,62 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
   initCategoryFilterPanel();
 
+  const PTG_PHRASE_CHART_LAYOUT_KEY = "ptg:phrase-chart-layout:v1";
+  function applyPhraseChartLayout(mode) {
+      const stack = document.getElementById("phraseChartStack");
+      const btn = document.getElementById("phraseChartSwapBtn");
+      if (!stack) return;
+      const chartFirst = mode === "chart-first";
+      stack.classList.toggle("phrase-chart-stack--chart-first", chartFirst);
+      if (btn) {
+          btn.setAttribute("aria-pressed", chartFirst ? "true" : "false");
+          btn.title = chartFirst ? "Show phrase above chart" : "Show chart above phrase";
+          btn.setAttribute(
+              "aria-label",
+              chartFirst ? "Swap: show phrase above chart" : "Swap: show chart above phrase"
+          );
+      }
+  }
+  (function initPhraseChartSwap() {
+      let mode = "phrase-first";
+      try {
+          const saved = localStorage.getItem(PTG_PHRASE_CHART_LAYOUT_KEY);
+          if (saved === "chart-first" || saved === "phrase-first") mode = saved;
+      } catch (_) {}
+      applyPhraseChartLayout(mode);
+      document.getElementById("phraseChartSwapBtn")?.addEventListener("click", function () {
+          const stack = document.getElementById("phraseChartStack");
+          const next = stack && stack.classList.contains("phrase-chart-stack--chart-first")
+              ? "phrase-first"
+              : "chart-first";
+          applyPhraseChartLayout(next);
+          try {
+              localStorage.setItem(PTG_PHRASE_CHART_LAYOUT_KEY, next);
+          } catch (_) {}
+      });
+  })();
+
   const calendarToggle = document.getElementById("calendarToggle");
   const calendarPanel = document.getElementById("calendarPanel");
   const categoryFilterToggle = document.getElementById("categoryFilterToggle");
   const categoryFilterPanel = document.getElementById("categoryFilterPanel");
+  const badgesToggle = document.getElementById("badgesToggle");
+  const badgesOverlay = document.getElementById("badgesOverlay");
+  const badgesModalCloseBtn = document.getElementById("badgesModalCloseBtn");
+  (function ensureBadgeGridSlots() {
+      const grid = document.querySelector("#badgesOverlay .badges-grid");
+      if (!grid || grid.dataset.slotsReady === "1") return;
+      const TARGET = 28; /* 4 cols × 7 rows */
+      const FILLED = 4; /* OG + 10 + 100 + 1000 */
+      for (let i = FILLED; i < TARGET; i++) {
+          const slot = document.createElement("div");
+          slot.className = "badge-slot-empty";
+          slot.setAttribute("aria-hidden", "true");
+          slot.textContent = "+";
+          grid.appendChild(slot);
+      }
+      grid.dataset.slotsReady = "1";
+  })();
   function closeCalendarPanelUI() {
       if (calendarPanel) calendarPanel.setAttribute("hidden", "");
       if (calendarToggle) calendarToggle.setAttribute("aria-expanded", "false");
@@ -17845,6 +18166,22 @@ async function ptgRefreshIdentityAliasesFromDb() {
   function closeCategoryFilterPanelUI() {
       if (categoryFilterPanel) categoryFilterPanel.setAttribute("hidden", "");
       if (categoryFilterToggle) categoryFilterToggle.setAttribute("aria-expanded", "false");
+  }
+  function openBadgesScreenUI() {
+      if (!badgesOverlay) return;
+      closeCalendarPanelUI();
+      closeCategoryFilterPanelUI();
+      badgesOverlay.classList.add("show");
+      badgesOverlay.setAttribute("aria-hidden", "false");
+      if (badgesToggle) badgesToggle.setAttribute("aria-expanded", "true");
+      void refreshBadgeOnchainBalances();
+  }
+  function closeBadgesScreenUI() {
+      if (badgesOverlay) {
+          badgesOverlay.classList.remove("show");
+          badgesOverlay.setAttribute("aria-hidden", "true");
+      }
+      if (badgesToggle) badgesToggle.setAttribute("aria-expanded", "false");
   }
   if (calendarToggle && calendarPanel) {
       calendarToggle.addEventListener("click", () => {
@@ -17871,6 +18208,23 @@ async function ptgRefreshIdentityAliasesFromDb() {
           } else {
               closeCategoryFilterPanelUI();
           }
+      });
+  }
+  if (badgesToggle && badgesOverlay) {
+      badgesToggle.addEventListener("click", () => {
+          if (badgesOverlay.classList.contains("show")) closeBadgesScreenUI();
+          else openBadgesScreenUI();
+      });
+  }
+  if (badgesModalCloseBtn) {
+      badgesModalCloseBtn.addEventListener("click", closeBadgesScreenUI);
+  }
+  if (badgesOverlay) {
+      badgesOverlay.addEventListener("click", function (e) {
+          if (e.target === badgesOverlay) closeBadgesScreenUI();
+      });
+      document.addEventListener("keydown", function (ev) {
+          if (ev.key === "Escape" && badgesOverlay.classList.contains("show")) closeBadgesScreenUI();
       });
   }
 
@@ -18030,9 +18384,9 @@ async function ptgRefreshIdentityAliasesFromDb() {
         },
         {
             id: "badges",
-            target: ".hero-badge-row",
+            target: "#badgesToggle",
             title: "NFT badges",
-            body: "Collect on-chain badges: OG, 10, 100, and 1000 points. Tap an unlocked badge to mint it to your wallet."
+            body: "Tap the badge icon to open the badges screen. Mint unlocked OG / 10 / 100 / 1000 point badges on Base."
         },
         {
             id: "rewards",
