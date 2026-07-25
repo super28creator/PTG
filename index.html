@@ -4048,7 +4048,9 @@
       text-align: left;
       white-space: normal;
     }
-    .category-filter-item:hover .category-info-tip,
+    /* Tylko hover na samym ⓘ / otwarty tip — nie :hover całego wiersza
+       (na mobile sticky hover trzymał poprzedni tip po kliknięciu innego). */
+    .category-info-btn:hover + .category-info-tip,
     .category-filter-item.is-tip-open .category-info-tip {
       display: block;
     }
@@ -13166,19 +13168,26 @@ async function ptgRefreshIdentityAliasesFromDb() {
           list.addEventListener("change", onCategoryFilterCheckboxChange);
           list.addEventListener("click", function (ev) {
               const btn = ev.target && ev.target.closest ? ev.target.closest(".category-info-btn") : null;
-              if (!btn || !list.contains(btn)) return;
+              if (!btn || !list.contains(btn)) {
+                  /* Klik w inny element listy (checkbox / nazwa) — zamknij tipy */
+                  closeAllCategoryInfoTips();
+                  return;
+              }
               ev.preventDefault();
               ev.stopPropagation();
               const row = btn.closest(".category-filter-item");
               if (!row) return;
-              const open = !row.classList.contains("is-tip-open");
-              closeAllCategoryInfoTips(open ? row : null);
-              row.classList.toggle("is-tip-open", open);
-              btn.setAttribute("aria-expanded", open ? "true" : "false");
+              const wasOpen = row.classList.contains("is-tip-open");
+              closeAllCategoryInfoTips();
+              if (!wasOpen) {
+                  row.classList.add("is-tip-open");
+                  btn.setAttribute("aria-expanded", "true");
+              }
           });
           document.addEventListener("click", function (ev) {
               const t = ev.target;
-              if (t && t.closest && t.closest("#categoryFilterList .category-filter-item")) return;
+              if (t && t.closest && t.closest("#categoryFilterList .category-info-btn")) return;
+              if (t && t.closest && t.closest("#categoryFilterList .category-filter-item.is-tip-open")) return;
               closeAllCategoryInfoTips();
           });
           categoryFilterChangeBound = true;
