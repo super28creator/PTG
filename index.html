@@ -3970,13 +3970,14 @@
     .category-filter-item {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       min-width: 0;
       font-size: 13px;
       font-weight: 600;
       color: var(--gray-30);
       cursor: pointer;
       user-select: none;
+      position: relative;
     }
     .category-filter-item input {
       flex-shrink: 0;
@@ -3985,10 +3986,64 @@
       accent-color: var(--cerulean);
       cursor: pointer;
     }
-    .category-filter-item span {
+    .category-filter-item .category-filter-name {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      min-width: 0;
+    }
+    .category-info-btn {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(200, 210, 228, 0.9);
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1;
+      cursor: help;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: inherit;
+    }
+    .category-info-btn:hover,
+    .category-info-btn[aria-expanded="true"] {
+      border-color: rgba(60, 138, 255, 0.65);
+      color: #fff;
+      background: rgba(60, 138, 255, 0.22);
+    }
+    .category-info-btn:focus-visible {
+      outline: 2px solid var(--cerulean);
+      outline-offset: 2px;
+    }
+    .category-info-tip {
+      display: none;
+      position: absolute;
+      left: 0;
+      top: calc(100% + 6px);
+      z-index: 30;
+      width: min(220px, 70vw);
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(60, 138, 255, 0.35);
+      background: #121826;
+      color: rgba(220, 228, 242, 0.95);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.4;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+      pointer-events: none;
+      text-align: left;
+      white-space: normal;
+    }
+    .category-filter-item:hover .category-info-tip,
+    .category-filter-item.is-tip-open .category-info-tip {
+      display: block;
     }
     .category-filter-msg {
       margin-top: 12px;
@@ -5328,7 +5383,7 @@
         </div>
         <ul class="docs-list docs-list--check">
           <li><strong>Visual clue</strong> - an image or chart that hints at the answer.</li>
-          <li><strong>Category label</strong> - the topic of the puzzle (e.g. <em>Crypto</em>, <em>Sports</em>, <em>Stars</em>).</li>
+          <li><strong>Category label</strong> - the topic of the puzzle (e.g. <em>Crypto</em>, <em>Clubs</em>, <em>Stars</em>).</li>
           <li><strong>Hint button</strong> - optional on-chain hint (<strong>$0.01</strong>) that reveals one random correct letter you have not already uncovered.</li>
           <li><strong>Dynamic keyboard</strong> - tapped letters are locked; correct = blue, wrong = red.</li>
         </ul>
@@ -5360,11 +5415,11 @@
         </p>
 
         <figure class="docs-figure docs-figure--dark">
-          <img src="docs-assets/category-pool.png" alt="Category selection grid - Animals, Sports, Pokemon, Stars and more" loading="lazy" />
+          <img src="docs-assets/category-pool.png" alt="Category selection grid - Animals, Clubs, Pokemon, Stars and more" loading="lazy" />
         </figure>
 
         <div class="docs-body-copy">
-          <p>Available categories include <strong>Animals, Crypto, Onchain, Economics, Finance, DeFi, Science, Sports, Games, Pokemon, Movies, Stars</strong> and more. The selection is saved locally so each of your 3 daily games is drawn from your custom pool.</p>
+          <p>Available categories include <strong>Animals, Crypto, Onchain, Economics, Finance, DeFi, Science, Clubs, Games, Pokemon, Movies, Stars</strong> and more. The selection is saved locally so each of your 3 daily games is drawn from your custom pool.</p>
         </div>
       </section>
 
@@ -12775,7 +12830,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       "DEEP SPACE", "QUANTUM PHYSICS",  "GENE EDIT", "GRAVITY WAVE", "SPEED OF LIGHT", 
       "MILKY WAY", "SUPER NOVA", 
     ],
-    Sports: [
+    Clubs: [
       "REAL MADRID", "LA LAKERS", "MAN UNITED", "FC BARCELONA", "BAYERN MUNICH", "LIVERPOOL FC", "PSG PARIS", "MAN CITY",
       "ARSENAL FC", "CHELSEA FC", "AC MILAN", "INTER MILAN", "JUVENTUS FC", "GOLDEN STATE", "CHICAGO BULLS", "MIAMI HEAT",
       "BOSTON CELTICS", "NEW YORK KNICKS", "DALLAS COWBOYS", "NEW YORK YANKEES", "SAN ANTONIO SPURS",
@@ -12812,6 +12867,40 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
   for (const cat in CATEGORIES) {
       CATEGORIES[cat] = CATEGORIES[cat].filter(phraseFitsLayout);
+  }
+
+  /** Krótki opis kategorii — tooltip przy „!” w Category pool. */
+  const CATEGORY_INFO = {
+      Animals: "Animal names — mammals, birds, sea creatures, and wildlife.",
+      Crypto: "Crypto slang and basics: wallets, markets, tokens, gas, Base.",
+      Onchain: "On-chain culture: NFTs, DAOs, minting, L2s, wallets.",
+      Economics: "Economy concepts: markets, inflation, banks, growth, trade.",
+      Finance: "Money & markets: funds, Wall Street, cash flow, investing.",
+      DeFi: "Decentralized finance: pools, swaps, staking, bridges, yield.",
+      Science: "Science & space: physics, cosmos, discoveries, tech.",
+      Clubs: "Sports club and team names — football, basketball, and more.",
+      Games: "Video game titles and popular franchises.",
+      Pokemon: "Pokémon character names from the games and anime.",
+      Movies: "Movie titles and well-known film franchises.",
+      Stars: "Famous people — celebrities, athletes, musicians, icons.",
+  };
+
+  /** Stara nazwa „Sports” → „Clubs” (pula haseł to nazwy klubów/drużyn). */
+  function migrateCategoryName(name) {
+      if (name === "Sports") return "Clubs";
+      return name;
+  }
+  function migrateCategoryNameList(list) {
+      if (!Array.isArray(list)) return list;
+      const out = [];
+      const seen = new Set();
+      for (let i = 0; i < list.length; i++) {
+          const n = migrateCategoryName(list[i]);
+          if (typeof n !== "string" || seen.has(n)) continue;
+          seen.add(n);
+          out.push(n);
+      }
+      return out;
   }
 
   function shufflePhraseArrayInPlace(arr) {
@@ -12929,7 +13018,14 @@ async function ptgRefreshIdentityAliasesFromDb() {
       try {
           const raw = localStorage.getItem(categoryFilterStorageKey());
           const arr = raw ? JSON.parse(raw) : null;
-          return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : null;
+          if (!Array.isArray(arr)) return null;
+          const migrated = migrateCategoryNameList(arr.filter((x) => typeof x === "string"));
+          if (JSON.stringify(migrated) !== JSON.stringify(arr)) {
+              try {
+                  localStorage.setItem(categoryFilterStorageKey(), JSON.stringify(migrated));
+              } catch (_) {}
+          }
+          return migrated;
       } catch (_) {
           return null;
       }
@@ -12955,7 +13051,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
       if (valid.length === 0) return null;
       const need = minCategoryPickRequired();
       if (!Array.isArray(raw)) return null;
-      const sel = raw.filter((x) => typeof x === "string" && valid.includes(x));
+      const migrated = migrateCategoryNameList(raw.filter((x) => typeof x === "string"));
+      const sel = migrated.filter((x) => valid.includes(x));
       if (sel.length < need) return null;
       return sel;
   }
@@ -12964,7 +13061,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
   function mergeActiveRoundCategoryIntoPool(keys) {
       const ar = profileActiveRound;
       if (!ar || ar.date !== localDateKey() || typeof ar.category !== "string") return keys;
-      const c = ar.category;
+      const c = migrateCategoryName(ar.category);
       const valid = allNonEmptyCategoryKeys();
       if (!valid.includes(c) || keys.includes(c)) return keys;
       return keys.concat([c]);
@@ -13017,10 +13114,36 @@ async function ptgRefreshIdentityAliasesFromDb() {
           cb.value = name;
           cb.checked = selected.has(name);
           const span = document.createElement("span");
+          span.className = "category-filter-name";
           span.textContent = name;
+          const info = document.createElement("button");
+          info.type = "button";
+          info.className = "category-info-btn";
+          info.textContent = "!";
+          info.setAttribute("aria-label", "About " + name);
+          info.setAttribute("aria-expanded", "false");
+          const tipText = CATEGORY_INFO[name] || ("Phrases from the " + name + " category.");
+          info.title = tipText;
+          const tip = document.createElement("span");
+          tip.className = "category-info-tip";
+          tip.textContent = tipText;
+          tip.setAttribute("role", "tooltip");
           row.appendChild(cb);
           row.appendChild(span);
+          row.appendChild(info);
+          row.appendChild(tip);
           list.appendChild(row);
+      });
+  }
+
+  function closeAllCategoryInfoTips(exceptRow) {
+      const list = document.getElementById("categoryFilterList");
+      if (!list) return;
+      list.querySelectorAll(".category-filter-item.is-tip-open").forEach(function (row) {
+          if (exceptRow && row === exceptRow) return;
+          row.classList.remove("is-tip-open");
+          const btn = row.querySelector(".category-info-btn");
+          if (btn) btn.setAttribute("aria-expanded", "false");
       });
   }
 
@@ -13029,6 +13152,23 @@ async function ptgRefreshIdentityAliasesFromDb() {
       if (!list) return;
       if (!categoryFilterChangeBound) {
           list.addEventListener("change", onCategoryFilterCheckboxChange);
+          list.addEventListener("click", function (ev) {
+              const btn = ev.target && ev.target.closest ? ev.target.closest(".category-info-btn") : null;
+              if (!btn || !list.contains(btn)) return;
+              ev.preventDefault();
+              ev.stopPropagation();
+              const row = btn.closest(".category-filter-item");
+              if (!row) return;
+              const open = !row.classList.contains("is-tip-open");
+              closeAllCategoryInfoTips(open ? row : null);
+              row.classList.toggle("is-tip-open", open);
+              btn.setAttribute("aria-expanded", open ? "true" : "false");
+          });
+          document.addEventListener("click", function (ev) {
+              const t = ev.target;
+              if (t && t.closest && t.closest("#categoryFilterList .category-filter-item")) return;
+              closeAllCategoryInfoTips();
+          });
           categoryFilterChangeBound = true;
       }
       renderCategoryFilterCheckboxes();
@@ -13115,7 +13255,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       if (round.date !== localDateKey()) return false;
       const g = Number(round.gamesAtRoundStart);
       if (!Number.isFinite(g) || g !== gamesPlayedTodayCount) return false;
-      const cat = round.category;
+      const cat = migrateCategoryName(round.category);
       if (typeof cat !== "string" || !cat) return false;
       const allCats = allNonEmptyCategoryKeys();
       if (!allCats.includes(cat)) return false;
@@ -13168,7 +13308,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
           if (serverR || localR) clearActiveRoundLocalSnapshot();
           return false;
       }
-      currentCategory = round.category;
+      currentCategory = migrateCategoryName(round.category);
       secret = round.secret.toUpperCase();
       revealed = Array.from(round.revealedStr);
       mistakes = Number(round.mistakes) || 0;
