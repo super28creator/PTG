@@ -14335,31 +14335,11 @@ async function ptgRefreshIdentityAliasesFromDb() {
       hintTxInFlight = true;
       updateHintButtonUI();
       try {
-          setHintStatus("Preparing hint transaction...", "#94a3b8");
-          let accounts;
-          let ethProvider = null;
-          try {
-              const embedded = getEmbeddedEthProvider();
-              if (embedded) {
-                  const [, embAcc] = await Promise.all([
-                      ensureBaseMainnet(embedded),
-                      getWalletAccountsFast(embedded),
-                  ]);
-                  accounts = embAcc;
-                  if (accounts && accounts[0]) ethProvider = embedded;
-              }
-          } catch (_) {}
-          if (!accounts || !accounts[0]) {
-              const injected = getInjectedProvider();
-              if (injected) {
-                  const [, injAcc] = await Promise.all([
-                      ensureBaseMainnet(injected),
-                      getWalletAccountsFast(injected),
-                  ]);
-                  accounts = injAcc;
-                  ethProvider = injected;
-              }
-          }
+          setHintStatus("Confirm hint in wallet…", "#94a3b8");
+          /* Base: ten sam fast-path co claim — injected first, bez wiszącego SDK. */
+          const resolved = await ptgResolveTxWalletFast();
+          const ethProvider = resolved.ethProvider;
+          const accounts = resolved.accounts;
           if (!accounts || !accounts[0] || !ethProvider) {
               throw new Error("No wallet found on Base network.");
           }
@@ -14379,7 +14359,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   ethProvider,
                   "eth_call",
                   [{ to: toHint, data: callData }, "latest"],
-                  Math.max(700, PTG_MINT_WALLET_ETH_CALL_MS)
+                  Math.max(500, PTG_MINT_WALLET_ETH_CALL_MS)
               ).then(function (hex) {
                   const bn = ethers.BigNumber.from(hex);
                   if (!bn.gt(0)) throw new Error("hintPrice zero from wallet");
@@ -14396,7 +14376,11 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   return bn;
               });
               try {
-                  hintPrice = await ptgPromiseAny([walletRead, serverRead]);
+                  hintPrice = await withTimeout(
+                      ptgPromiseAny([walletRead, serverRead]),
+                      1200,
+                      "hintPrice"
+                  );
                   ptgHintPriceCachePut(hintPrice);
               } catch (hintReadErr) {
                   console.warn("hintPrice read failed on wallet and server RPC", hintReadErr);
@@ -14406,7 +14390,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
           if (hintPrice == null) {
               throw new Error("Could not read hint price from contract.");
           }
-          setHintStatus("Confirm hint purchase in wallet...", "#94a3b8");
+          setHintStatus("Confirm hint in wallet…", "#94a3b8");
           const buyData = hintIface.encodeFunctionData("buyHint", []);
           const valueHex = ethers.BigNumber.from(hintPrice).toHexString();
           let txHash = null;
@@ -15469,15 +15453,105 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
   async function getWalletAccountsFast(provider) {
       if (!provider || typeof provider.request !== "function") return [];
+      const baseFast =
+          ptgHost === "base" ||
+          (typeof ptgClaimIsBaseSurface === "function" && ptgClaimIsBaseSurface());
       try {
           const quick = await withTimeout(
               provider.request({ method: "eth_accounts", params: [] }),
-              550,
+              baseFast ? 500 : 550,
               "wallet eth_accounts"
           );
           if (Array.isArray(quick) && quick[0]) return quick;
       } catch (_) {}
+      /* Base App: eth_requestAccounts często wisi bez UI — jak przy claimie. */
+      if (baseFast) return [];
       return walletRequestWithTimeout(provider, "eth_requestAccounts", [], 12000);
+  }
+
+  /**
+   * Wspólny wybór portfela do hint / mint / badge.
+   * Base App: injected first, bez getEthereumProvider hang.
+   * Farcaster: SDK async first. Browser: injected + ensureBaseMainnet.
+   */
+  async function ptgResolveTxWalletFast() {
+      const baseFast =
+          ptgHost === "base" ||
+          (typeof ptgClaimIsBaseSurface === "function" && ptgClaimIsBaseSurface());
+      const providers = [];
+      const injected = getInjectedProvider();
+      const embeddedLegacy = getEmbeddedEthProvider();
+
+      if (baseFast) {
+          if (injected && typeof injected.request === "function") providers.push(injected);
+          if (
+              embeddedLegacy &&
+              typeof embeddedLegacy.request === "function" &&
+              !providers.includes(embeddedLegacy)
+          ) {
+              providers.push(embeddedLegacy);
+          }
+      } else if (ptgHost === "farcaster") {
+          const embeddedAsync = await getEmbeddedEthProviderAsync().catch(() => null);
+          if (embeddedAsync && typeof embeddedAsync.request === "function") {
+              providers.push(embeddedAsync);
+          }
+          if (
+              embeddedLegacy &&
+              typeof embeddedLegacy.request === "function" &&
+              !providers.includes(embeddedLegacy)
+          ) {
+              providers.push(embeddedLegacy);
+          }
+          if (injected && typeof injected.request === "function" && !providers.includes(injected)) {
+              providers.push(injected);
+          }
+      } else {
+          if (injected && typeof injected.request === "function") providers.push(injected);
+          if (
+              embeddedLegacy &&
+              typeof embeddedLegacy.request === "function" &&
+              !providers.includes(embeddedLegacy)
+          ) {
+              providers.push(embeddedLegacy);
+          }
+      }
+
+      let lastErr = null;
+      for (let i = 0; i < providers.length; i++) {
+          const p = providers[i];
+          try {
+              let accounts;
+              if (baseFast) {
+                  accounts = await getWalletAccountsFast(p);
+                  if (accounts && accounts[0]) {
+                      return { ethProvider: p, accounts };
+                  }
+                  continue;
+              }
+              if (ptgHost === "farcaster") {
+                  accounts = await getWalletAccountsFast(p);
+              } else {
+                  const pair = await Promise.all([
+                      ensureBaseMainnet(p),
+                      getWalletAccountsFast(p),
+                  ]);
+                  accounts = pair[1];
+              }
+              if (accounts && accounts[0]) {
+                  return { ethProvider: p, accounts };
+              }
+          } catch (e) {
+              lastErr = e;
+          }
+      }
+      const err = new Error(
+          baseFast || ptgHost === "farcaster"
+              ? "No wallet found — approve in Base / Farcaster, or open in a browser with MetaMask on Base."
+              : "No wallet found on Base network."
+      );
+      if (lastErr) err.cause = lastErr;
+      throw err;
   }
 
   /**
@@ -16062,51 +16136,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
           ? Promise.resolve(cachedMintPrice)
           : readMintPriceWeiHex(toNft, null).catch(() => null);
 
+      /* Base: injected first (jak claim/hint). FC/browser: dotychczasowa logika w helperze. */
       let accounts;
       let ethProvider = null;
       try {
-          /* Farcaster / nowsze SDK: sync ethProvider bywa „martwy” — bierz async. */
-          const feAsync = await getEmbeddedEthProviderAsync().catch(() => null);
-          const feSync = getEmbeddedEthProvider();
-          const fe =
-              feAsync && typeof feAsync.request === "function"
-                  ? feAsync
-                  : feSync && typeof feSync.request === "function"
-                    ? feSync
-                    : null;
-          if (fe) {
-              /* Farcaster: NIE wallet_switchEthereumChain — psuje eth_sendTransaction. */
-              if (ptgHost === "farcaster") {
-                  accounts = await getWalletAccountsFast(fe);
-              } else {
-                  const [, embAcc] = await Promise.all([
-                      ensureBaseMainnet(fe),
-                      getWalletAccountsFast(fe),
-                  ]);
-                  accounts = embAcc;
-              }
-              /* Tylko gdy jest konto — inaczej zostawiamy ethProvider=null, żeby dojść do injected (np. MetaMask w przeglądarce). */
-              if (accounts && accounts[0]) {
-                  ethProvider = fe;
-              }
-          }
-      } catch (mintSdkErr) {
-          console.warn("Mint: embedded wallet path skipped", mintSdkErr);
-      }
-      if (!accounts || !accounts[0]) {
-          const injected = getInjectedProvider();
-          if (injected) {
-              try {
-                  const [, injAcc] = await Promise.all([
-                      ensureBaseMainnet(injected),
-                      getWalletAccountsFast(injected),
-                  ]);
-                  accounts = injAcc;
-                  ethProvider = injected;
-              } catch (injErr) {
-                  console.warn("Mint: injected wallet path", injErr);
-              }
-          }
+          const resolved = await ptgResolveTxWalletFast();
+          ethProvider = resolved.ethProvider;
+          accounts = resolved.accounts;
+      } catch (mintWalletErr) {
+          console.warn("Mint: wallet resolve failed", mintWalletErr);
       }
       if (!accounts || !accounts[0] || !ethProvider) {
           const hint =
@@ -16204,14 +16242,25 @@ async function ptgRefreshIdentityAliasesFromDb() {
           dataHexWithBuilder = appendErc8021BuilderSuffix(dataHexPlain);
       }
 
-      setStatus("Preparing…", "#94a3b8");
+      const mintBaseFast =
+          ptgHost === "base" ||
+          (typeof ptgClaimIsBaseSurface === "function" && ptgClaimIsBaseSurface());
+      setStatus(mintBaseFast ? "Confirm in your wallet…" : "Preparing…", "#94a3b8");
       let valueHex = "0x0";
       const skipPriceWarmup =
           ptgHost === "farcaster" && !isPtgBadgeContract(toNft);
       if (!skipPriceWarmup) {
           try {
-              const earlyPrice = await earlyMintPricePromise;
-              valueHex = earlyPrice || (await readMintPriceWeiHex(toNft, ethProvider));
+              const earlyPrice = cachedMintPrice
+                  ? cachedMintPrice
+                  : await withTimeout(
+                        earlyMintPricePromise.then(function (p) {
+                            return p || readMintPriceWeiHex(toNft, ethProvider);
+                        }),
+                        mintBaseFast ? 1200 : 4000,
+                        "mintPrice"
+                    );
+              valueHex = earlyPrice || "0x0";
           } catch (priceErr) {
               console.warn("readMintPriceWeiHex failed — will try wallet-estimated value", priceErr);
           }
@@ -16224,7 +16273,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                 return ethers.BigNumber.from(0);
             });
 
-      setStatus("Preparing…", "#94a3b8");
+      setStatus("Confirm in your wallet…", "#94a3b8");
       const fromChk = ethers.utils.getAddress(accounts[0]);
       let didSendMintTxRequest = false;
       let mintPreconfirmed = false;
@@ -16645,8 +16694,18 @@ async function ptgRefreshIdentityAliasesFromDb() {
               if (balAfter == null || bLatest.gt(balAfter)) balAfter = bLatest;
           } catch (_) {}
       }
-      for (let i = 0; i < 8 && balAfter != null && !balAfter.gt(balBefore); i++) {
-          await new Promise((r) => setTimeout(r, 500));
+      const balTries =
+          ptgHost === "base" ||
+          (typeof ptgClaimIsBaseSurface === "function" && ptgClaimIsBaseSurface())
+              ? 3
+              : 8;
+      const balGap =
+          ptgHost === "base" ||
+          (typeof ptgClaimIsBaseSurface === "function" && ptgClaimIsBaseSurface())
+              ? 280
+              : 500;
+      for (let i = 0; i < balTries && balAfter != null && !balAfter.gt(balBefore); i++) {
+          await new Promise((r) => setTimeout(r, balGap));
           try {
               const b = await readBal("latest");
               if (b.gt(balAfter)) balAfter = b;
