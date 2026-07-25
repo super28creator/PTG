@@ -14,7 +14,7 @@ const {
 const USDC_BASE_MAINNET = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
 const DEFAULT_PTG_NFT_ADDRESS =
-  "0x9f9343A6833190EE0c816f71D72CE450b1ee8530";
+  "0x4B44f01B784DaE961197d9A08F9be653bB48792C";
 
 /** Trophy + odznaki (publicMint(string) / mint() jak w Kontrakt-nft.sol). */
 const DEFAULT_ALLOWED_MINT_TARGETS = [
