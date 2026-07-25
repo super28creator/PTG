@@ -4001,15 +4001,22 @@
       border-radius: 50%;
       border: 1px solid rgba(148, 163, 184, 0.45);
       background: rgba(255, 255, 255, 0.06);
-      color: rgba(200, 210, 228, 0.9);
-      font-size: 10px;
-      font-weight: 800;
-      line-height: 1;
+      color: rgba(180, 198, 230, 0.92);
       cursor: help;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-family: inherit;
+      line-height: 0;
+    }
+    .category-info-btn svg {
+      width: 10px;
+      height: 10px;
+      display: block;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     .category-info-btn:hover,
     .category-info-btn[aria-expanded="true"] {
@@ -13119,7 +13126,12 @@ async function ptgRefreshIdentityAliasesFromDb() {
           const info = document.createElement("button");
           info.type = "button";
           info.className = "category-info-btn";
-          info.textContent = "!";
+          info.innerHTML =
+              '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+              '<circle cx="12" cy="12" r="9"/>' +
+              '<path d="M12 11v5"/>' +
+              '<circle cx="12" cy="7.5" r="0.9" fill="currentColor" stroke="none"/>' +
+              "</svg>";
           info.setAttribute("aria-label", "About " + name);
           info.setAttribute("aria-expanded", "false");
           const tipText = CATEGORY_INFO[name] || ("Phrases from the " + name + " category.");
