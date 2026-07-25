@@ -200,7 +200,6 @@
         display: flex;
         flex-direction: column;
         align-items: flex-end;
-        gap: 10px;
         pointer-events: none;
         /* % względem karty — w Farcaster/Base 100vw potrafi rozszerzać layout */
         max-width: min(260px, calc(100% - 16px));
@@ -208,35 +207,50 @@
     .card--main-game .cal-floating-tools > * {
         pointer-events: auto;
     }
-    .cal-floating-tools__icons {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
+    /* Siatka 3×2: ludzik idealnie pod gwiazdą, wynik pod kalendarz+odznaki */
+    .cal-floating-tools__grid {
+        display: grid;
+        grid-template-columns: auto auto auto;
+        grid-template-areas:
+            "star cal badge"
+            "invite score score";
         gap: 8px;
+        align-items: stretch;
+        justify-items: stretch;
+        width: max-content;
+        max-width: 100%;
     }
+    .cal-floating-tools__grid > #categoryFilterToggle { grid-area: star; }
+    .cal-floating-tools__grid > #calendarToggle { grid-area: cal; }
+    .cal-floating-tools__grid > #badgesToggle { grid-area: badge; }
+    .cal-floating-tools__grid > #referralOpenBtn { grid-area: invite; }
+    .cal-floating-tools__grid > .header-stats-cluster { grid-area: score; }
     .card--main-game .cal-floating-tools .cal-icon-btn {
         box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+        width: 42px;
+        height: 42px;
     }
     .card--main-game .cal-floating-tools .header-stats-cluster {
-        max-width: 100%;
-        width: max-content;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        height: 42px;
+        box-sizing: border-box;
     }
-    /* Kolumna ikon + blok wyniku (invite obok rankingu) */
+    .card--main-game .cal-floating-tools .header-cluster-merge {
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+    }
+    .card--main-game .cal-floating-tools .header-cluster-score {
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: flex-start;
+        padding-right: 10px;
+    }
+    /* Kolumna ikon + blok wyniku */
     .card--main-game .card-header-main {
         padding-right: clamp(148px, 40vw, 220px);
-    }
-    .header-stats-row {
-        display: inline-flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 8px;
-        max-width: 100%;
-    }
-    .header-stats-row .cal-icon-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        flex-shrink: 0;
     }
     .cal-icon-svg--users {
         stroke: currentColor;
@@ -3339,6 +3353,13 @@
             height: 40px;
             border-radius: 10px;
         }
+        .card--main-game .cal-floating-tools .cal-icon-btn {
+            width: 40px;
+            height: 40px;
+        }
+        .card--main-game .cal-floating-tools .header-stats-cluster {
+            height: 40px;
+        }
         .cal-icon-svg { width: 20px; height: 20px; }
         .daily-info-pill { font-size: 11px; padding: 5px 10px; }
         .header-cluster-score {
@@ -4839,7 +4860,7 @@
 <div class="wrap">
   <div class="card card--main-game">
     <div class="cal-floating-tools" role="toolbar" aria-label="Game tools">
-      <div class="cal-floating-tools__icons">
+      <div class="cal-floating-tools__grid">
         <button type="button" id="categoryFilterToggle" class="cal-icon-btn" aria-expanded="false" aria-controls="categoryFilterPanel" title="Category pool" aria-label="Choose categories for new phrases">
           <svg class="cal-icon-svg cal-icon-svg--star" viewBox="0 0 24 24" aria-hidden="true">
             <polygon points="12 2 15 9 22 9 17 14 19 22 12 18 5 22 7 14 2 9 9 9"/>
@@ -4860,8 +4881,6 @@
             <circle cx="12" cy="9" r="2.2"/>
           </svg>
         </button>
-      </div>
-      <div class="header-stats-row">
         <button type="button" id="referralOpenBtn" class="cal-icon-btn" title="Invites & referral link" aria-label="Open referral invites and rewards">
           <svg class="cal-icon-svg cal-icon-svg--users" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -4873,7 +4892,7 @@
         <div class="header-stats-cluster" role="group" aria-label="Leaderboard and score">
           <div class="header-cluster-merge">
             <button type="button" id="leaderboardBtn" class="header-cluster-trophy" title="Leaderboard" aria-label="Open leaderboard">🏆</button>
-            <span class="header-cluster-score" id="scoreDisplay">0</span>
+            <span class="header-cluster-score" id="scoreDisplay" title="0">0</span>
           </div>
         </div>
       </div>
@@ -17122,8 +17141,26 @@ async function ptgRefreshIdentityAliasesFromDb() {
       });
   }
 
+  /** 0–999 pełne; od 1000 → 1K / 1.1K / 10K / 1M itd. */
+  function formatScoreCompact(raw) {
+      const n = Math.max(0, Math.floor(Number(raw) || 0));
+      if (n < 1000) return String(n);
+      function trimOneDecimal(x) {
+          const r = Math.round(x * 10) / 10;
+          if (Math.abs(r - Math.round(r)) < 1e-9) return String(Math.round(r));
+          return r.toFixed(1);
+      }
+      if (n < 1000000) return trimOneDecimal(n / 1000) + "K";
+      if (n < 1000000000) return trimOneDecimal(n / 1000000) + "M";
+      return trimOneDecimal(n / 1000000000) + "B";
+  }
   function updateScoreUI() {
-      document.getElementById("scoreDisplay").textContent = currentScore;
+      const el = document.getElementById("scoreDisplay");
+      const n = Math.max(0, Math.floor(Number(currentScore) || 0));
+      if (el) {
+          el.textContent = formatScoreCompact(n);
+          el.title = String(n) + " points";
+      }
       updateScoreMilestones();
       scheduleRefreshBadgeOnchainBalances();
       updateHeroBadgeMintUi();
