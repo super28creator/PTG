@@ -2065,19 +2065,29 @@
         align-items: flex-start;
         box-sizing: border-box;
     }
+    /* Każdy człon hasła = osobny rząd (wyraźne przerwy między słowami) */
     .word-scale-inner {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
+        flex-wrap: nowrap;
         justify-content: center;
         align-items: center;
         align-content: center;
-        gap: clamp(6px, 2vw, 14px);
+        gap: clamp(8px, 2vw, 14px);
         transform-origin: top center;
         transition: transform 0.18s var(--ease-base);
         box-sizing: border-box;
+        width: 100%;
     }
 
-    .word-group { display: flex; flex-wrap: nowrap; gap: clamp(3px, 1.2vw, 6px); flex-shrink: 0; }
+    .word-group {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: clamp(3px, 1.2vw, 6px);
+        flex-shrink: 0;
+        justify-content: center;
+        width: 100%;
+    }
 
     .letter-box { 
         font-family: var(--font-mono);
@@ -12785,9 +12795,10 @@ async function ptgRefreshIdentityAliasesFromDb() {
   /** Mint-day badge in calendar (PTG-circle.png at site root). */
   const PTG_DAY_BADGE_IMAGE_URL = typeof window !== "undefined" ? `${window.location.origin}/PTG-circle.png` : "";
 
-  const MAX_LETTERS = 15;
-  const MAX_PHRASE_LEN = 22;
-  const MAX_WORDS = 4;
+  /* Wyższe limity: pełne formy (bez skrótów) + każde słowo w osobnym rzędzie */
+  const MAX_LETTERS = 22;
+  const MAX_PHRASE_LEN = 32;
+  const MAX_WORDS = 5;
   function phraseFitsLayout(phrase) {
       const u = phrase.toUpperCase().trim();
       if (!u) return false;
@@ -12804,71 +12815,72 @@ async function ptgRefreshIdentityAliasesFromDb() {
       "BLUE WHALE", "RED FOX", "GOLDEN EAGLE", "BLACK BEAR", "WHITE SHARK", "POLAR BEAR", "BROWN WOLF", "TIGER SHARK",
       "KING COBRA", "GRAY WOLF", "SNOW LEOPARD", "SEA TURTLE", "GIANT PANDA", "RED PANDA", "SAND CAT",
       "BLACK PANTHER", "MOUNTAIN LION", "GRIZZLY BEAR", "BALD EAGLE", "KILLER WHALE", "LEOPARD SEAL",
-      "KOALA BEAR",  "HAMMERHEAD SHARK", "MOUNTAIN GOAT",
-      "WHITE RHINO", "BLACK RHINO", "BENGAL TIGER", "SIBERIAN TIGER","GIRAFFE",
-      "AFRICAN ELEPHANT", "SLOTH BEAR",  "GORILLA", "ORANGUTAN",
-      "LEMUR", 
+      "KOALA BEAR", "HAMMERHEAD SHARK", "MOUNTAIN GOAT",
+      "WHITE RHINO", "BLACK RHINO", "BENGAL TIGER", "SIBERIAN TIGER", "GIRAFFE",
+      "AFRICAN ELEPHANT", "SLOTH BEAR", "GORILLA", "ORANGUTAN",
+      "LEMUR",
     ],
     Crypto: [
       "LAYER TWO", "MEME COIN", "GAS FEES", "BULL MARKET", "BEAR MARKET", "PRIVATE KEY", "COLD WALLET", "SEED PHRASE",
-      "WHITE LIST", "BLOCK HASH", "ALT COIN", "STABLE COIN", "GAS LIMIT", "AIR DROP", "BASE CHAIN",
+      "WHITE LIST", "BLOCK HASH", "ALTERNATIVE COIN", "STABLE COIN", "GAS LIMIT", "AIR DROP", "BASE CHAIN",
       "CRYPTO EXCHANGE", "PUBLIC KEY",
     ],
     Onchain: [
-      "DAO VOTER", "MINT PAGE", "GAS SPIKE", "FLOOR PRICE", "METAVERSE", "NFT MINT", "ENS NAME", "LAYER TWO",
-      "ZK PROOF", "BASE APP", "ONCHAIN", "SMART CONTRACT", "TOKEN SWAP", "CRYPTO WALLET",
-      "NATIVE TOKEN", 
+      "MINT PAGE", "GAS SPIKE", "FLOOR PRICE", "METAVERSE", "TOKEN MINT", "NAME SERVICE", "LAYER TWO",
+      "ZERO KNOWLEDGE PROOF", "BASE APP", "ONCHAIN", "SMART CONTRACT", "TOKEN SWAP", "CRYPTO WALLET",
+      "NATIVE TOKEN",
     ],
     Economics: [
       "MARKET CYCLE", "INTEREST RATE", "SUPPLY", "FREE TRADE", "BEAR TRAP", "BULL TRAP", "STOCK MARKET", "HEDGE FUND",
-      "INFLATION", "DEFLATION", "GDP GROWTH", "RECESSION", "BULL RUN", "CENTRAL BANK", 
-     "INCOME TAX", "CAPITAL GAINS", "MINIMUM WAGE",
+      "INFLATION", "DEFLATION", "ECONOMIC GROWTH", "RECESSION", "BULL RUN", "CENTRAL BANK",
+      "INCOME TAX", "CAPITAL GAINS", "MINIMUM WAGE",
     ],
     Finance: [
-      "CASH FLOW", "NET WORTH", "TAX HAVEN", "BLACK SWAN", "CREDIT SCORE", "STOCK BROKER", 
+      "CASH FLOW", "NET WORTH", "TAX HAVEN", "BLACK SWAN", "CREDIT SCORE", "STOCK BROKER",
       "WALL STREET", "PRIVATE EQUITY", "VENTURE CAPITAL", "INDEX FUND", "PROFIT MARGIN",
       "DEBT LIMIT", "EMERGENCY FUND", "TRUST FUND", "DAY TRADER",
     ],
     DeFi: [
-      "LIQUID POOL", "TOTAL VALUE", "SWAP PAIR", "AUTO STAKE", "STAKE POOL", "BRIDGE", "YIELD FARM", 
-     "SMART POOL", "TOKEN SWAP", "LIQUIDITY", "LENDING PROTOCOL", 
-      "CROSS CHAIN", "SLIPPAGE", 
+      "LIQUID POOL", "TOTAL VALUE", "SWAP PAIR", "AUTO STAKE", "STAKE POOL", "BRIDGE", "YIELD FARM",
+      "SMART POOL", "TOKEN SWAP", "LIQUIDITY", "LENDING PROTOCOL",
+      "CROSS CHAIN", "SLIPPAGE",
     ],
     Science: [
       "BLACK HOLE", "DARK MATTER", "ATOM CORE", "SOLAR WIND", "LASER BEAM", "MOON WALK", "SPACE WALK", "SOLAR PANEL",
-      "DEEP SPACE", "QUANTUM PHYSICS",  "GENE EDIT", "GRAVITY WAVE", "SPEED OF LIGHT", 
-      "MILKY WAY", "SUPER NOVA", 
+      "DEEP SPACE", "QUANTUM PHYSICS", "GENE EDITING", "GRAVITY WAVE", "SPEED OF LIGHT",
+      "MILKY WAY", "SUPER NOVA",
     ],
     Clubs: [
-      "REAL MADRID", "LA LAKERS", "MAN UNITED", "FC BARCELONA", "BAYERN MUNICH", "LIVERPOOL FC", "PSG PARIS", "MAN CITY",
-      "ARSENAL FC", "CHELSEA FC", "AC MILAN", "INTER MILAN", "JUVENTUS FC", "GOLDEN STATE", "CHICAGO BULLS", "MIAMI HEAT",
+      "REAL MADRID", "LOS ANGELES LAKERS", "MANCHESTER UNITED", "FUTBOL CLUB BARCELONA", "BAYERN MUNICH",
+      "LIVERPOOL", "PARIS SAINT GERMAIN", "MANCHESTER CITY",
+      "ARSENAL", "CHELSEA", "MILAN", "INTER MILAN", "JUVENTUS", "GOLDEN STATE WARRIORS", "CHICAGO BULLS", "MIAMI HEAT",
       "BOSTON CELTICS", "NEW YORK KNICKS", "DALLAS COWBOYS", "NEW YORK YANKEES", "SAN ANTONIO SPURS",
-      "BROOKLYN NETS", "DALLAS MAVERICKS", "DENVER NUGGETS", 
-      "ASTON VILLA", "NEWCASTLE UNITED", "ATLETICO MADRID", "AJAX AMSTERDAM", 
+      "BROOKLYN NETS", "DALLAS MAVERICKS", "DENVER NUGGETS",
+      "ASTON VILLA", "NEWCASTLE UNITED", "ATLETICO MADRID", "AJAX AMSTERDAM",
     ],
     Games: [
-      "MINECRAFT", "FORTNITE", "ELDEN RING", "CALL OF DUTY", "GTA FIVE", "COUNTER STRIKE", "SUPER MARIO",
-      "AMONG US", "CYBERPUNK", "OVER WATCH", "ROBLOX", "TOMB RAIDER","THE WITCHER", 
-     "ROCKET LEAGUE",
+      "MINECRAFT", "FORTNITE", "ELDEN RING", "CALL OF DUTY", "GRAND THEFT AUTO", "COUNTER STRIKE", "SUPER MARIO",
+      "AMONG US", "CYBERPUNK", "OVERWATCH", "ROBLOX", "TOMB RAIDER", "THE WITCHER",
+      "ROCKET LEAGUE",
     ],
     Pokemon: [
       "PIKACHU", "CHARIZARD", "BLASTOISE", "SNORLAX", "MEWTWO", "MEW", "EEVEE", "GENGAR", "LUCARIO", "GRENINJA",
       "DRAGONITE", "VAPOREON", "JOLTEON", "FLAREON", "UMBREON", "SYLVEON", "GYARADOS", "MACHAMP", "ARCANINE", "ALAKAZAM",
-      "RHYDON", "SCIZOR", "TYRANITAR", "METAGROSS", "RAYQUAZA", "KYOGRE", "GROUDON", "LAPRAS",  "SALAMENCE",
+      "RHYDON", "SCIZOR", "TYRANITAR", "METAGROSS", "RAYQUAZA", "KYOGRE", "GROUDON", "LAPRAS", "SALAMENCE",
       "BULBASAUR", "SQUIRTLE", "PSYDUCK", "MACHOP", "PONYTA", "SLOWPOKE", "MAGIKARP",
-      "DITTO", "ARTICUNO", "ZAPDOS", "MOLTRES", "CHIKORITA", "CYNDAQUIL",  "LUGIA",
+      "DITTO", "ARTICUNO", "ZAPDOS", "MOLTRES", "CHIKORITA", "CYNDAQUIL", "LUGIA",
     ],
     Movies: [
-      "WOLF OF WALL ST", "THE GODFATHER", "STAR WARS", "JURASSIC PARK", "INCEPTION", "THE MATRIX", "IRON MAN",
+      "WOLF OF WALL STREET", "THE GODFATHER", "STAR WARS", "JURASSIC PARK", "INCEPTION", "THE MATRIX", "IRON MAN",
       "BLACK PANTHER", "TOP GUN", "SPIDER MAN", "FIGHT CLUB", "TITANIC", "AVATAR", "FORREST GUMP",
-      "THE DARK KNIGHT","HARRY POTTER", "GLADIATOR", "TOY STORY",
+      "THE DARK KNIGHT", "HARRY POTTER", "GLADIATOR", "TOY STORY",
     ],
     Stars: [
       "ARIANA GRANDE", "TAYLOR SWIFT", "LIONEL MESSI", "LEBRON JAMES", "BILLIE EILISH", "LADY GAGA",
       "THE ROCK", "ELON MUSK", "BEYONCE", "RIHANNA", "JUSTIN BIEBER", "BAD BUNNY", "SELENA GOMEZ", "KIM KARDASHIAN",
-      "TOM CRUISE", "BRAD PITT", "JOHNNY DEPP", "WILL SMITH", 
-      "ANGELINA JOLIE", "MARGOT ROBBIE", "RYAN GOSLING", 
-       "ROBERT DOWNEY JR", "ZENDAYA", "TOM HOLLAND", "DRAKE", "EMINEM", "SNOOP DOGG", "ED SHEERAN",
+      "TOM CRUISE", "BRAD PITT", "JOHNNY DEPP", "WILL SMITH",
+      "ANGELINA JOLIE", "MARGOT ROBBIE", "RYAN GOSLING",
+      "ROBERT DOWNEY JUNIOR", "ZENDAYA", "TOM HOLLAND", "DRAKE", "EMINEM", "SNOOP DOGG", "ED SHEERAN",
       "THE WEEKND", "BRUNO MARS", "DUA LIPA", "KATY PERRY", "SHAKIRA", "JENNIFER LOPEZ", "MICHAEL JORDAN",
       "KOBE BRYANT", "TIGER WOODS", "SERENA WILLIAMS", "ROGER FEDERER", "RAFAEL NADAL", "NOVAK DJOKOVIC",
     ],
@@ -14272,7 +14284,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       wordFitResizeTimer = setTimeout(fitWordDisplay, 100);
   }
 
-  /** Skaluje wiersz z literami tak, by zmieścił się w szerokości — bez poziomego scrolla. */
+  /** Skaluje hasło (słowa w kolumnie) do szerokości kontenera — bez poziomego scrolla. */
   function fitWordDisplay() {
       const container = document.getElementById("wordDisplay");
       if (!container) return;
@@ -14293,7 +14305,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
           vp.style.height = sh + "px";
           return;
       }
-      const s = Math.max(0.45, Math.min(1, availableW / sw));
+      const s = Math.max(0.42, Math.min(1, availableW / sw));
       inner.style.transform = "scale(" + s + ")";
       vp.style.height = Math.max(Math.ceil(sh * s), 40) + "px";
   }
