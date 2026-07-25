@@ -5737,16 +5737,25 @@
    */
   async function ensureBaseMainnet(provider) {
       if (!provider || typeof provider.request !== "function") return;
+      /* Base App / Warpcast: portfel hosta JEST na Base, a
+       * `wallet_switchEthereumChain` tylko wisi (i psuje eth_sendTransaction
+       * w Warpcast). Krótki odczyt chainId i wychodzimy. */
+      const miniAppSurface =
+          ptgHost === "base" ||
+          ptgHost === "farcaster" ||
+          (typeof ptgInMiniAppSurface !== "undefined" && !!ptgInMiniAppSurface) ||
+          (typeof ptgNotifDetectBaseSurface === "function" && ptgNotifDetectBaseSurface());
       try {
           const cid = await withTimeout(
               provider.request({ method: "eth_chainId", params: [] }),
-              PTG_MINT_CHAIN_ID_MS,
+              miniAppSurface ? 600 : PTG_MINT_CHAIN_ID_MS,
               "eth_chainId"
           );
           if (chainIdMatchesBase(cid)) return;
       } catch (_) {
           /* brak odpowiedzi — dalej próba przełączenia */
       }
+      if (miniAppSurface) return;
       try {
           await walletRequestWithTimeout(
               provider,
@@ -7784,6 +7793,45 @@ let __ptgIdentityAliasRefreshPromise = null;
       return 0;
   }
 
+  /* Twardy lock claimu. Trzymany wysoko, bo listener RTDB (`bindReferralSummaryListener`)
+   * odświeża przycisk w trakcie claimu i bez tego potrafił go odblokować —
+   * user mógł kliknąć Claim drugi raz w środku wypłaty. */
+  let __ptgClaimInFlight = false;
+  /* Krótki cooldown tylko na wyścig RTDB (pending jeszcze >0 po starcie TX).
+   * Długi 12–20s blokował Claim bez potrzeby — inFlight i tak trzyma przycisk. */
+  let __ptgClaimCooldownUntil = 0;
+  const PTG_CLAIM_COOLDOWN_OK_MS = 1500;
+  const PTG_CLAIM_COOLDOWN_BUSY_MS = 3500;
+  const PTG_CLAIM_BTN_IDLE_LABEL = "Claim referral rewards";
+
+  function ptgSetClaimButtonBusy(busy) {
+      const btn = document.getElementById("referralClaimBtn");
+      if (!btn) return;
+      if (busy) {
+          if (!btn.dataset.ptgIdleLabel) {
+              btn.dataset.ptgIdleLabel = btn.textContent || PTG_CLAIM_BTN_IDLE_LABEL;
+          }
+          btn.disabled = true;
+          btn.setAttribute("aria-busy", "true");
+          btn.textContent = "Claiming…";
+      } else {
+          btn.removeAttribute("aria-busy");
+          btn.textContent = btn.dataset.ptgIdleLabel || PTG_CLAIM_BTN_IDLE_LABEL;
+      }
+  }
+
+  /** Jedyne miejsce, które włącza/wyłącza Claim — respektuje lock + cooldown. */
+  function ptgApplyClaimButtonState(pendingCents) {
+      const btn = document.getElementById("referralClaimBtn");
+      if (!btn) return;
+      if (__ptgClaimInFlight || Date.now() < __ptgClaimCooldownUntil) {
+          btn.disabled = true;
+          return;
+      }
+      btn.disabled =
+          !isLoggedIn() || myUserId === "guest" || !(Number(pendingCents) > 0);
+  }
+
   function ptgUpdateReferralUiFromSnapshot(d) {
       const bal = document.getElementById("referralBalanceDisplay");
       const pr = ptgReadPendingRewardCents(d);
@@ -7791,10 +7839,7 @@ let __ptgIdentityAliasRefreshPromise = null;
           const n = ptgFormatReferralCents(pr);
           bal.innerHTML = ptgEscapeReferralHtml(n) + '<span class="referral-balance-currency">$</span>';
       }
-      const btn = document.getElementById("referralClaimBtn");
-      if (btn) {
-          btn.disabled = !isLoggedIn() || myUserId === "guest" || pr <= 0;
-      }
+      ptgApplyClaimButtonState(pr);
   }
 
   function bindReferralSummaryListener() {
@@ -9517,21 +9562,30 @@ async function ptgRefreshIdentityAliasesFromDb() {
       let lastErr = null;
       if (prov && typeof prov.request === "function") {
           const plainMsg = String(message || "");
-          const attempts = [
-              /* MetaMask / większość injected: hex message + from. */
-              { method: "personal_sign", params: [msgHex, from] },
-              /* Base / Coinbase SCW często woli plain string. */
-              { method: "personal_sign", params: [plainMsg, from] },
-              { method: "personal_sign", params: [from, msgHex] },
-              { method: "personal_sign", params: [from, plainMsg] },
-              { method: "eth_sign", params: [from, msgHex] },
-          ];
+          const baseSignFast =
+              ptgHost === "base" ||
+              (typeof ptgNotifDetectBaseSurface === "function" && ptgNotifDetectBaseSurface());
+          /* Base SCW: plain string first — hex-first często „milczy” albo
+           * długo failuje zanim pokaże Confirm. MetaMask: hex first. */
+          const attempts = baseSignFast
+              ? [
+                    { method: "personal_sign", params: [plainMsg, from] },
+                    { method: "personal_sign", params: [msgHex, from] },
+                ]
+              : [
+                    { method: "personal_sign", params: [msgHex, from] },
+                    { method: "personal_sign", params: [plainMsg, from] },
+                    { method: "personal_sign", params: [from, msgHex] },
+                    { method: "personal_sign", params: [from, plainMsg] },
+                    { method: "eth_sign", params: [from, msgHex] },
+                ];
           for (let i = 0; i < attempts.length; i++) {
               try {
                   if (traceId) {
                       ptgClaimDebug(traceId, "claim.sign.attempt.start", {
                           idx: i,
                           method: attempts[i].method,
+                          baseSignFast: !!baseSignFast,
                       });
                   }
                   const out = await walletRequestWithTimeout(
@@ -9600,6 +9654,11 @@ async function ptgRefreshIdentityAliasesFromDb() {
       if (!/^0x[a-fA-F0-9]{40}$/.test(uid)) return null;
       const origin =
           typeof location !== "undefined" && location.origin ? location.origin : "";
+      const restoreMs =
+          ptgHost === "base" ||
+          (typeof ptgNotifDetectBaseSurface === "function" && ptgNotifDetectBaseSurface())
+              ? 4500
+              : 8000;
       try {
           const r = await fetchWithTimeout(
               origin + "/api/ptg-referral-payout",
@@ -9608,7 +9667,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ userId: uid, op: "restore" }),
               },
-              8000
+              restoreMs
           );
           const j = await r.json().catch(() => null);
           if (!r.ok || !j || j.ok !== true) return null;
@@ -10077,11 +10136,18 @@ async function ptgRefreshIdentityAliasesFromDb() {
       const claimTraceId = "claim-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
       console.info("[ptg-claim] click", { host: ptgHost, userId: myUserId });
       ptgClaimDebug(claimTraceId, "claim.click", { host: ptgHost, userId: myUserId });
+      if (__ptgClaimInFlight) {
+          ptgClaimDebug(claimTraceId, "claim.guard.in_flight");
+          return;
+      }
       if (!db || !isLoggedIn() || myUserId === "guest") {
           if (msg) msg.textContent = "Connect to claim.";
           ptgClaimDebug(claimTraceId, "claim.guard.not_logged");
           return;
       }
+      __ptgClaimInFlight = true;
+      ptgSetClaimButtonBusy(true);
+      try {
       const sourceUserId = String(myUserId || "");
       let claimUserId = sourceUserId;
       let uiSummaryUserId = sourceUserId;
@@ -10090,6 +10156,11 @@ async function ptgRefreshIdentityAliasesFromDb() {
       let bridgedAmountCents = 0;
       let bridgedMoves = [];
       let txSubmitted = false;
+      /* Gdy true — finally NIE woła ciężkiego recover (już zrobiony / zbędny). */
+      let skipFinallyRecover = false;
+      /* Po POST quote/execute NIE abortujemy outstanding — TX może jeszcze lecieć.
+       * Abort w tym momencie + drugi tap = ryzyko podwójnego claim / bałaganu salda. */
+      let claimServerTouched = false;
       /* Auto-przełączenie tożsamości na 0x robimy WYŁĄCZNIE poza Farcaster.
        * W Warpcast/Farcaster profile-first jest celowe; wcześniej ten blok
        * nadpisywał poprawny profil FC na losowy custody 0x i user widział
@@ -10097,25 +10168,28 @@ async function ptgRefreshIdentityAliasesFromDb() {
       if (ptgHost !== "farcaster" && !/^0x[a-fA-F0-9]{40}$/.test(myUserId)) {
           try {
               const fallbackProviders = [];
-              const embeddedAsync = await getEmbeddedEthProviderAsync().catch(() => null);
+              const skipAsyncProv =
+                  ptgHost === "base" ||
+                  (typeof ptgNotifDetectBaseSurface === "function" &&
+                      ptgNotifDetectBaseSurface());
+              const embeddedAsync = skipAsyncProv
+                  ? null
+                  : await getEmbeddedEthProviderAsync().catch(() => null);
               const embeddedLegacy = getEmbeddedEthProvider();
               const injected = getInjectedProvider();
+              /* Base: injected first — bez czekania na wiszący SDK provider. */
+              if (injected && typeof injected.request === "function") {
+                  fallbackProviders.push(injected);
+              }
               if (embeddedAsync && typeof embeddedAsync.request === "function") {
                   fallbackProviders.push(embeddedAsync);
               }
               if (
                   embeddedLegacy &&
                   typeof embeddedLegacy.request === "function" &&
-                  embeddedLegacy !== embeddedAsync
+                  !fallbackProviders.includes(embeddedLegacy)
               ) {
                   fallbackProviders.push(embeddedLegacy);
-              }
-              if (
-                  injected &&
-                  typeof injected.request === "function" &&
-                  !fallbackProviders.includes(injected)
-              ) {
-                  fallbackProviders.push(injected);
               }
               for (let i = 0; i < fallbackProviders.length; i++) {
                   const acc = await getWalletAccountsFast(fallbackProviders[i]).catch(() => []);
@@ -10213,57 +10287,88 @@ async function ptgRefreshIdentityAliasesFromDb() {
        * RESTORE sam to posprząta i zwróci aktualny `pendingReward`. */
       if (btn) btn.disabled = true;
       if (msg) msg.textContent = "Preparing claim…";
-      const restoreState = await ptgReferralFetchRestoreState(claimUserId);
-      console.info("[ptg-claim] restore", restoreState);
-      ptgClaimDebug(claimTraceId, "claim.restore", restoreState);
+      const warmBaseProviders = ptgClaimIsBaseSurface();
+      let warmClaimAccounts = null;
+      let warmClaimProvider = null;
+      if (warmBaseProviders) {
+          warmClaimProvider = getInjectedProvider() || getEmbeddedEthProvider();
+          if (warmClaimProvider && typeof warmClaimProvider.request === "function") {
+              warmClaimAccounts = getWalletAccountsForClaimProvider(
+                  warmClaimProvider,
+                  claimTraceId,
+                  -1
+              ).catch(() => []);
+          }
+      }
 
       let claimAmount = 0;
       let resumeAuth = null;
-      if (restoreState && restoreState.outstanding && restoreState.outstanding.auth) {
-          resumeAuth = restoreState.outstanding.auth;
-          claimAmount = Number(restoreState.outstanding.amountCents) || 0;
+      let restoreState = null;
+      /* Base fast-path: lokalne pending z RTDB → od razu do podpisu.
+       * Restore robi on-chain RPC (authorizationState) i potrafi zabrać
+       * kilka–kilkanaście sekund zanim w ogóle pokaże się Confirm. */
+      try {
+          const preLocal = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + claimUserId));
+          if (preLocal.exists()) claimAmount = ptgReadPendingRewardCents(preLocal.val());
+      } catch (_) {}
+
+      const skipRestoreForSpeed = warmBaseProviders && claimAmount > 0;
+      if (skipRestoreForSpeed) {
+          ptgClaimDebug(claimTraceId, "claim.base_skip_restore", { claimAmount });
       } else {
-          const pendingFromServer = restoreState && Number.isFinite(Number(restoreState.pendingReward))
-              ? Number(restoreState.pendingReward)
-              : null;
-          if (pendingFromServer != null && pendingFromServer > 0) {
-              claimAmount = pendingFromServer;
-          } else if (pendingFromServer === 0 && (restoreState && restoreState.restored > 0)) {
-              /* Self-heal właśnie przywrócił pending — oświeżmy RTDB read. */
-              try {
-                  const pre = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + claimUserId));
-                  if (pre.exists()) claimAmount = ptgReadPendingRewardCents(pre.val());
-              } catch (_) {}
+          restoreState = await ptgReferralFetchRestoreState(claimUserId);
+          console.info("[ptg-claim] restore", restoreState);
+          ptgClaimDebug(claimTraceId, "claim.restore", restoreState);
+          if (restoreState && restoreState.outstanding && restoreState.outstanding.auth) {
+              resumeAuth = restoreState.outstanding.auth;
+              claimAmount = Number(restoreState.outstanding.amountCents) || 0;
           } else {
-              try {
-                  const pre = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + claimUserId));
-                  if (pre.exists()) claimAmount = ptgReadPendingRewardCents(pre.val());
-              } catch (_) {}
+              const pendingFromServer =
+                  restoreState && Number.isFinite(Number(restoreState.pendingReward))
+                      ? Number(restoreState.pendingReward)
+                      : null;
+              if (pendingFromServer != null && pendingFromServer > 0) {
+                  claimAmount = pendingFromServer;
+              } else if (pendingFromServer === 0 && restoreState && restoreState.restored > 0) {
+                  try {
+                      const pre = await get(
+                          ref(db, ptgReferralsRtdbRoot() + "/summary/" + claimUserId)
+                      );
+                      if (pre.exists()) claimAmount = ptgReadPendingRewardCents(pre.val());
+                  } catch (_) {}
+              } else if (!(claimAmount > 0)) {
+                  try {
+                      const pre = await get(
+                          ref(db, ptgReferralsRtdbRoot() + "/summary/" + claimUserId)
+                      );
+                      if (pre.exists()) claimAmount = ptgReadPendingRewardCents(pre.val());
+                  } catch (_) {}
+              }
           }
       }
 
       if (claimAmount <= 0 && !resumeAuth) {
-          let rec = null;
+          /* Tylko gdy naprawdę 0: jeden szybki abort (zombie outstanding),
+           * potem kontynuacja w TYM samym kliknięciu. */
+          if (msg) msg.textContent = "Checking claim…";
           try {
-              rec = await ptgReferralRecoverClaimUiAfterCancel({
-                  claimUserId,
-                  uiSummaryUserId,
-                  bridgedSourceUserId,
-                  bridgedWalletUserId,
-                  bridgedAmountCents,
-                  bridgedMoves,
-                  rollbackBridge: bridgedAmountCents > 0,
-                  keepMsg: true,
-              });
-          } catch (_) {
-              if (btn) btn.disabled = true;
-          }
-          if (rec && Number(rec.totalPending) > 0) {
-              if (msg) msg.textContent = "Balance restored. Tap Claim again.";
+              await ptgReferralAbortOutstanding(claimUserId);
+          } catch (_) {}
+          try {
+              const pre = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + claimUserId));
+              if (pre.exists()) claimAmount = ptgReadPendingRewardCents(pre.val());
+          } catch (_) {}
+          if (!(claimAmount > 0)) {
+              skipFinallyRecover = true;
+              try {
+                  await ptgReferralRefreshClaimableBalanceUi([claimUserId, uiSummaryUserId], {
+                      skipHeal: true,
+                  });
+              } catch (_) {}
+              if (msg) msg.textContent = "Nothing to claim.";
               return;
           }
-          if (msg) msg.textContent = "Nothing to claim.";
-          return;
+          ptgClaimDebug(claimTraceId, "claim.auto_restored_continue", { claimAmount });
       }
 
       /* Outstanding bez portfela: treasury sama wysyła TWA (Farcaster / Base). */
@@ -10271,6 +10376,9 @@ async function ptgRefreshIdentityAliasesFromDb() {
           const originEarly =
               typeof location !== "undefined" && location.origin ? location.origin : "";
           if (msg) msg.textContent = "Sending USDC…";
+          claimServerTouched = true;
+          __ptgClaimCooldownUntil = Date.now() + PTG_CLAIM_COOLDOWN_BUSY_MS;
+          const earlyExecMs = ptgClaimIsBaseSurface() ? 20000 : 25000;
           try {
               const resEarly = await fetchWithTimeout(
                   originEarly + "/api/ptg-referral-payout",
@@ -10279,7 +10387,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ userId: claimUserId, op: "execute" }),
                   },
-                  25000
+                  earlyExecMs
               );
               const jEarly = await resEarly.json().catch(() => null);
               ptgClaimDebug(claimTraceId, "claim.resume.execute.early", {
@@ -10296,32 +10404,40 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       ptgUpdateReferralUiFromSnapshot(s.exists() ? s.val() : null);
                   } catch (_) {}
                   if (btn) btn.disabled = true;
+                  skipFinallyRecover = true;
+                  return;
+              }
+              if (jEarly && jEarly.error === "claim_in_progress") {
+                  if (msg) msg.textContent = "Claim is already being sent — one moment…";
+                  skipFinallyRecover = true;
+                  __ptgClaimCooldownUntil = Date.now() + PTG_CLAIM_COOLDOWN_BUSY_MS;
+                  ptgClaimDebug(claimTraceId, "claim.in_progress.early");
                   return;
               }
               if (jEarly && jEarly.error === "already_claimed") {
                   if (msg) msg.textContent = "Already claimed. Refresh the app.";
+                  skipFinallyRecover = true;
+                  __ptgClaimCooldownUntil = Date.now() + PTG_CLAIM_COOLDOWN_OK_MS;
                   try {
-                      await ptgReferralRecoverClaimUiAfterCancel({
-                          claimUserId,
-                          uiSummaryUserId,
-                          keepMsg: true,
+                      await ptgReferralRefreshClaimableBalanceUi([claimUserId, uiSummaryUserId], {
+                          skipHeal: true,
                       });
                   } catch (_) {}
-                  if (btn) btn.disabled = true;
-                  if (msg) msg.textContent = "Already claimed. Refresh the app.";
                   return;
               }
               console.warn("[ptg-claim] early execute failed, continue with wallet", jEarly);
           } catch (eEarly) {
               console.warn("[ptg-claim] early execute fetch failed", eEarly);
               ptgClaimDebug(claimTraceId, "claim.resume.execute.early.err", eEarly);
+              /* Timeout po starcie execute: NIE abortuj — TX może dojść. */
+              skipFinallyRecover = true;
           }
       }
 
-      /* Base / Coinbase webview: najpierw SDK (ethProvider / getEthereumProvider),
-       * potem window.ethereum — w praktyce to SAMO konto co na desktopie, gdy
-       * SDK nie pokazuje UI; strict match na claimUserId eliminuje „zły” portfel.
-       * Inne hosty: embedded + MetaMask/injected jak dotąd. */
+      /* Base App / Coinbase: `window.ethereum` (injected) jest szybki.
+       * `sdk.wallet.getEthereumProvider()` na Base potrafi wisieć kilka sekund
+       * (albo nigdy się nie resolve'ować) — to opóźniało sheet „Confirm”.
+       * Farcaster: nadal embedded SDK first. */
       const isBaseClaimUi = ptgHost === "base" || ptgNotifDetectBaseSurface();
       ptgClaimDebug(claimTraceId, "claim.host", {
           ptgHost,
@@ -10333,36 +10449,50 @@ async function ptgRefreshIdentityAliasesFromDb() {
       });
       const providers = [];
       ptgClaimDebug(claimTraceId, "claim.providers.resolve.start");
-      const embeddedAsync = await getEmbeddedEthProviderAsync().catch((e) => {
-          ptgClaimDebug(claimTraceId, "claim.providers.async.err", e);
-          return null;
-      });
+      let embeddedAsync = null;
+      if (!isBaseClaimUi) {
+          embeddedAsync = await getEmbeddedEthProviderAsync().catch((e) => {
+              ptgClaimDebug(claimTraceId, "claim.providers.async.err", e);
+              return null;
+          });
+      } else {
+          embeddedAsync = null;
+          ptgClaimDebug(claimTraceId, "claim.providers.async.skipped_base");
+      }
       ptgClaimDebug(claimTraceId, "claim.providers.resolve.done", {
         hasEmbeddedAsync: !!embeddedAsync,
+        isBaseClaimUi,
       });
       const embeddedLegacy = getEmbeddedEthProvider();
       const injected = getInjectedProvider();
-      /* Kolejność ma znaczenie — provider, który zawisa, blokuje cały loop
-       * (każdy ma do 22s na odpowiedź). W Base app jako zwykłej webview
-       * (ptgHost === "browser", `isBaseClaimUi === false`) SDK zwykle jest
-       * "martwy", a injected to właściwy Base wallet — stawiamy injected
-       * pierwszy, a SDK zostawiamy jako fallback. */
-      const preferInjectedFirst = !isBaseClaimUi && ptgHost !== "farcaster";
-      if (preferInjectedFirst && injected && typeof injected.request === "function") {
-          providers.push(injected);
-      }
-      if (embeddedAsync && typeof embeddedAsync.request === "function" && !providers.includes(embeddedAsync)) {
-          providers.push(embeddedAsync);
-      }
-      if (
-          embeddedLegacy &&
-          typeof embeddedLegacy.request === "function" &&
-          !providers.includes(embeddedLegacy)
-      ) {
-          providers.push(embeddedLegacy);
-      }
-      if (injected && typeof injected.request === "function" && !providers.includes(injected)) {
-          providers.push(injected);
+      if (isBaseClaimUi) {
+          /* Tylko injected (+ sync SDK fallback) — bez pętli providerów. */
+          if (injected && typeof injected.request === "function") providers.push(injected);
+          if (
+              embeddedLegacy &&
+              typeof embeddedLegacy.request === "function" &&
+              !providers.includes(embeddedLegacy)
+          ) {
+              providers.push(embeddedLegacy);
+          }
+      } else {
+          const preferInjectedFirst = ptgHost !== "farcaster";
+          if (preferInjectedFirst && injected && typeof injected.request === "function") {
+              providers.push(injected);
+          }
+          if (embeddedAsync && typeof embeddedAsync.request === "function" && !providers.includes(embeddedAsync)) {
+              providers.push(embeddedAsync);
+          }
+          if (
+              embeddedLegacy &&
+              typeof embeddedLegacy.request === "function" &&
+              !providers.includes(embeddedLegacy)
+          ) {
+              providers.push(embeddedLegacy);
+          }
+          if (injected && typeof injected.request === "function" && !providers.includes(injected)) {
+              providers.push(injected);
+          }
       }
       console.info("[ptg-claim] providers", providers.length, {
           host: ptgHost,
@@ -10380,13 +10510,18 @@ async function ptgRefreshIdentityAliasesFromDb() {
           if (msg) {
               msg.textContent =
                   isBaseClaimUi
-                      ? "Base wallet (SDK) not available. Update the app or reopen Phrase to Guess, then try Claim again."
+                      ? "Base wallet not available. Update the app or reopen Phrase to Guess, then try Claim again."
                       : "Open in Base / Warpcast and connect wallet to sign the payout.";
           }
-          if (btn) btn.disabled = false;
           return;
       }
-      if (msg) msg.textContent = resumeAuth ? "Resuming claim — confirm in wallet…" : "Sign in wallet, then USDC on Base…";
+      if (msg) {
+          msg.textContent = resumeAuth
+              ? "Resuming claim…"
+              : isBaseClaimUi
+                ? "Confirm in Base wallet…"
+                : "Sign in wallet, then USDC on Base…";
+      }
       try {
           let prov = null;
           let addr = "";
@@ -10394,8 +10529,43 @@ async function ptgRefreshIdentityAliasesFromDb() {
           let firstAddr = "";
           let sawAnyAccount = false;
           let lastAccountErr = null;
-          for (let i = 0; i < providers.length; i++) {
+          /* Base: jeśli warm z restore już ma konta — użyj od razu. */
+          if (isBaseClaimUi && warmClaimAccounts && warmClaimProvider) {
+              try {
+                  const warmAcc = await warmClaimAccounts;
+                  const aWarm = warmAcc && warmAcc[0] ? String(warmAcc[0]) : "";
+                  if (aWarm && /^0x[a-fA-F0-9]{40}$/.test(aWarm)) {
+                      sawAnyAccount = true;
+                      firstProv = warmClaimProvider;
+                      firstAddr = aWarm;
+                      let sameWarm = false;
+                      try {
+                          sameWarm =
+                              ethers.utils.getAddress(aWarm) ===
+                              ethers.utils.getAddress(claimUserId);
+                      } catch (_) {
+                          sameWarm =
+                              aWarm.toLowerCase() === String(claimUserId).toLowerCase();
+                      }
+                      if (sameWarm) {
+                          prov = warmClaimProvider;
+                          addr = aWarm;
+                      }
+                      ptgClaimDebug(claimTraceId, "claim.accounts.warm.ok", {
+                          account0: aWarm.toLowerCase(),
+                          matched: sameWarm,
+                      });
+                  }
+              } catch (eWarm) {
+                  ptgClaimDebug(claimTraceId, "claim.accounts.warm.err", ptgClaimDebugSafe(eWarm));
+              }
+          }
+          for (let i = 0; i < providers.length && !(prov && addr); i++) {
               const p = providers[i];
+              if (isBaseClaimUi && warmClaimProvider && p === warmClaimProvider && firstAddr) {
+                  /* Już ogrzane — nie czekaj drugi raz. */
+                  continue;
+              }
               let accounts = [];
               try {
                   accounts = await getWalletAccountsForClaimProvider(p, claimTraceId, i);
@@ -10594,6 +10764,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   typeof location !== "undefined" && location.origin ? location.origin : "";
               if (msg) msg.textContent = "Sending USDC…";
               let res, j;
+              claimServerTouched = true;
+              __ptgClaimCooldownUntil = Date.now() + PTG_CLAIM_COOLDOWN_BUSY_MS;
               async function ptgPostClaimAuth(authPayload) {
                   const r = await fetchWithTimeout(
                       origin + "/api/ptg-referral-payout",
@@ -10611,7 +10783,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                               )
                           ),
                       },
-                      25000
+                      ptgClaimIsBaseSurface() ? 28000 : 25000
                   );
                   const bodyJson = await r.json().catch(() => null);
                   return { res: r, j: bodyJson };
@@ -10633,11 +10805,35 @@ async function ptgRefreshIdentityAliasesFromDb() {
               } catch (eFetch) {
                   console.warn("[ptg-claim] quote fetch failed", eFetch);
                   ptgClaimDebug(claimTraceId, "claim.quote.fetch.err", eFetch);
-                  if (msg) msg.textContent = "Network error talking to payout server. Try again.";
+                  /* Po podpisie serwer mógł już zdjąć pending + wysłać TX.
+                   * Abort tutaj = ryzyko bałaganu; drugi tap wznawia outstanding. */
+                  skipFinallyRecover = true;
+                  if (msg) {
+                      msg.textContent =
+                          "Sending may still be in progress. Wait a few seconds — don’t tap Claim again yet.";
+                  }
                   return;
               }
               if (!res || !res.ok) {
                   const errCode = j && j.error ? String(j.error) : "claim_failed";
+                  if (errCode === "claim_in_progress") {
+                      if (msg) msg.textContent = "Claim is already being sent — one moment…";
+                      skipFinallyRecover = true;
+                      __ptgClaimCooldownUntil = Date.now() + PTG_CLAIM_COOLDOWN_BUSY_MS;
+                      ptgClaimDebug(claimTraceId, "claim.in_progress.quote");
+                      return;
+                  }
+                  if (errCode === "already_claimed" || errCode === "concurrent_claim") {
+                      skipFinallyRecover = true;
+                      __ptgClaimCooldownUntil = Date.now() + PTG_CLAIM_COOLDOWN_OK_MS;
+                      if (msg) {
+                          msg.textContent =
+                              errCode === "already_claimed"
+                                  ? "Already claimed. Refresh the app."
+                                  : "Claim already started — wait a moment.";
+                      }
+                      return;
+                  }
                   const extraHint =
                       j && j.hint
                           ? " " + j.hint
@@ -10673,6 +10869,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
               const origin =
                   typeof location !== "undefined" && location.origin ? location.origin : "";
               if (msg) msg.textContent = "Resuming USDC payout…";
+              claimServerTouched = true;
+              __ptgClaimCooldownUntil = Date.now() + PTG_CLAIM_COOLDOWN_BUSY_MS;
               try {
                   const resExec = await fetchWithTimeout(
                       origin + "/api/ptg-referral-payout",
@@ -10681,7 +10879,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ userId: claimUserId, op: "execute" }),
                       },
-                      60000
+                      ptgClaimIsBaseSurface() ? 20000 : 60000
                   );
                   const jExec = await resExec.json().catch(() => null);
                   ptgClaimDebug(claimTraceId, "claim.resume.execute", {
@@ -10690,8 +10888,14 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   });
                   if (resExec && resExec.ok && jExec && jExec.txHash) {
                       serverTxHash = String(jExec.txHash).toLowerCase();
+                  } else if (jExec && jExec.error === "claim_in_progress") {
+                      if (msg) msg.textContent = "Claim is already being sent — one moment…";
+                      skipFinallyRecover = true;
+                      __ptgClaimCooldownUntil = Date.now() + PTG_CLAIM_COOLDOWN_BUSY_MS;
+                      return;
                   } else if (jExec && jExec.error === "already_claimed") {
                       if (msg) msg.textContent = "Already claimed. Refresh the app.";
+                      skipFinallyRecover = true;
                       return;
                   } else {
                       console.warn("[ptg-claim] resume execute failed, wallet fallback", jExec);
@@ -10699,6 +10903,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               } catch (eExec) {
                   console.warn("[ptg-claim] resume execute fetch failed", eExec);
                   ptgClaimDebug(claimTraceId, "claim.resume.execute.err", eExec);
+                  skipFinallyRecover = true;
               }
           }
 
@@ -10734,11 +10939,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
       } finally {
           ptgClaimDebug(claimTraceId, "claim.finally", {
               txSubmitted,
+              skipFinallyRecover,
+              claimServerTouched,
               bridgedAmountCents,
               bridgedSourceUserId: bridgedSourceUserId || null,
               bridgedWalletUserId: bridgedWalletUserId || null,
           });
-          if (!txSubmitted) {
+          /* Po starcie wypłaty na serwerze NIGDY nie abortuj outstanding —
+           * drugi tap + abort w trakcie TX to właśnie „dziwny” podwójny claim. */
+          if (!txSubmitted && !skipFinallyRecover && !claimServerTouched) {
               try {
                   await ptgReferralRecoverClaimUiAfterCancel({
                       claimUserId,
@@ -10748,19 +10957,49 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       bridgedAmountCents,
                       bridgedMoves,
                       rollbackBridge: bridgedAmountCents > 0,
+                      fast: true,
+                      skipWalletDiscovery: true,
                   });
               } catch (eRec) {
                   console.warn("[ptg-claim] recover ui failed", eRec);
-                  if (btn) btn.disabled = false;
               }
-          } else {
+          } else if (txSubmitted) {
+              /* Po sukcesie pending=0 trzyma przycisk — cooldown tylko na sync RTDB. */
+              __ptgClaimCooldownUntil = Date.now() + PTG_CLAIM_COOLDOWN_OK_MS;
               try {
                   const sRef = ref(db, ptgReferralsRtdbRoot() + "/summary/" + uiSummaryUserId);
                   const snap = await get(sRef);
                   ptgUpdateReferralUiFromSnapshot(snap.exists() ? snap.val() : null);
-              } catch (_) {
-                  if (btn) btn.disabled = true;
+              } catch (_) {}
+          } else if (claimServerTouched) {
+              __ptgClaimCooldownUntil = Math.max(
+                  __ptgClaimCooldownUntil,
+                  Date.now() + PTG_CLAIM_COOLDOWN_BUSY_MS
+              );
+              if (msg && (!msg.textContent || /Sending|Resuming|Confirm/i.test(msg.textContent))) {
+                  msg.textContent =
+                      "Payout may still be processing. Wait a moment before trying again.";
               }
+          }
+      }
+      } finally {
+          __ptgClaimInFlight = false;
+          ptgSetClaimButtonBusy(false);
+          try {
+              const s = await get(ref(db, ptgReferralsRtdbRoot() + "/summary/" + myUserId));
+              ptgApplyClaimButtonState(s.exists() ? ptgReadPendingRewardCents(s.val()) : 0);
+          } catch (_) {
+              ptgApplyClaimButtonState(0);
+          }
+          /* Po cooldownie odblokuj przycisk jeśli nadal jest pending. */
+          const coolLeft = Math.max(0, __ptgClaimCooldownUntil - Date.now());
+          if (coolLeft > 0) {
+              setTimeout(function () {
+                  if (__ptgClaimInFlight) return;
+                  void ptgReferralRefreshClaimableBalanceUi([myUserId], { skipHeal: true }).catch(
+                      function () {}
+                  );
+              }, coolLeft + 50);
           }
       }
   }
@@ -11261,7 +11500,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ userId: uid, op: "abort" }),
               },
-              20000
+              8000
           );
           return await r.json().catch(() => null);
       } catch (e) {
@@ -11270,7 +11509,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
       }
   }
 
-  async function ptgReferralWalletIdsForHeal() {
+  function ptgClaimIsBaseSurface() {
+      return (
+          ptgHost === "base" ||
+          (typeof ptgNotifDetectBaseSurface === "function" && ptgNotifDetectBaseSurface())
+      );
+  }
+
+  async function ptgReferralWalletIdsForHeal(opts) {
+      const o = opts && typeof opts === "object" ? opts : {};
       const ids = new Set();
       try {
           const aliases = ptgGetMyIdentityAliasesLc();
@@ -11281,21 +11528,27 @@ async function ptgRefreshIdentityAliasesFromDb() {
       } catch (_) {}
       const me = String(myUserId || "").trim();
       if (/^0x[a-fA-F0-9]{40}$/.test(me)) ids.add(me.toLowerCase());
+      /* Fast recover / Base: NIE pytaj portfela — getEthereumProvider +
+       * eth_requestAccounts potrafią zabrać 10–20s i robią wrażenie
+       * „kliknij Claim drugi raz". */
+      if (o.skipWalletDiscovery || ptgClaimIsBaseSurface()) {
+          return Array.from(ids);
+      }
       try {
           const providers = [];
           const embeddedAsync = await getEmbeddedEthProviderAsync().catch(() => null);
           const embeddedLegacy = getEmbeddedEthProvider();
           const injected = getInjectedProvider();
-          if (embeddedAsync && typeof embeddedAsync.request === "function") providers.push(embeddedAsync);
+          if (injected && typeof injected.request === "function") providers.push(injected);
+          if (embeddedAsync && typeof embeddedAsync.request === "function" && !providers.includes(embeddedAsync)) {
+              providers.push(embeddedAsync);
+          }
           if (
               embeddedLegacy &&
               typeof embeddedLegacy.request === "function" &&
-              embeddedLegacy !== embeddedAsync
+              !providers.includes(embeddedLegacy)
           ) {
               providers.push(embeddedLegacy);
-          }
-          if (injected && typeof injected.request === "function" && !providers.includes(injected)) {
-              providers.push(injected);
           }
           for (let i = 0; i < providers.length; i++) {
               const acc = await getWalletAccountsFast(providers[i]).catch(() => []);
@@ -11310,37 +11563,50 @@ async function ptgRefreshIdentityAliasesFromDb() {
       if (!isLoggedIn() || myUserId === "guest") return null;
       const walletIds = await ptgReferralWalletIdsForHeal();
       if (!walletIds.length) return null;
-      let best = null;
-      for (let i = 0; i < walletIds.length; i++) {
-          try {
-              const origin =
-                  typeof location !== "undefined" && location.origin ? location.origin : "";
-              const r = await fetch(origin + "/api/ptg-referral-payout", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ userId: walletIds[i], op: "restore" }),
-              });
-              const j = await r.json().catch(() => null);
-              if (r.ok && j) {
+      const origin =
+          typeof location !== "undefined" && location.origin ? location.origin : "";
+      /* Równolegle i z timeoutem. Sekwencyjny `fetch` bez limitu potrafił
+       * trzymać otwieranie panelu referrali kilka sekund na wolnym RPC. */
+      const results = await Promise.all(
+          walletIds.map(async function (uid) {
+              try {
+                  const r = await fetchWithTimeout(
+                      origin + "/api/ptg-referral-payout",
+                      {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ userId: uid, op: "restore" }),
+                      },
+                      6000
+                  );
+                  const j = await r.json().catch(() => null);
+                  if (!r.ok || !j) return null;
                   if (j.restored || j.claimed || (j.outstanding && j.outstanding.auth)) {
                       console.info("[ptg-referral] self-heal", {
-                          userId: walletIds[i],
+                          userId: uid,
                           restored: j.restored,
                           claimed: j.claimed,
                           pending: j.pendingReward,
                           hasOutstanding: !!(j.outstanding && j.outstanding.auth),
                       });
                   }
-                  if (
-                      !best ||
-                      Number(j.pendingReward || 0) > Number(best.pendingReward || 0) ||
-                      (j.outstanding && j.outstanding.auth)
-                  ) {
-                      best = j;
-                  }
+                  return j;
+              } catch (e) {
+                  console.warn("ptgReferralSelfHealOutstanding", uid, e);
+                  return null;
               }
-          } catch (e) {
-              console.warn("ptgReferralSelfHealOutstanding", walletIds[i], e);
+          })
+      );
+      let best = null;
+      for (let i = 0; i < results.length; i++) {
+          const j = results[i];
+          if (!j) continue;
+          if (
+              !best ||
+              Number(j.pendingReward || 0) > Number(best.pendingReward || 0) ||
+              (j.outstanding && j.outstanding.auth)
+          ) {
+              best = j;
           }
       }
       return best;
@@ -11382,15 +11648,12 @@ async function ptgRefreshIdentityAliasesFromDb() {
       }
 
       const displayCents = totalPending + outstandingCents;
-      const btn = document.getElementById("referralClaimBtn");
       const bal = document.getElementById("referralBalanceDisplay");
       if (bal) {
           const n = ptgFormatReferralCents(displayCents);
           bal.innerHTML = ptgEscapeReferralHtml(n) + '<span class="referral-balance-currency">$</span>';
       }
-      if (btn) {
-          btn.disabled = !isLoggedIn() || myUserId === "guest" || displayCents <= 0;
-      }
+      ptgApplyClaimButtonState(displayCents);
       return { totalPending, outstandingCents, displayCents };
   }
 
@@ -11405,16 +11668,27 @@ async function ptgRefreshIdentityAliasesFromDb() {
       add(o.claimUserId);
       add(o.bridgedWalletUserId);
       add(myUserId);
-      try {
-          const wallets = await ptgReferralWalletIdsForHeal();
-          for (let i = 0; i < wallets.length; i++) add(wallets[i]);
-      } catch (_) {}
+      const skipDiscover = !!o.skipWalletDiscovery || ptgClaimIsBaseSurface() || !!o.fast;
+      if (!skipDiscover) {
+          try {
+              const wallets = await ptgReferralWalletIdsForHeal();
+              for (let i = 0; i < wallets.length; i++) add(wallets[i]);
+          } catch (_) {}
+      }
 
       let restoredAny = 0;
       const idList = Array.from(ids);
-      for (let i = 0; i < idList.length; i++) {
-          const j = await ptgReferralAbortOutstanding(idList[i]);
-          if (j && Number(j.restored) > 0) restoredAny += Number(j.restored) || 0;
+      /* Abort równolegle — sekwencyjne RPC + 20s timeout = 15s „martwego” UI. */
+      if (idList.length) {
+          const abortResults = await Promise.all(
+              idList.map(function (id) {
+                  return ptgReferralAbortOutstanding(id);
+              })
+          );
+          for (let i = 0; i < abortResults.length; i++) {
+              const j = abortResults[i];
+              if (j && Number(j.restored) > 0) restoredAny += Number(j.restored) || 0;
+          }
       }
 
       if (
@@ -11447,12 +11721,10 @@ async function ptgRefreshIdentityAliasesFromDb() {
           }
       }
 
-      const refreshed = await ptgReferralRefreshClaimableBalanceUi([
-          o.uiSummaryUserId,
-          o.claimUserId,
-          o.bridgedSourceUserId,
-          o.bridgedWalletUserId,
-      ]);
+      const refreshed = await ptgReferralRefreshClaimableBalanceUi(
+          [o.uiSummaryUserId, o.claimUserId, o.bridgedSourceUserId, o.bridgedWalletUserId],
+          { skipHeal: true }
+      );
       const msg = document.getElementById("referralClaimMsg");
       if (msg && restoredAny > 0 && !o.keepMsg) {
           msg.textContent = "Claim cancelled. Balance restored — you can try again.";
@@ -11697,7 +11969,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
    * rzuca niepełnym błędem w rodzaju "Cannot read properties of undefined
    * (reading 'error')". Zawsze wolimy wariant async jeśli istnieje.
    */
-  async function getEmbeddedEthProviderAsync() {
+  async function getEmbeddedEthProviderAsync(timeoutMs) {
       try {
           const w = sdk && typeof sdk === "object" ? sdk.wallet : null;
           if (w && typeof w.getEthereumProvider === "function") {
@@ -11705,10 +11977,17 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   /* Regularna Base App (nie preview) potrafi zwrócić promise, który
                    * NIGDY się nie resolve'uje z `sdk.wallet.getEthereumProvider()`.
                    * Bez timeoutu cały claim wisi na „Checking claim state…"
-                   * (patrz #debug-log: brak `claim.providers` po `claim.restore`). */
+                   * (patrz #debug-log: brak `claim.providers` po `claim.restore`).
+                   * Na Base krótszy limit — sync ethProvider tam wystarcza. */
+                  const ms =
+                      Number(timeoutMs) > 0
+                          ? Number(timeoutMs)
+                          : ptgClaimIsBaseSurface()
+                            ? 1200
+                            : 3500;
                   const p = await withTimeout(
                       Promise.resolve(w.getEthereumProvider()),
-                      3500,
+                      ms,
                       "sdk.wallet.getEthereumProvider"
                   );
                   if (p && typeof p.request === "function") return p;
@@ -12666,6 +12945,21 @@ async function ptgRefreshIdentityAliasesFromDb() {
   let guessSequence = [];
   let hintTxInFlight = false;
   let ptgHintPriceCacheWei = null;
+  let ptgHintPriceCacheAtMs = 0;
+  /** Cena hintu zmienia się rzadko — świeży cache pomija RPC przed podpisem. */
+  const PTG_HINT_PRICE_CACHE_MS = 15 * 60 * 1000;
+
+  function ptgHintPriceCacheFresh() {
+      return (
+          ptgHintPriceCacheWei != null &&
+          Date.now() - ptgHintPriceCacheAtMs < PTG_HINT_PRICE_CACHE_MS
+      );
+  }
+
+  function ptgHintPriceCachePut(bn) {
+      ptgHintPriceCacheWei = bn;
+      ptgHintPriceCacheAtMs = Date.now();
+  }
 
   let currentCategory = "", secret = "", revealed = [], mistakes = 0, moves = 0, gameOver = false;
   let chartData = []; 
@@ -14074,31 +14368,39 @@ async function ptgRefreshIdentityAliasesFromDb() {
           const toHint = ethers.utils.getAddress(PTG_HINT_ADDRESS);
           const fromChk = ethers.utils.getAddress(accounts[0]);
           let hintPrice = null;
-          try {
+          if (ptgHintPriceCacheFresh()) {
+              /* Świeży cache → od razu do portfela, bez żadnego RPC. */
+              hintPrice = ptgHintPriceCacheWei;
+          } else {
               const callData = hintIface.encodeFunctionData("hintPrice", []);
-              const quickHex = await walletRequestWithTimeout(
+              /* Wallet eth_call i serwerowy RPC równolegle — pierwszy wynik
+               * wygrywa. Wcześniej sekwencyjnie: do ~1.6s przed podpisem. */
+              const walletRead = walletRequestWithTimeout(
                   ethProvider,
                   "eth_call",
                   [{ to: toHint, data: callData }, "latest"],
                   Math.max(700, PTG_MINT_WALLET_ETH_CALL_MS)
-              );
-              hintPrice = ethers.BigNumber.from(quickHex);
-              ptgHintPriceCacheWei = hintPrice;
-          } catch (hintReadErr) {
-              console.warn("hintPrice wallet eth_call failed, fallback to server RPC", hintReadErr);
+              ).then(function (hex) {
+                  const bn = ethers.BigNumber.from(hex);
+                  if (!bn.gt(0)) throw new Error("hintPrice zero from wallet");
+                  return bn;
+              });
+              const serverRead = baseJsonRpc({
+                  jsonrpc: "2.0",
+                  id: 1,
+                  method: "eth_call",
+                  params: [{ to: toHint, data: callData }, "latest"],
+              }).then(function (hex) {
+                  const bn = ethers.BigNumber.from(hex);
+                  if (!bn.gt(0)) throw new Error("hintPrice zero from server RPC");
+                  return bn;
+              });
               try {
-                  const callData = hintIface.encodeFunctionData("hintPrice", []);
-                  const fallbackHex = await baseJsonRpc({
-                      jsonrpc: "2.0",
-                      id: 1,
-                      method: "eth_call",
-                      params: [{ to: toHint, data: callData }, "latest"],
-                  });
-                  hintPrice = ethers.BigNumber.from(fallbackHex);
-                  ptgHintPriceCacheWei = hintPrice;
-              } catch (_) {}
-              if (ptgHintPriceCacheWei != null) {
-                  hintPrice = ptgHintPriceCacheWei;
+                  hintPrice = await ptgPromiseAny([walletRead, serverRead]);
+                  ptgHintPriceCachePut(hintPrice);
+              } catch (hintReadErr) {
+                  console.warn("hintPrice read failed on wallet and server RPC", hintReadErr);
+                  if (ptgHintPriceCacheWei != null) hintPrice = ptgHintPriceCacheWei;
               }
           }
           if (hintPrice == null) {
@@ -14707,7 +15009,10 @@ async function ptgRefreshIdentityAliasesFromDb() {
   async function waitForTxReceiptViaServer(txHash) {
       const h = typeof txHash === "string" ? txHash : String(txHash);
       const deadline = Date.now() + 120000;
+      /* Base ~2s/blok — po włączeniu tx do bloku nie chcemy dokładać do 2s
+       * czekania na kolejny poll. Ramp do 1.5s zamiast 2s. */
       let delay = 220;
+      const maxDelay = 1500;
       while (Date.now() < deadline) {
           let result;
           try {
@@ -14720,14 +15025,14 @@ async function ptgRefreshIdentityAliasesFromDb() {
           } catch (pollErr) {
               console.warn("waitForTxReceiptViaServer: proxy poll error (retry)", pollErr);
               await new Promise((res) => setTimeout(res, delay));
-              delay = Math.min(delay + 250, 2000);
+              delay = Math.min(delay + 250, maxDelay);
               continue;
           }
           if (result && result.blockHash) {
               const st = result.status;
               if (st === undefined || st === null) {
                   await new Promise((res) => setTimeout(res, delay));
-                  delay = Math.min(delay + 250, 2000);
+                  delay = Math.min(delay + 250, maxDelay);
                   continue;
               }
               const ok =
@@ -14739,7 +15044,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               };
           }
           await new Promise((res) => setTimeout(res, delay));
-          delay = Math.min(delay + 250, 2000);
+          delay = Math.min(delay + 250, maxDelay);
       }
       throw new Error("Transaction confirmation timeout (Base via server RPC)");
   }
@@ -14863,6 +15168,9 @@ async function ptgRefreshIdentityAliasesFromDb() {
       }
 
       const deadline = Date.now() + 90000;
+      /* Base App zwykle ma hash w ~1–3s po potwierdzeniu; wolne odpytywanie
+       * (1.5s) dokładało sekundy „ładowania" po kliknięciu Confirm. */
+      let statusDelay = 350;
       while (Date.now() < deadline) {
           let st = null;
           try {
@@ -14870,7 +15178,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   provider,
                   "wallet_getCallsStatus",
                   [callsId],
-                  15000
+                  8000
               );
           } catch (eSt) {
               console.warn("[ptg] wallet_getCallsStatus", eSt);
@@ -14886,7 +15194,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
           if (code === 400 || code === 500 || code === 600) {
               throw new Error("Transaction batch failed in wallet (status " + code + ").");
           }
-          await new Promise((r) => setTimeout(r, 1500));
+          await new Promise((r) => setTimeout(r, statusDelay));
+          statusDelay = Math.min(statusDelay + 250, 1500);
       }
       throw new Error("Timed out waiting for wallet_sendCalls confirmation.");
   }
@@ -15183,11 +15492,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
    */
   async function getWalletAccountsForClaimProvider(provider, traceId, providerIdx) {
       if (!provider || typeof provider.request !== "function") return [];
+      const baseFast =
+          ptgHost === "base" ||
+          (typeof ptgNotifDetectBaseSurface === "function" && ptgNotifDetectBaseSurface());
+      const accountsMs = baseFast ? 500 : 1200;
       try {
-          if (traceId) ptgClaimDebug(traceId, "claim.accounts.quick.start", { providerIdx });
+          if (traceId) ptgClaimDebug(traceId, "claim.accounts.quick.start", { providerIdx, baseFast });
           const quick = await withTimeout(
               provider.request({ method: "eth_accounts", params: [] }),
-              1200,
+              accountsMs,
               "claim eth_accounts"
           );
           if (Array.isArray(quick) && quick[0]) {
@@ -15208,13 +15521,20 @@ async function ptgRefreshIdentityAliasesFromDb() {
               });
           }
       }
-      if (traceId) ptgClaimDebug(traceId, "claim.accounts.request.start", { providerIdx });
+      /* Base App: eth_requestAccounts często wisi bez UI (kilka–kilkanaście s).
+       * User jest już zalogowany — pusty eth_accounts = spróbuj kolejny provider. */
+      if (baseFast) {
+          if (traceId) ptgClaimDebug(traceId, "claim.accounts.request.skipped_base", { providerIdx });
+          return [];
+      }
+      const requestMs = 18000;
+      if (traceId) ptgClaimDebug(traceId, "claim.accounts.request.start", { providerIdx, requestMs });
       try {
           const out = await walletRequestWithTimeout(
               provider,
               "eth_requestAccounts",
               [],
-              18000
+              requestMs
           );
           if (traceId) {
               ptgClaimDebug(traceId, "claim.accounts.request.ok", {
@@ -17377,19 +17697,21 @@ async function ptgRefreshIdentityAliasesFromDb() {
       try {
           if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
       } catch (_) {}
+      if (__ptgClaimInFlight) return;
       const now = Date.now();
       if (now < __ptgClaimTapLockUntil) return;
-      /* Mobile webview bywa kapryśny i potrafi puścić zarówno touchend,
-       * jak i synthetic click. Krótki lock zapobiega podwójnemu triggerowi. */
-      __ptgClaimTapLockUntil = now + 450;
+      if (now < __ptgClaimCooldownUntil) {
+          const msg = document.getElementById("referralClaimMsg");
+          if (msg) {
+              msg.textContent = "Please wait — previous claim may still be processing…";
+          }
+          return;
+      }
+      /* Tylko click — touchend+click na Base odpalało dwa przebiegi. */
+      __ptgClaimTapLockUntil = now + 1500;
       void claimReferralRewardsFromUi();
   }
   document.getElementById("referralClaimBtn")?.addEventListener("click", ptgTriggerClaimFromUiTap);
-  document.getElementById("referralClaimBtn")?.addEventListener(
-      "touchend",
-      ptgTriggerClaimFromUiTap,
-      { passive: false }
-  );
   document.getElementById("referralOverlay")?.addEventListener("click", function (ev) {
       if (ev.target === ev.currentTarget) closeReferralModal();
   });

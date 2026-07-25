@@ -442,6 +442,53 @@ async function executeTransferWithAuthorization(auth, rpcUrl) {
   return { ok: true, txHash: txHash.toLowerCase() };
 }
 
+/* Ile czasu jedna próba wysyłki TWA blokuje kolejne. Wystarczy na RPC +
+ * broadcast; po TTL lock sam wygasa, więc nic nie zostaje „zakleszczone". */
+const EXEC_LOCK_TTL_MS = 45000;
+
+/**
+ * Lock na `claim_outstanding/{userId}/execLock`. Chroni przed dwoma
+ * równoległymi `transferWithAuthorization` na TYM SAMYM nonce (np. user
+ * kliknął Claim dwa razy). On-chain drugi transfer i tak by odpadł, ale
+ * treasury spaliłaby gas, a klient dostałby mylący błąd.
+ */
+async function acquireExecLock(db, outstandingPath) {
+  const token = randomBytes(8).toString("hex");
+  const now = Date.now();
+  let result;
+  try {
+    result = await db.ref(`${outstandingPath}/execLock`).transaction((cur) => {
+      if (
+        cur &&
+        typeof cur === "object" &&
+        Number(cur.at) > now - EXEC_LOCK_TTL_MS
+      ) {
+        return undefined; /* aktywny lock — abort */
+      }
+      return { token, at: now };
+    });
+  } catch (e) {
+    /* Nie blokuj wypłaty, gdy sam lock nie działa. */
+    console.warn("[claim] execLock transaction failed", e && e.message);
+    return { ok: true, token: null };
+  }
+  const val = result && result.snapshot ? result.snapshot.val() : null;
+  const ok = !!(result && result.committed && val && val.token === token);
+  return { ok, token: ok ? token : null };
+}
+
+async function releaseExecLock(db, outstandingPath, token) {
+  if (!token) return;
+  try {
+    await db.ref(`${outstandingPath}/execLock`).transaction((cur) => {
+      if (cur && typeof cur === "object" && cur.token && cur.token !== token) {
+        return undefined; /* cudzy lock — nie ruszaj */
+      }
+      return null;
+    });
+  } catch (_) {}
+}
+
 async function settleOutstandingInDb(db, root, userId, nonce, txHash, amountCents) {
   const summaryPath = `${root}/summary/${userId}`;
   const outstandingPath = `${root}/claim_outstanding/${userId}`;
@@ -525,9 +572,26 @@ async function handleExecute(req, res, body) {
 
   const rpcUrl = process.env.BASE_RPC_URL || "https://mainnet.base.org";
   const amountCents = Number(outstanding.amountCents) || 0;
-  const exec = await executeTransferWithAuthorization(outstanding.auth, rpcUrl);
+
+  /* Podwójny tap na Claim = dwa równoległe execute na tym samym nonce. */
+  const lock = await acquireExecLock(db, outstandingPath);
+  if (!lock.ok) {
+    return res.status(409).json({
+      error: "claim_in_progress",
+      hint: "This claim is already being sent. Wait a few seconds.",
+    });
+  }
+
+  let exec;
+  try {
+    exec = await executeTransferWithAuthorization(outstanding.auth, rpcUrl);
+  } catch (e) {
+    await releaseExecLock(db, outstandingPath, lock.token);
+    throw e;
+  }
 
   if (!exec.ok) {
+    await releaseExecLock(db, outstandingPath, lock.token);
     if (exec.error === "already_used") {
       return res.status(400).json({
         error: "already_claimed",
@@ -811,7 +875,23 @@ async function handleQuote(req, res, body) {
       const wantExecuteResume =
         body.execute === true || body.execute === 1 || body.execute === "true";
       if (wantExecuteResume && outstanding.auth) {
-        const exec = await executeTransferWithAuthorization(outstanding.auth, rpcUrl);
+        const resumeLock = await acquireExecLock(db, outstandingPath);
+        if (!resumeLock.ok) {
+          return res.status(409).json({
+            error: "claim_in_progress",
+            hint: "This claim is already being sent. Wait a few seconds.",
+          });
+        }
+        let exec;
+        try {
+          exec = await executeTransferWithAuthorization(outstanding.auth, rpcUrl);
+        } catch (e) {
+          await releaseExecLock(db, outstandingPath, resumeLock.token);
+          throw e;
+        }
+        if (!exec.ok) {
+          await releaseExecLock(db, outstandingPath, resumeLock.token);
+        }
         if (exec.ok && exec.txHash) {
           const amt = Number(outstanding.amountCents) || 0;
           try {
