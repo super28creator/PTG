@@ -6515,12 +6515,12 @@
    * Numer sezonu widoczny dla graczy (UI / round-id / daily keys).
    * Ma pozostać stały nawet przy "technicznym" resecie punktów.
    */
-  const LEADERBOARD_SEASON = 2;
+  const LEADERBOARD_SEASON = 3;
   /**
    * Wersja danych rankingu w RTDB.
    * Bump tej wartości robi reset punktów BEZ zmiany numeru sezonu:
-   * - season zostaje np. "2"
-   * - punkty lecą do nowego drzewa: players_s2_v{N}
+   * - season zostaje np. "3"
+   * - punkty lecą do nowego drzewa: players_s3_v{N}
    * - stare drzewo zostaje jako archiwum.
    */
   const LEADERBOARD_DATA_VERSION = 1;
@@ -6528,7 +6528,7 @@
    * Epoka punktowa wewnątrz tego samego sezonu.
    * Bump = twardy reset score dla wszystkich (bez zmiany LEADERBOARD_SEASON).
    */
-  const LEADERBOARD_RESET_EPOCH = 2;
+  const LEADERBOARD_RESET_EPOCH = 1;
   function ptgLeaderboardPlayersRootPath() {
     const suffix = LEADERBOARD_DATA_VERSION > 1 ? `_v${LEADERBOARD_DATA_VERSION}` : "";
     return `players_s${LEADERBOARD_SEASON}${suffix}`;
