@@ -33,6 +33,14 @@
     "api/ptg-broadcast-mint.js": {
       "includeFiles": "lib/**",
       "maxDuration": 60
+    },
+    "api/ptg-admin-events.js": {
+      "includeFiles": "lib/**",
+      "maxDuration": 30
+    },
+    "api/ptg-resolve-names.js": {
+      "includeFiles": "lib/**",
+      "maxDuration": 30
     }
   },
   "headers": [
@@ -88,8 +96,26 @@
     {
       "source": "/api/ptg-resolve-names",
       "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    },
+    {
+      "source": "/api/ptg-admin-events",
+      "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=120" }
+        { "key": "Cache-Control", "value": "private, no-store" }
+      ]
+    },
+    {
+      "source": "/admin-bugs.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/admin.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
       ]
     }
   ],

@@ -3541,6 +3541,38 @@
         align-items: center;
         gap: 6px;
     }
+    .rewards-strip.is-event {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 0 0 1px rgba(255, 255, 255, 0.04),
+            0 8px 28px rgba(0, 0, 0, 0.28);
+        transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+    }
+    .rewards-strip .rewards-event-name {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        opacity: 0.92;
+        max-width: 160px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .rewards-strip .rewards-timer {
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        margin-top: 2px;
+    }
+    @keyframes rewards-event-pulse {
+        0%, 100% { filter: brightness(1); }
+        50% { filter: brightness(1.08); }
+    }
+    .rewards-strip.is-event {
+        animation: rewards-event-pulse 2.8s ease-in-out infinite;
+    }
     /* Tytuł → tagline (odznaki w rozwijanym panelu) */
     .hero-stack {
         display: flex;
@@ -4978,9 +5010,11 @@
             </div>
             <div class="header-rewards-row">
               <div class="rewards-compact">
-                <div class="rewards-strip" aria-label="Point rewards">
-                  <div><span>🏆 Win:</span> <span style="color: var(--green-base);">+1</span></div>
-                  <div><span>✨ Mint:</span> <span style="color: var(--cerulean);">+2</span></div>
+                <div class="rewards-strip" id="rewardsStrip" aria-label="Point rewards">
+                  <div class="rewards-event-name" id="rewardsEventName" hidden></div>
+                  <div><span>🏆 Win:</span> <span id="rewardWinValue" style="color: var(--green-base);">+1</span></div>
+                  <div><span>✨ Mint:</span> <span id="rewardMintValue" style="color: var(--cerulean);">+2</span></div>
+                  <div class="rewards-timer" id="rewardsTimer" hidden aria-live="polite"></div>
                 </div>
               </div>
             </div>
@@ -12966,6 +13000,185 @@ async function ptgRefreshIdentityAliasesFromDb() {
   let myUsername = "Guest";
   let myUserId = "guest";
   let currentScore = 0;
+
+  /** Active timed game event (admin-configured Win/Mint point overrides). */
+  const PTG_DEFAULT_WIN_POINTS = 1;
+  const PTG_DEFAULT_MINT_POINTS = 2;
+  let __ptgActiveEvent = null;
+  let __ptgEventTimerIv = null;
+  let __ptgEventUnsub = null;
+  let __ptgEventPollIv = null;
+  let __ptgEventClockSkewMs = 0;
+
+  function ptgClampRewardPoints(n, fallback) {
+      const v = Math.floor(Number(n));
+      if (!Number.isFinite(v) || v < 1) return fallback;
+      return Math.min(1000, v);
+  }
+
+  function ptgServerNowApprox() {
+      // skew = clientNow - serverNow at last sync → server ≈ client - skew
+      return Date.now() - __ptgEventClockSkewMs;
+  }
+
+  function ptgWinPoints() {
+      const ev = __ptgActiveEvent;
+      if (!ev) return PTG_DEFAULT_WIN_POINTS;
+      const endsAt = Number(ev.endsAt || 0);
+      if (!Number.isFinite(endsAt) || endsAt <= ptgServerNowApprox()) return PTG_DEFAULT_WIN_POINTS;
+      return ptgClampRewardPoints(ev.winPoints, PTG_DEFAULT_WIN_POINTS);
+  }
+
+  function ptgMintPoints() {
+      const ev = __ptgActiveEvent;
+      if (!ev) return PTG_DEFAULT_MINT_POINTS;
+      const endsAt = Number(ev.endsAt || 0);
+      if (!Number.isFinite(endsAt) || endsAt <= ptgServerNowApprox()) return PTG_DEFAULT_MINT_POINTS;
+      return ptgClampRewardPoints(ev.mintPoints, PTG_DEFAULT_MINT_POINTS);
+  }
+
+  function ptgFormatEventCountdown(ms) {
+      if (ms <= 0) return "00:00:00";
+      const total = Math.floor(ms / 1000);
+      const h = Math.floor(total / 3600);
+      const m = Math.floor((total % 3600) / 60);
+      const s = total % 60;
+      const p = (n) => String(n).padStart(2, "0");
+      return p(h) + ":" + p(m) + ":" + p(s);
+  }
+
+  function ptgApplyEventToRewardsUi() {
+      const strip = document.getElementById("rewardsStrip");
+      const winEl = document.getElementById("rewardWinValue");
+      const mintEl = document.getElementById("rewardMintValue");
+      const nameEl = document.getElementById("rewardsEventName");
+      const timerEl = document.getElementById("rewardsTimer");
+      if (!strip || !winEl || !mintEl) return;
+
+      const winPts = ptgWinPoints();
+      const mintPts = ptgMintPoints();
+      winEl.textContent = "+" + winPts;
+      mintEl.textContent = "+" + mintPts;
+
+      const ev = __ptgActiveEvent;
+      const endsAt = ev ? Number(ev.endsAt || 0) : 0;
+      const live = !!(ev && Number.isFinite(endsAt) && endsAt > ptgServerNowApprox());
+      const st = live && ev.style && typeof ev.style === "object" ? ev.style : null;
+
+      if (!live) {
+          strip.classList.remove("is-event");
+          strip.style.background = "";
+          strip.style.borderColor = "";
+          strip.style.color = "";
+          winEl.style.color = "var(--green-base)";
+          mintEl.style.color = "var(--cerulean)";
+          if (nameEl) {
+              nameEl.hidden = true;
+              nameEl.textContent = "";
+          }
+          if (timerEl) {
+              timerEl.hidden = true;
+              timerEl.textContent = "";
+          }
+          if (__ptgEventTimerIv) {
+              clearInterval(__ptgEventTimerIv);
+              __ptgEventTimerIv = null;
+          }
+          return;
+      }
+
+      strip.classList.add("is-event");
+      if (st) {
+          if (st.bg) strip.style.background = String(st.bg);
+          if (st.border) strip.style.borderColor = String(st.border);
+          if (st.labelColor) strip.style.color = String(st.labelColor);
+          if (st.winColor) winEl.style.color = String(st.winColor);
+          if (st.mintColor) mintEl.style.color = String(st.mintColor);
+          if (timerEl && st.timerColor) timerEl.style.color = String(st.timerColor);
+          if (nameEl && st.accent) nameEl.style.color = String(st.accent);
+      }
+      if (nameEl) {
+          nameEl.hidden = false;
+          nameEl.textContent = String(ev.name || "Event");
+      }
+      const tick = () => {
+          const left = endsAt - ptgServerNowApprox();
+          if (timerEl) {
+              timerEl.hidden = false;
+              timerEl.textContent = "⏱ " + ptgFormatEventCountdown(left);
+          }
+          if (left <= 0) {
+              __ptgActiveEvent = null;
+              ptgApplyEventToRewardsUi();
+              void ptgRefreshActiveEventFromApi();
+          }
+      };
+      tick();
+      if (__ptgEventTimerIv) clearInterval(__ptgEventTimerIv);
+      __ptgEventTimerIv = setInterval(tick, 1000);
+  }
+
+  function ptgNormalizeActiveEvent(raw, serverNow) {
+      if (!raw || typeof raw !== "object") return null;
+      const endsAt = Number(raw.endsAt || 0);
+      if (!Number.isFinite(endsAt)) return null;
+      if (typeof serverNow === "number" && Number.isFinite(serverNow)) {
+          __ptgEventClockSkewMs = Date.now() - serverNow;
+      }
+      if (endsAt <= Date.now() - __ptgEventClockSkewMs) return null;
+      return {
+          id: String(raw.id || ""),
+          name: String(raw.name || "Event").slice(0, 48),
+          winPoints: ptgClampRewardPoints(raw.winPoints, PTG_DEFAULT_WIN_POINTS),
+          mintPoints: ptgClampRewardPoints(raw.mintPoints, PTG_DEFAULT_MINT_POINTS),
+          startsAt: Number(raw.startsAt || 0),
+          endsAt,
+          style: raw.style && typeof raw.style === "object" ? raw.style : null,
+      };
+  }
+
+  async function ptgRefreshActiveEventFromApi() {
+      try {
+          const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+          const to = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (_) {} }, 8000) : 0;
+          const res = await fetch("/api/ptg-admin-events", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+              body: JSON.stringify({ op: "event_get_active" }),
+              cache: "no-store",
+              signal: ctrl ? ctrl.signal : undefined,
+          });
+          if (to) clearTimeout(to);
+          if (!res.ok) return;
+          const data = await res.json();
+          __ptgActiveEvent = ptgNormalizeActiveEvent(data && data.active, data && data.serverNow);
+          ptgApplyEventToRewardsUi();
+      } catch (_) {}
+  }
+
+  function ptgStartGameEventsWatch() {
+      void ptgRefreshActiveEventFromApi();
+      if (__ptgEventPollIv) clearInterval(__ptgEventPollIv);
+      __ptgEventPollIv = setInterval(() => { void ptgRefreshActiveEventFromApi(); }, 45000);
+
+      if (!db || typeof onValue !== "function") return;
+      try {
+          if (typeof __ptgEventUnsub === "function") {
+              try { __ptgEventUnsub(); } catch (_) {}
+              __ptgEventUnsub = null;
+          }
+          const evRef = ref(db, "ptg_game_events_v1/active");
+          __ptgEventUnsub = onValue(
+              evRef,
+              (snap) => {
+                  const val = snap && typeof snap.val === "function" ? snap.val() : null;
+                  __ptgActiveEvent = ptgNormalizeActiveEvent(val, Date.now());
+                  ptgApplyEventToRewardsUi();
+              },
+              () => { /* permission / offline — API poll remains */ }
+          );
+      } catch (_) {}
+  }
   let gamesPlayedTodayCount = 0;
   let pendingMint = false;
   /** Ostatni zapisany dzień rozgrywki (RTDB lastPlayed) — kalendarz trofeum musi używać tego dnia, nie dnia TX mintu. */
@@ -13486,6 +13699,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       try {
           const app = initializeApp(firebaseConfig);
           db = getDatabase(app);
+          try { ptgStartGameEventsWatch(); } catch (_) {}
           const seasonEl = document.getElementById("leaderboardSeasonLabel");
           if (seasonEl) seasonEl.textContent = "Season " + LEADERBOARD_SEASON;
 
@@ -14877,21 +15091,25 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   if (played >= MAX_GAMES_PER_DAY) {
                       return undefined;
                   }
-                  userData.score = (userData.score || 0) + 1;
+                  const winPts = ptgWinPoints();
+                  userData.score = (userData.score || 0) + winPts;
                   userData.gamesPlayedToday = played + 1;
                   userData.pendingMint = true;
                   userData.lastPlayed = today;
                   userData.name = myUsername;
                   userData.leaderboardEpoch = LEADERBOARD_RESET_EPOCH;
+                  userData.lastWinPoints = winPts;
                   if (__ptgCurrentRoundId) userData.roundLedgerKey = __ptgCurrentRoundId;
               } else {
+                  const winPts = ptgWinPoints();
                   userData = {
                       name: myUsername,
-                      score: 1,
+                      score: winPts,
                       lastPlayed: today,
                       gamesPlayedToday: 1,
                       pendingMint: true,
                       leaderboardEpoch: LEADERBOARD_RESET_EPOCH,
+                      lastWinPoints: winPts,
                   };
                   if (__ptgCurrentRoundId) userData.roundLedgerKey = __ptgCurrentRoundId;
               }
@@ -17228,10 +17446,12 @@ async function ptgRefreshIdentityAliasesFromDb() {
               if (!userData.pendingMint) {
                   return userData;
               }
-              userData.score = (userData.score || 0) + 2;
+              const mintPts = ptgMintPoints();
+              userData.score = (userData.score || 0) + mintPts;
               userData.mintCount = (userData.mintCount || 0) + 1;
               userData.pendingMint = false;
               userData.lastMintBonusTxHash = txHash;
+              userData.lastMintPoints = mintPts;
               return userData;
           });
           try {
@@ -17253,7 +17473,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
               }
               if (hadPendingMint && d.lastMintBonusTxHash !== txHash) {
                   throw new Error(
-                      "On-chain mint OK, but +2 was not saved (profile out of sync). Refresh the page. Tx: " + txHash
+                      "On-chain mint OK, but mint points were not saved (profile out of sync). Refresh the page. Tx: " + txHash
                   );
               }
           }
@@ -18416,7 +18636,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
             id: "rewards",
             target: ".rewards-strip",
             title: "Points rewards",
-            body: "Win a round to earn +1 point. Mint the trophy NFT afterwards for an extra +2. Points fuel your rank and badge unlocks."
+            body: "Win a round and mint the trophy NFT for points. During special events the rewards strip shows boosted values and a live countdown."
         },
         {
             id: "hint",

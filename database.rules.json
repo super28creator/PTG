@@ -1,5 +1,20 @@
 {
   "rules": {
+    "ptg_game_events_v1": {
+      "active": {
+        ".read": true,
+        ".write": false
+      },
+      "history": {
+        ".read": false,
+        ".write": false
+      }
+    },
+    "ptg_bug_reports_v1": {
+      ".read": false,
+      ".write": false,
+      ".indexOn": ["createdAt", "reporterKey"]
+    },
     "players_s1": {
       ".read": true,
       "$playerId": {

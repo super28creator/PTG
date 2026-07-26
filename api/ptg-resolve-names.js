@@ -25,11 +25,17 @@ const BASENAME_L2_RESOLVER_PROXY = "0x426fA03fB86E510d0Dd9F70335Cf102a98b10875";
 const BASENAME_L2_RESOLVER_LEGACY = "0xC6d566A56A1aFf6508b41f6c90ff131615583BCD";
 const BASE_NUMERIC_CHAIN_ID = 8453;
 const { getAdminDb, hasServiceAccount } = require("../lib/fc-notif-store.js");
+const { requireAdmin } = require("../lib/ptg-admin-auth.js");
 const BUG_ROOT = "ptg_bug_reports_v1";
 const BUG_MAX_DESC = 1000;
 const BUG_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const BUG_MAX_LIST = 200;
 const BUG_DAILY_LIMIT_PER_REPORTER = 10;
+
+function noStore(res) {
+  res.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+}
 
 const ABI_NAME = ["function name(bytes32 node) view returns (string)"];
 const ABI_NODE = ["function node(address addr) view returns (bytes32)"];
@@ -100,27 +106,27 @@ async function isReporterOverDailyLimit(db, reporterKey) {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   const dayStart = start.getTime();
-  const snap = await db.ref(BUG_ROOT).once("value");
+  // Only scan today's window instead of the full report tree.
+  let snap;
+  try {
+    snap = await db.ref(BUG_ROOT).orderByChild("createdAt").startAt(dayStart).once("value");
+  } catch (_) {
+    snap = await db.ref(BUG_ROOT).once("value");
+  }
   const all = snap.val() || {};
   let count = 0;
   const keys = Object.keys(all);
+  const want = String(reporterKey || "").toLowerCase();
   for (let i = 0; i < keys.length; i++) {
     const r = all[keys[i]];
     if (!r || typeof r !== "object") continue;
-    if (String(r.reporterKey || "").toLowerCase() !== reporterKey) continue;
+    if (String(r.reporterKey || "").toLowerCase() !== want) continue;
     const ts = Number(r.createdAt || 0);
     if (!Number.isFinite(ts) || ts < dayStart) continue;
     count += 1;
     if (count >= BUG_DAILY_LIMIT_PER_REPORTER) return true;
   }
   return false;
-}
-
-function isBugAdmin(req) {
-  const key = String(process.env.PTG_BUG_ADMIN_KEY || "").trim();
-  if (!key) return false;
-  const fromHeader = String(req.headers["x-admin-key"] || "").trim();
-  return fromHeader === key;
 }
 
 function sha3HexAddressLabel(address) {
@@ -331,6 +337,7 @@ module.exports = async (req, res) => {
     }
 
     if (body && body.op === "bug_report_submit") {
+      noStore(res);
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
       }
@@ -353,10 +360,20 @@ module.exports = async (req, res) => {
       }
     }
 
-    if (body && body.op === "bug_report_list") {
-      if (!isBugAdmin(req)) {
-        return res.status(401).json({ error: "unauthorized_admin" });
+    if (body && body.op === "admin_ping") {
+      noStore(res);
+      const gate = requireAdmin(req);
+      if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
+      if (!hasServiceAccount()) {
+        return res.status(503).json({ error: "firebase_admin_missing" });
       }
+      return res.status(200).json({ ok: true, role: "admin", serverNow: Date.now() });
+    }
+
+    if (body && body.op === "bug_report_list") {
+      noStore(res);
+      const gate = requireAdmin(req);
+      if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
       }
@@ -367,6 +384,7 @@ module.exports = async (req, res) => {
         const items = Object.entries(raw)
           .map(([id, v]) => {
             const row = { id, ...((v && typeof v === "object") ? v : {}) };
+            // Strip heavy screenshot payloads from list (fetch via bug_report_image).
             if (row.screenshot && typeof row.screenshot === "object") {
               row.screenshot = {
                 name: row.screenshot.name || "screenshot",
@@ -375,19 +393,20 @@ module.exports = async (req, res) => {
                 hasData: Boolean(row.screenshot.dataUrl),
               };
             }
+            delete row.ua;
             return row;
           })
           .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
-        return res.status(200).json({ ok: true, items });
+        return res.status(200).json({ ok: true, items, count: items.length });
       } catch (e) {
         return res.status(500).json({ error: "db_read_failed", detail: String(e && e.message) });
       }
     }
 
     if (body && body.op === "bug_report_image") {
-      if (!isBugAdmin(req)) {
-        return res.status(401).json({ error: "unauthorized_admin" });
-      }
+      noStore(res);
+      const gate = requireAdmin(req);
+      if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
       }
@@ -415,9 +434,9 @@ module.exports = async (req, res) => {
     }
 
     if (body && body.op === "bug_report_delete") {
-      if (!isBugAdmin(req)) {
-        return res.status(401).json({ error: "unauthorized_admin" });
-      }
+      noStore(res);
+      const gate = requireAdmin(req);
+      if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
       }

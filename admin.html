@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bug Reports Admin — PTG</title>
+  <title>PTG Admin — Bugs & Events</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
@@ -197,8 +197,8 @@
 <body>
   <main class="wrap">
     <section id="loginView" class="panel login-hero">
-      <h1>Bug Reports Admin</h1>
-      <p class="hint" style="margin-top:0;margin-bottom:14px;">Standalone panel for PTG bug reports & timed Win/Mint events. Key stays in this browser only.</p>
+      <h1>PTG Admin</h1>
+      <p class="hint" style="margin-top:0;margin-bottom:14px;">Bug reports & timed Win/Mint events. Same origin — key stays in this browser only.</p>
       <label for="adminKeyInput">Admin key</label>
       <div class="row">
         <input id="adminKeyInput" type="password" placeholder="PTG_ADMIN_KEY" autocomplete="current-password" />
@@ -210,8 +210,8 @@
     <section id="appView" class="hidden">
       <header class="brand">
         <div>
-          <h1>Bug Reports Admin</h1>
-          <p>Standalone panel — bugs + live Win/Mint events.</p>
+          <h1>PTG Admin</h1>
+          <p>Manage bug inbox and live reward events.</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <span id="sessionBadge" class="badge on">Signed in</span>
@@ -373,7 +373,12 @@
       }
 
       function apiBase() {
-        // This project is a separate Vercel static site — always call the main game API.
+        // Same-origin by default (fixes standalone hardcoding / preview deploy login failures).
+        try {
+          if (location.protocol === "http:" || location.protocol === "https:") {
+            return location.origin;
+          }
+        } catch (_) {}
         return "https://phrasetoguess.xyz";
       }
 
@@ -443,10 +448,6 @@
             cache: "no-store",
             signal: ctrl ? ctrl.signal : undefined
           });
-        } catch (netErr) {
-          if (to) clearTimeout(to);
-          var fake = { ok: false, status: 0, statusText: String(netErr && netErr.name || "network") };
-          return { res: fake, data: { error: "network_failed" }, networkError: true };
         } finally {
           if (to) clearTimeout(to);
         }
@@ -481,13 +482,8 @@
         setStatus(loginStatus, "Checking key…");
         loginBtn.disabled = true;
         try {
-          // Auth against the existing bugs API first (has CORS on production).
-          // Events API may be missing until main site is redeployed — never block login on it.
+          // Bugs API first — events route may 404 without CORS until main deploy.
           var out = await api("/api/ptg-resolve-names", "bug_report_list");
-          if (out.networkError || out.res.status === 0) {
-            setStatus(loginStatus, "Cannot reach " + apiBase() + " (network/CORS).", "err");
-            return;
-          }
           if (!out.res.ok) {
             var err = out.data && out.data.error ? out.data.error : "";
             setStatus(loginStatus, authErrorMessage(out.res.status, err), "err");
@@ -496,18 +492,10 @@
           saveKey(key);
           setStatus(loginStatus, "Signed in.", "ok");
           showApp();
-          // Reuse list payload when possible
-          try {
-            var items = Array.isArray(out.data && out.data.items) ? out.data.items : null;
-            if (items) {
-              bugsList.innerHTML = "";
-              setStatus(bugsStatus, items.length ? ("Reports: " + items.length) : "No reports yet.", "ok");
-            }
-          } catch (_) {}
           void loadBugs();
           void loadEvents();
         } catch (e) {
-          setStatus(loginStatus, "Login failed — network/timeout. API: " + apiBase(), "err");
+          setStatus(loginStatus, "Login failed — network/timeout.", "err");
         } finally {
           loginBtn.disabled = false;
         }
@@ -689,10 +677,6 @@
         setStatus(eventsStatus, "Loading events…");
         try {
           var out = await api("/api/ptg-admin-events", "event_list");
-          if (out.networkError || out.res.status === 0 || out.res.status === 404 || out.res.status === 405) {
-            setStatus(eventsStatus, "Events API not live on main site yet — bugs still work. Redeploy phrasetoguess.xyz.", "err");
-            return;
-          }
           if (!out.res.ok) {
             var err = out.data && out.data.error ? out.data.error : "";
             if (out.res.status === 401) {
