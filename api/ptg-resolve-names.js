@@ -369,7 +369,7 @@ module.exports = async (req, res) => {
 
     if (body && body.op === "admin_ping") {
       noStore(res);
-      const gate = requireAdmin(req);
+      const gate = requireAdmin(req, body);
       if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
@@ -379,7 +379,7 @@ module.exports = async (req, res) => {
 
     if (body && body.op === "bug_report_list") {
       noStore(res);
-      const gate = requireAdmin(req);
+      const gate = requireAdmin(req, body);
       if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
@@ -412,7 +412,7 @@ module.exports = async (req, res) => {
 
     if (body && body.op === "bug_report_image") {
       noStore(res);
-      const gate = requireAdmin(req);
+      const gate = requireAdmin(req, body);
       if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
@@ -442,7 +442,7 @@ module.exports = async (req, res) => {
 
     if (body && body.op === "bug_report_delete") {
       noStore(res);
-      const gate = requireAdmin(req);
+      const gate = requireAdmin(req, body);
       if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
@@ -476,7 +476,7 @@ module.exports = async (req, res) => {
     }
     if (op === "event_list") {
       noStore(res);
-      const gate = requireAdmin(req);
+      const gate = requireAdmin(req, body);
       if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
@@ -491,7 +491,7 @@ module.exports = async (req, res) => {
     }
     if (op === "event_start") {
       noStore(res);
-      const gate = requireAdmin(req);
+      const gate = requireAdmin(req, body);
       if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
@@ -511,7 +511,7 @@ module.exports = async (req, res) => {
     }
     if (op === "event_stop") {
       noStore(res);
-      const gate = requireAdmin(req);
+      const gate = requireAdmin(req, body);
       if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });

@@ -198,7 +198,7 @@
   <main class="wrap">
     <section id="loginView" class="panel login-hero">
       <h1>Bug Reports Admin</h1>
-      <p class="hint" style="margin-top:0;margin-bottom:14px;">Standalone panel for PTG bug reports & timed Win/Mint events. Key stays in this browser only.</p>
+      <p class="hint" style="margin-top:0;margin-bottom:14px;">Hasło = wartość <code>PTG_BUG_ADMIN_KEY</code> z Vercel (projekt ptg / phrasetoguess.xyz), bez cudzysłowów.</p>
       <label for="adminKeyInput">Admin key</label>
       <div class="row">
         <input id="adminKeyInput" type="password" placeholder="PTG_ADMIN_KEY" autocomplete="current-password" />
@@ -413,23 +413,25 @@
 
       function authErrorMessage(status, error) {
         if (error === "admin_key_not_configured") {
-          return "Server missing PTG_ADMIN_KEY (or PTG_BUG_ADMIN_KEY) env var.";
+          return "Na Vercel (projekt ptg) brak PTG_BUG_ADMIN_KEY / PTG_ADMIN_KEY — dodaj i zrób Redeploy.";
         }
         if (error === "firebase_admin_missing") {
-          return "Server missing FIREBASE_SERVICE_ACCOUNT_JSON.";
+          return "Brak FIREBASE_SERVICE_ACCOUNT_JSON na Vercel.";
         }
         if (status === 401 || error === "unauthorized_admin") {
-          return "Wrong admin key.";
+          return "Złe hasło — musi być DOKŁADNIE jak PTG_BUG_ADMIN_KEY w Vercel (bez cudzysłowów).";
         }
-        if (status === 0) return "Network error — check connection / CORS.";
-        return "Login failed (" + (error || ("HTTP " + status)) + ").";
+        if (status === 0 || error === "network_failed") {
+          return "Nie można połączyć z API phrasetoguess.xyz (sieć/CORS).";
+        }
+        return "Logowanie nieudane (" + (error || ("HTTP " + status)) + ").";
       }
 
       async function api(path, op, extra) {
         var key = getKey();
         var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
         var to = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 20000) : 0;
-        var body = Object.assign({ op: op }, extra || {});
+        var body = Object.assign({ op: op, adminKey: key }, extra || {});
         var res;
         try {
           res = await fetch(apiBase() + path, {
@@ -490,6 +492,9 @@
           }
           if (!out.res.ok) {
             var err = out.data && out.data.error ? out.data.error : "";
+            if (out.res.status === 401) {
+              clearKey();
+            }
             setStatus(loginStatus, authErrorMessage(out.res.status, err), "err");
             return;
           }
