@@ -411,7 +411,7 @@
         }
       }
 
-      function authErrorMessage(status, error) {
+      function authErrorMessage(status, error, diag) {
         if (error === "admin_key_not_configured") {
           return "Na Vercel (projekt ptg) brak PTG_BUG_ADMIN_KEY / PTG_ADMIN_KEY — dodaj i zrób Redeploy.";
         }
@@ -419,7 +419,20 @@
           return "Brak FIREBASE_SERVICE_ACCOUNT_JSON na Vercel.";
         }
         if (status === 401 || error === "unauthorized_admin") {
-          return "Złe hasło — musi być DOKŁADNIE jak PTG_BUG_ADMIN_KEY w Vercel (bez cudzysłowów).";
+          var hint = "Złe hasło — musi być dokładnie jak wartość env na projekcie ptg.";
+          if (diag && typeof diag === "object") {
+            hint +=
+              " (wpisane " +
+              String(diag.providedLength || 0) +
+              " znaków, na serwerze: " +
+              (Array.isArray(diag.configuredLengths) ? diag.configuredLengths.join("/") : "?") +
+              "; PTG_ADMIN_KEY=" +
+              String(!!(diag.envPresent && diag.envPresent.PTG_ADMIN_KEY)) +
+              ", PTG_BUG_ADMIN_KEY=" +
+              String(!!(diag.envPresent && diag.envPresent.PTG_BUG_ADMIN_KEY)) +
+              ")";
+          }
+          return hint;
         }
         if (status === 0 || error === "network_failed") {
           return "Nie można połączyć z API phrasetoguess.xyz (sieć/CORS).";
@@ -492,10 +505,11 @@
           }
           if (!out.res.ok) {
             var err = out.data && out.data.error ? out.data.error : "";
+            var diag = out.data && out.data.diag ? out.data.diag : null;
             if (out.res.status === 401) {
               clearKey();
             }
-            setStatus(loginStatus, authErrorMessage(out.res.status, err), "err");
+            setStatus(loginStatus, authErrorMessage(out.res.status, err, diag), "err");
             return;
           }
           saveKey(key);

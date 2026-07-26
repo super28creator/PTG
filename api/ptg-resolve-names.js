@@ -25,7 +25,7 @@ const BASENAME_L2_RESOLVER_PROXY = "0x426fA03fB86E510d0Dd9F70335Cf102a98b10875";
 const BASENAME_L2_RESOLVER_LEGACY = "0xC6d566A56A1aFf6508b41f6c90ff131615583BCD";
 const BASE_NUMERIC_CHAIN_ID = 8453;
 const { getAdminDb, hasServiceAccount } = require("../lib/fc-notif-store.js");
-const { requireAdmin } = require("../lib/ptg-admin-auth.js");
+const { requireAdmin, adminAuthDiagnostics } = require("../lib/ptg-admin-auth.js");
 const {
   getActiveEvent,
   startEvent,
@@ -370,17 +370,30 @@ module.exports = async (req, res) => {
     if (body && body.op === "admin_ping") {
       noStore(res);
       const gate = requireAdmin(req, body);
-      if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
+      if (!gate.ok) {
+        const payload = { error: gate.error };
+        if (gate.diag) payload.diag = gate.diag;
+        return res.status(gate.status).json(payload);
+      }
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
       }
       return res.status(200).json({ ok: true, role: "admin", serverNow: Date.now() });
     }
 
+    if (body && body.op === "admin_auth_diag") {
+      noStore(res);
+      return res.status(200).json({ ok: true, diag: adminAuthDiagnostics(req, body), serverNow: Date.now() });
+    }
+
     if (body && body.op === "bug_report_list") {
       noStore(res);
       const gate = requireAdmin(req, body);
-      if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
+      if (!gate.ok) {
+        const payload = { error: gate.error };
+        if (gate.diag) payload.diag = gate.diag;
+        return res.status(gate.status).json(payload);
+      }
       if (!hasServiceAccount()) {
         return res.status(503).json({ error: "firebase_admin_missing" });
       }
