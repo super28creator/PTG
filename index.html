@@ -3536,10 +3536,20 @@
                 0 0 42px rgba(96, 165, 250, 0.22);
         }
     }
-    .rewards-strip > div {
+    .rewards-strip > .rewards-line,
+    .rewards-strip > .rewards-top-row {
         display: flex;
         align-items: center;
         gap: 6px;
+    }
+    .rewards-strip .rewards-top-row {
+        width: 100%;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 0;
+    }
+    .rewards-strip .rewards-top-row:not(.is-visible) {
+        display: none;
     }
     .rewards-strip.is-event {
         box-shadow:
@@ -3547,6 +3557,8 @@
             0 0 0 1px rgba(255, 255, 255, 0.04),
             0 8px 28px rgba(0, 0, 0, 0.28);
         transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+        min-width: min(220px, 100%);
+        animation: rewards-event-pulse 2.8s ease-in-out infinite;
     }
     .rewards-strip .rewards-event-name {
         font-size: 11px;
@@ -3554,7 +3566,7 @@
         letter-spacing: 0.04em;
         text-transform: uppercase;
         opacity: 0.92;
-        max-width: 160px;
+        max-width: 58%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -3564,14 +3576,29 @@
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.02em;
-        margin-top: 2px;
+        margin-left: auto;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+    .rewards-strip.is-event .rewards-timer {
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        line-height: 1;
+    }
+    .rewards-strip .reward-base {
+        text-decoration: line-through;
+        text-decoration-thickness: 1.5px;
+        opacity: 0.55;
+        font-weight: 600;
+        margin-right: 2px;
+    }
+    .rewards-strip .reward-boost {
+        font-weight: 800;
     }
     @keyframes rewards-event-pulse {
         0%, 100% { filter: brightness(1); }
         50% { filter: brightness(1.08); }
-    }
-    .rewards-strip.is-event {
-        animation: rewards-event-pulse 2.8s ease-in-out infinite;
     }
     /* Tytuł → tagline (odznaki w rozwijanym panelu) */
     .hero-stack {
@@ -5011,10 +5038,20 @@
             <div class="header-rewards-row">
               <div class="rewards-compact">
                 <div class="rewards-strip" id="rewardsStrip" aria-label="Point rewards">
-                  <div class="rewards-event-name" id="rewardsEventName" hidden></div>
-                  <div><span>🏆 Win:</span> <span id="rewardWinValue" style="color: var(--green-base);">+1</span></div>
-                  <div><span>✨ Mint:</span> <span id="rewardMintValue" style="color: var(--cerulean);">+2</span></div>
-                  <div class="rewards-timer" id="rewardsTimer" hidden aria-live="polite"></div>
+                  <div class="rewards-top-row" id="rewardsTopRow">
+                    <div class="rewards-event-name" id="rewardsEventName" hidden></div>
+                    <div class="rewards-timer" id="rewardsTimer" hidden aria-live="polite"></div>
+                  </div>
+                  <div class="rewards-line">
+                    <span>🏆 Win:</span>
+                    <span class="reward-base" id="rewardWinBase" hidden>+1</span>
+                    <span class="reward-boost" id="rewardWinValue" style="color: var(--green-base);">+1</span>
+                  </div>
+                  <div class="rewards-line">
+                    <span>✨ Mint:</span>
+                    <span class="reward-base" id="rewardMintBase" hidden>+2</span>
+                    <span class="reward-boost" id="rewardMintValue" style="color: var(--cerulean);">+2</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -13051,8 +13088,11 @@ async function ptgRefreshIdentityAliasesFromDb() {
       const strip = document.getElementById("rewardsStrip");
       const winEl = document.getElementById("rewardWinValue");
       const mintEl = document.getElementById("rewardMintValue");
+      const winBaseEl = document.getElementById("rewardWinBase");
+      const mintBaseEl = document.getElementById("rewardMintBase");
       const nameEl = document.getElementById("rewardsEventName");
       const timerEl = document.getElementById("rewardsTimer");
+      const topRow = document.getElementById("rewardsTopRow");
       if (!strip || !winEl || !mintEl) return;
 
       const winPts = ptgWinPoints();
@@ -13072,6 +13112,9 @@ async function ptgRefreshIdentityAliasesFromDb() {
           strip.style.color = "";
           winEl.style.color = "var(--green-base)";
           mintEl.style.color = "var(--cerulean)";
+          if (winBaseEl) winBaseEl.hidden = true;
+          if (mintBaseEl) mintBaseEl.hidden = true;
+          if (topRow) topRow.classList.remove("is-visible");
           if (nameEl) {
               nameEl.hidden = true;
               nameEl.textContent = "";
@@ -13088,6 +13131,15 @@ async function ptgRefreshIdentityAliasesFromDb() {
       }
 
       strip.classList.add("is-event");
+      if (topRow) topRow.classList.add("is-visible");
+      if (winBaseEl) {
+          winBaseEl.hidden = false;
+          winBaseEl.textContent = "+" + PTG_DEFAULT_WIN_POINTS;
+      }
+      if (mintBaseEl) {
+          mintBaseEl.hidden = false;
+          mintBaseEl.textContent = "+" + PTG_DEFAULT_MINT_POINTS;
+      }
       if (st) {
           if (st.bg) strip.style.background = String(st.bg);
           if (st.border) strip.style.borderColor = String(st.border);
@@ -13096,6 +13148,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
           if (st.mintColor) mintEl.style.color = String(st.mintColor);
           if (timerEl && st.timerColor) timerEl.style.color = String(st.timerColor);
           if (nameEl && st.accent) nameEl.style.color = String(st.accent);
+          if (winBaseEl) winBaseEl.style.color = st.labelColor || "";
+          if (mintBaseEl) mintBaseEl.style.color = st.labelColor || "";
       }
       if (nameEl) {
           nameEl.hidden = false;
