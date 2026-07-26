@@ -378,7 +378,17 @@
       }
 
       function getKey() {
-        return String(adminKeyInput.value || "").trim();
+        var s = String(adminKeyInput.value || "")
+          .replace(/^\uFEFF/, "")
+          .replace(/[\u200B-\u200D\u2060\uFEFF\u202A-\u202E]/g, "")
+          .trim();
+        if (
+          (s.charAt(0) === '"' && s.charAt(s.length - 1) === '"' && s.length >= 2) ||
+          (s.charAt(0) === "'" && s.charAt(s.length - 1) === "'" && s.length >= 2)
+        ) {
+          s = s.slice(1, -1).trim();
+        }
+        return s.replace(/[\r\n\t]+/g, "").trim();
       }
 
       function saveKey(key) {
@@ -492,36 +502,35 @@
           setStatus(loginStatus, "Provide admin key.", "err");
           return;
         }
+        // Keep sanitized value in the field so retries match server sanitize.
+        adminKeyInput.value = key;
         setStatus(loginStatus, "Checking key…");
         loginBtn.disabled = true;
         try {
-          // Auth against the existing bugs API first (has CORS on production).
-          // Events API may be missing until main site is redeployed — never block login on it.
-          var out = await api("/api/ptg-resolve-names", "bug_report_list");
+          // Lightweight public diag — no Firebase read, no heavy bug list (avoids timeouts).
+          var out = await api("/api/ptg-resolve-names", "admin_auth_diag");
           if (out.networkError || out.res.status === 0) {
             setStatus(loginStatus, "Cannot reach " + apiBase() + " (network/CORS).", "err");
             return;
           }
           if (!out.res.ok) {
             var err = out.data && out.data.error ? out.data.error : "";
-            var diag = out.data && out.data.diag ? out.data.diag : null;
-            if (out.res.status === 401) {
-              clearKey();
-            }
-            setStatus(loginStatus, authErrorMessage(out.res.status, err, diag), "err");
+            setStatus(loginStatus, authErrorMessage(out.res.status, err, out.data && out.data.diag), "err");
+            return;
+          }
+          var diag = out.data && out.data.diag ? out.data.diag : null;
+          if (!diag || !diag.configured) {
+            setStatus(loginStatus, authErrorMessage(503, "admin_key_not_configured", diag), "err");
+            return;
+          }
+          if (!diag.matched) {
+            clearKey();
+            setStatus(loginStatus, authErrorMessage(401, "unauthorized_admin", diag), "err");
             return;
           }
           saveKey(key);
           setStatus(loginStatus, "Signed in.", "ok");
           showApp();
-          // Reuse list payload when possible
-          try {
-            var items = Array.isArray(out.data && out.data.items) ? out.data.items : null;
-            if (items) {
-              bugsList.innerHTML = "";
-              setStatus(bugsStatus, items.length ? ("Reports: " + items.length) : "No reports yet.", "ok");
-            }
-          } catch (_) {}
           void loadBugs();
           void loadEvents();
         } catch (e) {
@@ -706,7 +715,11 @@
       async function loadEvents() {
         setStatus(eventsStatus, "Loading events…");
         try {
-          var out = await api("/api/ptg-admin-events", "event_list");
+          // Prefer same endpoint as bugs (rewrite of /api/ptg-admin-events also works).
+          var out = await api("/api/ptg-resolve-names", "event_list");
+          if (out.networkError || out.res.status === 0) {
+            out = await api("/api/ptg-admin-events", "event_list");
+          }
           if (out.networkError || out.res.status === 0 || out.res.status === 404 || out.res.status === 405) {
             setStatus(eventsStatus, "Events API not live on main site yet — bugs still work. Redeploy phrasetoguess.xyz.", "err");
             return;
@@ -714,10 +727,10 @@
           if (!out.res.ok) {
             var err = out.data && out.data.error ? out.data.error : "";
             if (out.res.status === 401) {
-              showLogin(authErrorMessage(401, err), "err");
+              showLogin(authErrorMessage(401, err, out.data && out.data.diag), "err");
               return;
             }
-            setStatus(eventsStatus, authErrorMessage(out.res.status, err), "err");
+            setStatus(eventsStatus, authErrorMessage(out.res.status, err, out.data && out.data.diag), "err");
             return;
           }
           paintActive(out.data && out.data.active);
@@ -750,7 +763,7 @@
         setStatus(eventsStatus, "Starting event…");
         document.getElementById("startEventBtn").disabled = true;
         try {
-          var out = await api("/api/ptg-admin-events", "event_start", {
+          var out = await api("/api/ptg-resolve-names", "event_start", {
             name: document.getElementById("evName").value.trim() || "Event",
             winPoints: Number(document.getElementById("evWin").value) || 1,
             mintPoints: Number(document.getElementById("evMint").value) || 1,
@@ -775,7 +788,7 @@
         if (!confirm("End the active event now?")) return;
         setStatus(eventsStatus, "Stopping…");
         try {
-          var out = await api("/api/ptg-admin-events", "event_stop");
+          var out = await api("/api/ptg-resolve-names", "event_stop");
           if (!out.res.ok) throw new Error("fail");
           setStatus(eventsStatus, "Event ended.", "ok");
           await loadEvents();

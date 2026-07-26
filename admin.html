@@ -383,7 +383,17 @@
       }
 
       function getKey() {
-        return String(adminKeyInput.value || "").trim();
+        var s = String(adminKeyInput.value || "")
+          .replace(/^\uFEFF/, "")
+          .replace(/[\u200B-\u200D\u2060\uFEFF\u202A-\u202E]/g, "")
+          .trim();
+        if (
+          (s.charAt(0) === '"' && s.charAt(s.length - 1) === '"' && s.length >= 2) ||
+          (s.charAt(0) === "'" && s.charAt(s.length - 1) === "'" && s.length >= 2)
+        ) {
+          s = s.slice(1, -1).trim();
+        }
+        return s.replace(/[\r\n\t]+/g, "").trim();
       }
 
       function saveKey(key) {
@@ -416,7 +426,7 @@
         }
       }
 
-      function authErrorMessage(status, error) {
+      function authErrorMessage(status, error, diag) {
         if (error === "admin_key_not_configured") {
           return "Server missing PTG_ADMIN_KEY (or PTG_BUG_ADMIN_KEY) env var.";
         }
@@ -424,9 +434,18 @@
           return "Server missing FIREBASE_SERVICE_ACCOUNT_JSON.";
         }
         if (status === 401 || error === "unauthorized_admin") {
-          return "Wrong admin key.";
+          var hint = "Wrong admin key.";
+          if (diag && typeof diag === "object") {
+            hint +=
+              " (typed " +
+              String(diag.providedLength || 0) +
+              " chars, server: " +
+              (Array.isArray(diag.configuredLengths) ? diag.configuredLengths.join("/") : "?") +
+              ")";
+          }
+          return hint;
         }
-        if (status === 0) return "Network error — check connection / CORS.";
+        if (status === 0 || error === "network_failed") return "Network error — check connection / CORS.";
         return "Login failed (" + (error || ("HTTP " + status)) + ").";
       }
 
@@ -434,7 +453,7 @@
         var key = getKey();
         var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
         var to = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 20000) : 0;
-        var body = Object.assign({ op: op }, extra || {});
+        var body = Object.assign({ op: op, adminKey: key }, extra || {});
         var res;
         try {
           res = await fetch(apiBase() + path, {
@@ -447,6 +466,10 @@
             cache: "no-store",
             signal: ctrl ? ctrl.signal : undefined
           });
+        } catch (netErr) {
+          if (to) clearTimeout(to);
+          var fake = { ok: false, status: 0, statusText: String(netErr && netErr.name || "network") };
+          return { res: fake, data: { error: "network_failed" }, networkError: true };
         } finally {
           if (to) clearTimeout(to);
         }
@@ -478,14 +501,28 @@
           setStatus(loginStatus, "Provide admin key.", "err");
           return;
         }
+        adminKeyInput.value = key;
         setStatus(loginStatus, "Checking key…");
         loginBtn.disabled = true;
         try {
-          // Bugs API first — events route may 404 without CORS until main deploy.
-          var out = await api("/api/ptg-resolve-names", "bug_report_list");
+          var out = await api("/api/ptg-resolve-names", "admin_auth_diag");
+          if (out.networkError || out.res.status === 0) {
+            setStatus(loginStatus, "Cannot reach API (network/CORS).", "err");
+            return;
+          }
           if (!out.res.ok) {
             var err = out.data && out.data.error ? out.data.error : "";
-            setStatus(loginStatus, authErrorMessage(out.res.status, err), "err");
+            setStatus(loginStatus, authErrorMessage(out.res.status, err, out.data && out.data.diag), "err");
+            return;
+          }
+          var diag = out.data && out.data.diag ? out.data.diag : null;
+          if (!diag || !diag.configured) {
+            setStatus(loginStatus, authErrorMessage(503, "admin_key_not_configured", diag), "err");
+            return;
+          }
+          if (!diag.matched) {
+            clearKey();
+            setStatus(loginStatus, authErrorMessage(401, "unauthorized_admin", diag), "err");
             return;
           }
           saveKey(key);
@@ -675,14 +712,21 @@
       async function loadEvents() {
         setStatus(eventsStatus, "Loading events…");
         try {
-          var out = await api("/api/ptg-admin-events", "event_list");
+          var out = await api("/api/ptg-resolve-names", "event_list");
+          if (out.networkError || out.res.status === 0) {
+            out = await api("/api/ptg-admin-events", "event_list");
+          }
+          if (out.networkError || out.res.status === 0 || out.res.status === 404 || out.res.status === 405) {
+            setStatus(eventsStatus, "Events API not available yet.", "err");
+            return;
+          }
           if (!out.res.ok) {
             var err = out.data && out.data.error ? out.data.error : "";
             if (out.res.status === 401) {
-              showLogin(authErrorMessage(401, err), "err");
+              showLogin(authErrorMessage(401, err, out.data && out.data.diag), "err");
               return;
             }
-            setStatus(eventsStatus, authErrorMessage(out.res.status, err), "err");
+            setStatus(eventsStatus, authErrorMessage(out.res.status, err, out.data && out.data.diag), "err");
             return;
           }
           paintActive(out.data && out.data.active);
@@ -715,7 +759,7 @@
         setStatus(eventsStatus, "Starting event…");
         document.getElementById("startEventBtn").disabled = true;
         try {
-          var out = await api("/api/ptg-admin-events", "event_start", {
+          var out = await api("/api/ptg-resolve-names", "event_start", {
             name: document.getElementById("evName").value.trim() || "Event",
             winPoints: Number(document.getElementById("evWin").value) || 1,
             mintPoints: Number(document.getElementById("evMint").value) || 1,
@@ -740,7 +784,7 @@
         if (!confirm("End the active event now?")) return;
         setStatus(eventsStatus, "Stopping…");
         try {
-          var out = await api("/api/ptg-admin-events", "event_stop");
+          var out = await api("/api/ptg-resolve-names", "event_stop");
           if (!out.res.ok) throw new Error("fail");
           setStatus(eventsStatus, "Event ended.", "ok");
           await loadEvents();

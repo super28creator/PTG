@@ -375,10 +375,12 @@ module.exports = async (req, res) => {
         if (gate.diag) payload.diag = gate.diag;
         return res.status(gate.status).json(payload);
       }
-      if (!hasServiceAccount()) {
-        return res.status(503).json({ error: "firebase_admin_missing" });
-      }
-      return res.status(200).json({ ok: true, role: "admin", serverNow: Date.now() });
+      return res.status(200).json({
+        ok: true,
+        role: "admin",
+        firebase: hasServiceAccount(),
+        serverNow: Date.now(),
+      });
     }
 
     if (body && body.op === "admin_auth_diag") {
