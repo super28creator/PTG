@@ -3544,8 +3544,9 @@
     }
     .rewards-strip .rewards-top-row {
         width: 100%;
-        justify-content: space-between;
-        gap: 12px;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 10px;
         min-height: 0;
     }
     .rewards-strip .rewards-top-row:not(.is-visible) {
@@ -3557,7 +3558,7 @@
             0 0 0 1px rgba(255, 255, 255, 0.04),
             0 8px 28px rgba(0, 0, 0, 0.28);
         transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
-        min-width: min(220px, 100%);
+        min-width: min(240px, 100%);
         animation: rewards-event-pulse 2.8s ease-in-out infinite;
     }
     .rewards-strip .rewards-event-name {
@@ -3566,24 +3567,26 @@
         letter-spacing: 0.04em;
         text-transform: uppercase;
         opacity: 0.92;
-        max-width: 58%;
+        max-width: 46%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        flex: 0 1 auto;
     }
     .rewards-strip .rewards-timer {
         font-variant-numeric: tabular-nums;
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.02em;
-        margin-left: auto;
-        flex-shrink: 0;
+        margin-left: 0;
+        flex: 1 1 auto;
+        text-align: center;
         white-space: nowrap;
     }
     .rewards-strip.is-event .rewards-timer {
-        font-size: 16px;
+        font-size: 20px;
         font-weight: 800;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.04em;
         line-height: 1;
     }
     .rewards-strip .reward-base {
