@@ -26,6 +26,13 @@ const BASENAME_L2_RESOLVER_LEGACY = "0xC6d566A56A1aFf6508b41f6c90ff131615583BCD"
 const BASE_NUMERIC_CHAIN_ID = 8453;
 const { getAdminDb, hasServiceAccount } = require("../lib/fc-notif-store.js");
 const { requireAdmin } = require("../lib/ptg-admin-auth.js");
+const {
+  getActiveEvent,
+  startEvent,
+  stopActiveEvent,
+  listRecentEvents,
+  STYLE_PRESETS,
+} = require("../lib/ptg-game-events.js");
 const BUG_ROOT = "ptg_bug_reports_v1";
 const BUG_MAX_DESC = 1000;
 const BUG_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -448,6 +455,73 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, removed: id });
       } catch (e) {
         return res.status(500).json({ error: "db_delete_failed", detail: String(e && e.message) });
+      }
+    }
+
+    // Game events (kept in this function to stay under Hobby's 12-function limit;
+    // /api/ptg-admin-events rewrites here via vercel.json).
+    const op = body && typeof body.op === "string" ? body.op.trim() : "";
+    if (op === "event_get_active") {
+      noStore(res);
+      if (!hasServiceAccount()) {
+        return res.status(200).json({ ok: true, active: null, serverNow: Date.now() });
+      }
+      try {
+        const db = getAdminDb();
+        const active = await getActiveEvent(db);
+        return res.status(200).json({ ok: true, active, serverNow: Date.now() });
+      } catch (e) {
+        return res.status(500).json({ error: "db_read_failed", detail: String(e && e.message) });
+      }
+    }
+    if (op === "event_list") {
+      noStore(res);
+      const gate = requireAdmin(req);
+      if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
+      if (!hasServiceAccount()) {
+        return res.status(503).json({ error: "firebase_admin_missing" });
+      }
+      try {
+        const db = getAdminDb();
+        const data = await listRecentEvents(db, body && body.limit);
+        return res.status(200).json({ ok: true, ...data, serverNow: Date.now() });
+      } catch (e) {
+        return res.status(500).json({ error: "db_read_failed", detail: String(e && e.message) });
+      }
+    }
+    if (op === "event_start") {
+      noStore(res);
+      const gate = requireAdmin(req);
+      if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
+      if (!hasServiceAccount()) {
+        return res.status(503).json({ error: "firebase_admin_missing" });
+      }
+      try {
+        const db = getAdminDb();
+        const active = await startEvent(db, body || {});
+        return res.status(200).json({ ok: true, active, presets: STYLE_PRESETS, serverNow: Date.now() });
+      } catch (e) {
+        const msg = String(e && e.message ? e.message : "invalid_event");
+        const bad =
+          msg === "missing_name" ||
+          msg === "duration_too_short" ||
+          msg === "duration_too_long";
+        return res.status(bad ? 400 : 500).json({ error: msg });
+      }
+    }
+    if (op === "event_stop") {
+      noStore(res);
+      const gate = requireAdmin(req);
+      if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
+      if (!hasServiceAccount()) {
+        return res.status(503).json({ error: "firebase_admin_missing" });
+      }
+      try {
+        const db = getAdminDb();
+        const result = await stopActiveEvent(db);
+        return res.status(200).json({ ok: true, ...result, active: null, serverNow: Date.now() });
+      } catch (e) {
+        return res.status(500).json({ error: "db_write_failed", detail: String(e && e.message) });
       }
     }
 
