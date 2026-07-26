@@ -3536,23 +3536,31 @@
                 0 0 42px rgba(96, 165, 250, 0.22);
         }
     }
-    .rewards-strip > .rewards-line,
-    .rewards-strip > .rewards-top-row {
+    .rewards-strip > .rewards-line {
         display: flex;
         align-items: center;
         gap: 6px;
     }
     .rewards-strip .rewards-top-row {
-        width: 100%;
-        justify-content: flex-start;
+        display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 10px;
+        justify-content: center;
+        align-self: stretch;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        gap: 6px;
         min-height: 0;
+        text-align: center;
     }
     .rewards-strip .rewards-top-row:not(.is-visible) {
         display: none;
     }
     .rewards-strip.is-event {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
         box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.06),
             0 0 0 1px rgba(255, 255, 255, 0.04),
@@ -3561,33 +3569,79 @@
         min-width: min(240px, 100%);
         animation: rewards-event-pulse 2.8s ease-in-out infinite;
     }
+    .rewards-strip.is-event .rewards-top-row {
+        justify-self: stretch;
+        width: 100%;
+    }
+    .rewards-strip.is-event > .rewards-line {
+        justify-self: stretch;
+        width: 100%;
+        box-sizing: border-box;
+        justify-content: center;
+    }
     .rewards-strip .rewards-event-name {
+        display: block;
+        width: 100%;
         font-size: 11px;
         font-weight: 700;
         letter-spacing: 0.04em;
         text-transform: uppercase;
         opacity: 0.92;
-        max-width: 46%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        flex: 0 1 auto;
+        text-align: center;
+        max-width: 100%;
+    }
+    .rewards-strip .rewards-event-name[hidden] {
+        display: none !important;
     }
     .rewards-strip .rewards-timer {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.28em;
+        width: auto;
+        max-width: 100%;
+        margin: 0 auto;
         font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum" 1;
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.02em;
-        margin-left: 0;
-        flex: 1 1 auto;
         text-align: center;
         white-space: nowrap;
+        box-sizing: border-box;
+    }
+    .rewards-strip .rewards-timer[hidden] {
+        display: none !important;
+    }
+    .rewards-strip .rewards-timer-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        line-height: 1;
+        font-size: 0.92em;
+        /* WebView (Base/FC): emoji bywa optycznie przesunięte w lewo */
+        transform: translateY(0.02em);
+    }
+    .rewards-strip .rewards-timer-digits {
+        display: inline-block;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum" 1;
     }
     .rewards-strip.is-event .rewards-timer {
-        font-size: 20px;
+        font-size: clamp(20px, 5.6vw, 24px);
         font-weight: 800;
         letter-spacing: 0.04em;
         line-height: 1;
+        /* Pełna szerokość rzędu + flex = pewne wyśrodkowanie w mini-appach */
+        display: flex;
+        width: 100%;
+        justify-content: center;
+        align-items: center;
     }
     .rewards-strip .reward-base {
         text-decoration: line-through;
@@ -5043,7 +5097,10 @@
                 <div class="rewards-strip" id="rewardsStrip" aria-label="Point rewards">
                   <div class="rewards-top-row" id="rewardsTopRow">
                     <div class="rewards-event-name" id="rewardsEventName" hidden></div>
-                    <div class="rewards-timer" id="rewardsTimer" hidden aria-live="polite"></div>
+                    <div class="rewards-timer" id="rewardsTimer" hidden aria-live="polite">
+                      <span class="rewards-timer-icon" aria-hidden="true">⏱</span>
+                      <span class="rewards-timer-digits" id="rewardsTimerDigits">00:00:00</span>
+                    </div>
                   </div>
                   <div class="rewards-line">
                     <span>🏆 Win:</span>
@@ -13095,6 +13152,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
       const mintBaseEl = document.getElementById("rewardMintBase");
       const nameEl = document.getElementById("rewardsEventName");
       const timerEl = document.getElementById("rewardsTimer");
+      const timerDigitsEl = document.getElementById("rewardsTimerDigits");
       const topRow = document.getElementById("rewardsTopRow");
       if (!strip || !winEl || !mintEl) return;
 
@@ -13122,10 +13180,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
               nameEl.hidden = true;
               nameEl.textContent = "";
           }
-          if (timerEl) {
-              timerEl.hidden = true;
-              timerEl.textContent = "";
-          }
+          if (timerEl) timerEl.hidden = true;
+          if (timerDigitsEl) timerDigitsEl.textContent = "00:00:00";
           if (__ptgEventTimerIv) {
               clearInterval(__ptgEventTimerIv);
               __ptgEventTimerIv = null;
@@ -13160,8 +13216,10 @@ async function ptgRefreshIdentityAliasesFromDb() {
       }
       const tick = () => {
           const left = endsAt - ptgServerNowApprox();
-          if (timerEl) {
-              timerEl.hidden = false;
+          if (timerEl) timerEl.hidden = false;
+          if (timerDigitsEl) {
+              timerDigitsEl.textContent = ptgFormatEventCountdown(left);
+          } else if (timerEl) {
               timerEl.textContent = "⏱ " + ptgFormatEventCountdown(left);
           }
           if (left <= 0) {
