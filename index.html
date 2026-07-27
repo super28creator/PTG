@@ -6550,7 +6550,7 @@
    * Bumpnij REFERRAL_DATA_VERSION, żeby „wyzerować" drzewo zaproszeń (suffix `_v{N}`).
    * Stare dane zostają w RTDB jako archiwum; `REFERRAL_RTDB_SEASON` zostaje bez zmian, o ile nie migrujesz całości.
    */
-  const REFERRAL_DATA_VERSION = 7;
+  const REFERRAL_DATA_VERSION = 8;
   /**
    * Bumpnij, gdy zmieni się wzór/stawki wyliczania rewardów i chcesz, żeby każdy
    * zalogowany user jednorazowo dostał wyzerowane: `summary.pendingReward`,
@@ -8734,7 +8734,10 @@ let __ptgIdentityAliasRefreshPromise = null;
       o.classList.remove("show");
       o.setAttribute("aria-hidden", "true");
       try {
-          if (typeof window.__ptgTourKickoff === "function") window.__ptgTourKickoff();
+          /* Tour tylko po połączeniu portfela — nie startuj na gościa. */
+          if (isLoggedIn() && typeof window.__ptgTourKickoff === "function") {
+              window.__ptgTourKickoff();
+          }
       } catch (_) {}
   }
 
@@ -12623,6 +12626,9 @@ async function ptgRefreshIdentityAliasesFromDb() {
           checkGameStateAndRender();
       }
       void ptgMaybeShowInviteAcceptOverlay();
+      try {
+          if (typeof window.__ptgTourKickoff === "function") window.__ptgTourKickoff();
+      } catch (_) {}
       /* Self-heal referral outstanding: jeżeli poprzednia sesja zostawiła
        * zombie wpis (kasa zeszła z summary, bo wallet nie dobił tx), server
        * to teraz posprząta i przywróci pendingReward jeszcze zanim user
@@ -13854,6 +13860,9 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   if (pendingMint) resetVisualsWhileAwaitingTrophyMint();
                   checkGameStateAndRender();
               }
+              try {
+                  if (typeof window.__ptgTourKickoff === "function") window.__ptgTourKickoff();
+              } catch (_) {}
           } else {
               setAuthGateVisible(true);
               await withTimeout(syncUserProfile(), PTG_BOOT_PROFILE_SYNC_MS, "boot profile sync").catch((e) => {
@@ -18666,33 +18675,47 @@ async function ptgRefreshIdentityAliasesFromDb() {
    -------------------------------------------------------------------------
    - Highlights key UI pieces in sequence with a spotlight + tooltip
    - Controls: Next / Back / Skip tour + keyboard (→ ← Enter Esc)
-   - Persists "seen" flag in localStorage so it appears only on first visit
+   - Starts ONLY after wallet / identity connect (never for guests)
+   - Persists "seen" flag per userId in localStorage
    - TESTING: set FORCE_ALWAYS = true below to show it every reload.
              Set to false for production behaviour.
    ========================================================================= */
 (function ptgTourInit() {
     "use strict";
 
-    var STORAGE_KEY_PREFIX = "ptg_tour_v5_seen_";
+    var STORAGE_KEY_PREFIX = "ptg_tour_v6_seen_";
     var FORCE_ALWAYS = false;
     var VIEWPORT_MARGIN = 12;
 
-    function resolveTourIdentity() {
+    function isWalletConnected() {
         try {
             var uid = String((typeof myUserId !== "undefined" && myUserId) ? myUserId : "guest").trim().toLowerCase();
+            return !!(uid && uid !== "guest");
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function resolveTourIdentity() {
+        try {
+            var uid = String((typeof myUserId !== "undefined" && myUserId) ? myUserId : "").trim().toLowerCase();
             if (uid && uid !== "guest") return uid;
         } catch (_) {}
-        return "guest_device";
+        return "";
     }
 
     function seenStorageKey() {
-        return STORAGE_KEY_PREFIX + resolveTourIdentity();
+        var id = resolveTourIdentity();
+        return id ? STORAGE_KEY_PREFIX + id : "";
     }
 
     function shouldShowTour() {
+        if (!isWalletConnected()) return false;
         if (FORCE_ALWAYS) return true;
+        var key = seenStorageKey();
+        if (!key) return false;
         try {
-            return !localStorage.getItem(seenStorageKey());
+            return !localStorage.getItem(key);
         } catch (_) {
             return true;
         }
@@ -18862,6 +18885,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
     function waitReadyThenStart(attempts) {
         attempts = attempts || 0;
+        /* Bez portfela / tożsamości — nie startuj i nie spinaj pętli (gość). */
+        if (!isWalletConnected()) return;
         if (appReady()) {
             if (!shouldShowTour()) return;
             start();
@@ -18935,7 +18960,10 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
     function destroy(markSeen) {
         if (markSeen) {
-            try { localStorage.setItem(seenStorageKey(), "1"); } catch (_) {}
+            var key = seenStorageKey();
+            if (key) {
+                try { localStorage.setItem(key, "1"); } catch (_) {}
+            }
         }
         if (!root) return;
         window.removeEventListener("resize", resizeHandler);
@@ -19172,10 +19200,12 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
     window.__ptgTourKickoff = function () {
         if (root) return;
+        if (!isWalletConnected()) return;
         waitReadyThenStart(0);
     };
 
     function start() {
+        if (!isWalletConnected() || !shouldShowTour()) return;
         build();
         idx = 0;
         while (idx < steps.length) {
@@ -19187,15 +19217,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
         renderCurrent(false);
     }
 
-    function kickoff() {
-        setTimeout(function () { waitReadyThenStart(0); }, 900);
-    }
-
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", kickoff, { once: true });
-    } else {
-        kickoff();
-    }
+    /* Brak auto-startu na DOMContentLoaded — tour odpala się dopiero po
+     * finishLoginAfterIdentity / boot zalogowanego usera / zamknięciu invite. */
 })();
 </script>
 </body>
