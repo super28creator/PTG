@@ -6550,7 +6550,7 @@
    * Bumpnij REFERRAL_DATA_VERSION, żeby „wyzerować" drzewo zaproszeń (suffix `_v{N}`).
    * Stare dane zostają w RTDB jako archiwum; `REFERRAL_RTDB_SEASON` zostaje bez zmian, o ile nie migrujesz całości.
    */
-  const REFERRAL_DATA_VERSION = 6;
+  const REFERRAL_DATA_VERSION = 7;
   /**
    * Bumpnij, gdy zmieni się wzór/stawki wyliczania rewardów i chcesz, żeby każdy
    * zalogowany user jednorazowo dostał wyzerowane: `summary.pendingReward`,
@@ -18673,7 +18673,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
 (function ptgTourInit() {
     "use strict";
 
-    var STORAGE_KEY_PREFIX = "ptg_tour_v4_seen_";
+    var STORAGE_KEY_PREFIX = "ptg_tour_v5_seen_";
     var FORCE_ALWAYS = false;
     var VIEWPORT_MARGIN = 12;
 
@@ -18745,7 +18745,7 @@ async function ptgRefreshIdentityAliasesFromDb() {
             id: "badges",
             target: "#badgesToggle",
             title: "NFT badges",
-            body: "Tap the badge icon to open the badges screen. Mint unlocked OG / 10 / 100 / 1000 point badges on Base."
+            body: "Tap the badge icon to open your badges collection. Mint unlocked OG / 10 / 100 / 1000 point badges on Base."
         },
         {
             id: "rewards",
