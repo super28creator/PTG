@@ -6550,7 +6550,7 @@
    * Bumpnij REFERRAL_DATA_VERSION, żeby „wyzerować" drzewo zaproszeń (suffix `_v{N}`).
    * Stare dane zostają w RTDB jako archiwum; `REFERRAL_RTDB_SEASON` zostaje bez zmian, o ile nie migrujesz całości.
    */
-  const REFERRAL_DATA_VERSION = 8;
+  const REFERRAL_DATA_VERSION = 9;
   /**
    * Bumpnij, gdy zmieni się wzór/stawki wyliczania rewardów i chcesz, żeby każdy
    * zalogowany user jednorazowo dostał wyzerowane: `summary.pendingReward`,
@@ -12543,30 +12543,10 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
           if (isBaseApp) {
               ptgHost = "base";
-              /* Base App = tożsamość po portfelu 0x (osobny system referral).
-               * NIE linkujemy profilu FC jako alias pieniężny — inaczej claim
-               * scalał saldo Base + Farcaster w jedną wypłatę. */
-              try {
-                  const fe = getEmbeddedEthProvider();
-                  if (fe) {
-                      const acc = await withTimeout(
-                          fe.request({ method: "eth_accounts" }),
-                          1200,
-                          "base eth_accounts"
-                      );
-                      if (acc && acc[0] && applyWalletIdentity(acc[0], "base")) return;
-                  }
-              } catch (e) {
-                  console.warn("Base eth_accounts", e);
-              }
-              /* Wallet niedostępny — fallback do profilu Farcaster (osobne konto). */
-              try {
-                  if (ctx.user && (ctx.user.username || ctx.user.fid != null)) {
-                      if (applyFarcasterProfileUser(ctx.user, true)) return;
-                  }
-              } catch (e) {
-                  console.warn("Base Farcaster profile", e);
-              }
+              /* Base App: NIE auto-logujemy z eth_accounts / profilu FC.
+               * Pierwsze uruchomienie ma pokazać „Connect Base wallet";
+               * tożsamość 0x ustawiamy dopiero w connectWalletForPlay →
+               * finishLoginAfterIdentity (wtedy też startuje poradnik). */
               return;
           }
 
@@ -13860,9 +13840,13 @@ async function ptgRefreshIdentityAliasesFromDb() {
                   if (pendingMint) resetVisualsWhileAwaitingTrophyMint();
                   checkGameStateAndRender();
               }
-              try {
-                  if (typeof window.__ptgTourKickoff === "function") window.__ptgTourKickoff();
-              } catch (_) {}
+              /* Poradnik na Base/Web TYLKO po Connect (finishLoginAfterIdentity).
+               * Farcaster auto-profil może odpalić tour na boocie. */
+              if (ptgHost === "farcaster") {
+                  try {
+                      if (typeof window.__ptgTourKickoff === "function") window.__ptgTourKickoff();
+                  } catch (_) {}
+              }
           } else {
               setAuthGateVisible(true);
               await withTimeout(syncUserProfile(), PTG_BOOT_PROFILE_SYNC_MS, "boot profile sync").catch((e) => {
@@ -13878,15 +13862,14 @@ async function ptgRefreshIdentityAliasesFromDb() {
           setTimeout(function () {
               warmMintLambdasInBackground();
           }, 400);
-          /* Farcaster: czekamy na login (kolizja z Connect wallet). Base: pokazujemy instrukcję ⋯ → Save od razu. */
+          /* Farcaster: czekamy na login (kolizja z Connect wallet).
+           * Base save-sheet / notif: tylko po zalogowaniu (patrz notifPromptShouldShow). */
           if (isLoggedIn()) {
               setTimeout(function () {
                   if (ptgHost === "farcaster" || ptgHost === "base" || ptgInMiniAppSurface || ptgNotificationSurfaceHint()) {
                       scheduleNotificationPrompt();
                   }
               }, 650);
-          } else if (ptgHost === "base" || ptgNotifDetectBaseSurface()) {
-              setTimeout(function () { scheduleNotificationPrompt(); }, 800);
           }
       } catch (e) {
         console.error("Critical error during startApp", e);
@@ -13923,8 +13906,6 @@ async function ptgRefreshIdentityAliasesFromDb() {
                       scheduleNotificationPrompt();
                   }
               }, 650);
-          } else if (ptgHost === "base" || ptgNotifDetectBaseSurface()) {
-              setTimeout(function () { scheduleNotificationPrompt(); }, 800);
           }
       }
   }
@@ -13952,7 +13933,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
    */
   function notifPromptShouldShow() {
       var isBase = ptgHost === "base" || ptgNotifDetectBaseSurface();
-      if (isBase) return true;
+      /* Base: instrukcja ⋯ → Save dopiero PO połączeniu portfela — nie przed auth gate. */
+      if (isBase) return isLoggedIn() && myUserId !== "guest";
       if (!isLoggedIn()) return false;
       try {
           var ag = document.getElementById("authGateOverlay");
@@ -18683,14 +18665,20 @@ async function ptgRefreshIdentityAliasesFromDb() {
 (function ptgTourInit() {
     "use strict";
 
-    var STORAGE_KEY_PREFIX = "ptg_tour_v6_seen_";
+    var STORAGE_KEY_PREFIX = "ptg_tour_v7_seen_";
     var FORCE_ALWAYS = false;
     var VIEWPORT_MARGIN = 12;
 
     function isWalletConnected() {
         try {
             var uid = String((typeof myUserId !== "undefined" && myUserId) ? myUserId : "guest").trim().toLowerCase();
-            return !!(uid && uid !== "guest");
+            if (!uid || uid === "guest") return false;
+            var host = (typeof ptgHost !== "undefined" && ptgHost) ? String(ptgHost) : "browser";
+            /* Base + Web: wyłącznie prawdziwy portfel 0x (nie profil FC jako „login"). */
+            if (host === "base" || host === "browser") {
+                return /^0x[a-f0-9]{40}$/.test(uid);
+            }
+            return true;
         } catch (_) {
             return false;
         }

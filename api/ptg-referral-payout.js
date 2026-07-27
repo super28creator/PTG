@@ -213,7 +213,7 @@ function setCors(req, res) {
 
 function referralRoot() {
   const season = Number(process.env.PTG_REFERRAL_SEASON || "2");
-  const ver = Number(process.env.PTG_REFERRAL_DATA_VERSION || "8");
+  const ver = Number(process.env.PTG_REFERRAL_DATA_VERSION || "9");
   const suffix = Number.isFinite(ver) && ver > 1 ? `_v${ver}` : "";
   return `referrals_v1/s${season}${suffix}`;
 }
