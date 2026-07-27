@@ -13927,9 +13927,8 @@ async function ptgRefreshIdentityAliasesFromDb() {
 
   /**
    * Środowiskowe warunki pokazywania prompta.
-   * Base App: pokazujemy instrukcję ⋯ → Save **niezależnie od logowania i auth-gate** — Base traktuje apkę jak stronę web,
-   *           więc brak Farcaster profile / pustego embedded wallet nie powinien blokować hint-u.
-   * Farcaster: wymagamy zalogowania (ma Farcaster profile z kontekstu) i zamkniętego auth-gate (żeby nie nakładać się na Connect wallet).
+   * Base App: instrukcja ⋯ → Save dopiero po połączeniu portfela (nie przed auth gate).
+   * Farcaster: wymagamy zalogowania i zamkniętego auth-gate (żeby nie nakładać się na Connect wallet).
    */
   function notifPromptShouldShow() {
       var isBase = ptgHost === "base" || ptgNotifDetectBaseSurface();
